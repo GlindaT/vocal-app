@@ -876,7 +876,29 @@ function showSplitterResults(downloadUrl) {
  // ==========================================
 // 1. VARIABLES GLOBALES DE CONEXIÓN (PÉGALO AQUÍ)
 // ==========================================
+// ==========================================
+// 1. VARIABLES GLOBALES Y CONFIGURACIÓN
+// ==========================================
+let instrumentalUrlGlobal = null;
+let letraLrcGlobal = "";
+const API_KEY_CLOUDMERSIVE = "1b8014f4-9e84-4cab-b7a1-b5982618a343"; // Tu llave real
 
+function safeAddEvent(id, event, handler) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.addEventListener(event, handler);
+  } else {
+    console.warn(`Aviso: No se encontró el botón con ID "${id}"`);
+  }
+}
+
+function setSplitterStatus(msg, type) {
+  const el = document.getElementById("splitterStatus");
+  if (!el) return;
+  el.style.display = "block";
+  el.textContent = msg;
+  el.style.color = type === "error" ? "#ef4444" : type === "success" ? "#22c55e" : "#3b82f6";
+}
   const vocalsBox = document.getElementById("vocalsResult");
   if ((stemType === "vocals" || stemType === "both") && vocalsUrl) {
     document.getElementById("vocalsAudio").src = vocalsUrl;
