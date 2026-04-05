@@ -148,40 +148,30 @@
           </div>
 
           <div style="margin-top: 16px;">
-            <label style="color:#94a3b8; font-size:14px;">¿Qué quieres separar?</label>
-            <div style="display:flex; gap:16px; margin-top:8px;">
-              <label style="color:white; cursor:pointer;">
-                <input type="radio" name="stemType" value="vocals" checked> 🎤 Solo voz
-              </label>
-              <label style="color:white; cursor:pointer;">
-                <input type="radio" name="stemType" value="instrumental"> 🎸 Solo música
-              </label>
-              <label style="color:white; cursor:pointer;">
-                <input type="radio" name="stemType" value="both"> 🎵 Ambos
-              </label>
-            </div>
-          </div>
+  <label style="color:#94a3b8; font-size:14px;">¿Qué quieres separar?</label>
+  <div style="display:flex; gap:16px; margin-top:8px;">
+    <label style="color:white; cursor:pointer;">
+      <input type="radio" name="stemType" value="vocals" checked> 🎤 Solo voz
+    </label>
+    <label style="color:white; cursor:pointer;">
+      <input type="radio" name="stemType" value="instrumental"> 🎸 Solo música
+    </label>
+    <label style="color:white; cursor:pointer;">
+      <input type="radio" name="stemType" value="both"> 🎵 Ambos
+    </label>
+  </div>
+</div>
 
-          <div style="margin-top: 20px;">
-            <button id="splitBtn" class="btn-whisper" type="button" style="font-size:15px; padding:12px 28px;">
-              ✂️ Separar
-            </button>
-          </div>
-        </div>
+<div style="margin-top: 20px;">
+  <button id="splitBtn" class="btn-whisper" type="button" style="font-size:15px; padding:12px 28px;">
+    ✂️ Separar
+  </button>
+</div>
 
-        <div
-          id="splitterStatus"
-          style="
-            display:none;
-            margin-top:10px;
-            padding:14px;
-            border-radius:8px;
-            background:#0f172a;
-            color:#94a3b8;
-            font-size:14px;
-            text-align:center;
-          "
-        ></div>
+<div id="splitterStatus" style="display:none; margin-top:10px; padding:14px; border-radius:8px; background:#0f172a; color:#94a3b8; font-size:14px; text-align:center;"></div>
+
+<div id="splitterResults" style="display:none; margin-top:20px; padding:16px; border-radius:12px; background:rgba(30, 41, 59, 0.5); border: 1px solid #334155;">
+    </div>
 
         <div id="splitterResults" class="card" style="display:none;">
           <h3>🎧 Resultados:</h3>
