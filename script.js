@@ -706,28 +706,42 @@ function setWhisperStatus(msg, type) {
 
 // ======== CLOUDMERSIVE CONFIG ========
 function loadLalalKey() {
-  const saved = localStorage.getItem("cloudmersiveApiKey"); // Cambiado el nombre del almacén
+  // Ahora buscamos la llave de Cloudmersive en el almacén del navegador
+  const saved = localStorage.getItem("cloudmersiveApiKey"); 
   if (saved) {
     const input = document.getElementById("lalalApiKey");
-    if(input) input.value = saved;
-    document.getElementById("lalalKeyStatus").textContent = "✅ Clave Cloudmersive guardada";
-    document.getElementById("lalalKeyStatus").style.color = "#22c55e";
+    if (input) input.value = saved;
+    
+    const status = document.getElementById("lalalKeyStatus");
+    if (status) {
+      status.textContent = "✅ Clave Cloudmersive cargada";
+      status.style.color = "#22c55e";
+    }
   }
 }
 
 function saveLalalKey() {
-  const key = document.getElementById("lalalApiKey").value.trim();
+  const keyInput = document.getElementById("lalalApiKey");
+  const key = keyInput ? keyInput.value.trim() : "";
+  
   if (!key) {
-    document.getElementById("lalalKeyStatus").textContent = "⚠️ Ingresa una clave válida";
-    document.getElementById("lalalKeyStatus").style.color = "#ef4444";
+    const status = document.getElementById("lalalKeyStatus");
+    if (status) {
+      status.textContent = "⚠️ Ingresa una clave válida";
+      status.style.color = "#ef4444";
+    }
     return;
   }
-  // Guardamos la nueva llave de Cloudmersive
-  localStorage.setItem("cloudmersiveApiKey", key);
-  document.getElementById("lalalKeyStatus").textContent = "✅ Clave Cloudmersive guardada correctamente";
-  document.getElementById("lalalKeyStatus").style.color = "#22c55e";
-}
 
+  // Guardamos con el nuevo nombre para que no se mezcle con lo viejo
+  localStorage.setItem("cloudmersiveApiKey", key);
+  
+  const status = document.getElementById("lalalKeyStatus");
+  if (status) {
+    status.textContent = "✅ Clave Cloudmersive guardada correctamente";
+    status.style.color = "#22c55e";
+  }
+}
 function toggleLalalKeyVisibility() {
   const input = document.getElementById("lalalApiKey");
   const btn = document.getElementById("showLalalKeyBtn");
@@ -951,12 +965,14 @@ document.addEventListener("DOMContentLoaded", function () {
   safeAddEvent("stopKaraokeBtn", "click", stopKaraokeRecording);
   safeAddEvent("saveKaraokeBtn", "click", saveKaraokeToLibrary);
   safeAddEvent("retryKaraokeBtn", "click", retryKaraoke);
-  safeAddEvent("splitBtn", "click", splitAudio);
+  safeAddEvent("splitBtn", "click", splitAudio); // Este se queda igual, pero usará la lógica nueva
 
   // CONFIGURACIÓN (API Keys)
   safeAddEvent("saveApiKeyBtn", "click", saveApiKey);
   safeAddEvent("showApiKeyBtn", "click", toggleApiKeyVisibility);
-  safeAddEvent("saveLalalKeyBtn", "click", saveLalalKey);
+  
+  // AQUÍ EL CAMBIO: Usamos las funciones de Cloudmersive que actualizamos antes
+  safeAddEvent("saveLalalKeyBtn", "click", saveLalalKey); 
   safeAddEvent("showLalalKeyBtn", "click", toggleLalalKeyVisibility);
 
   // INICIALIZADORES DE DATOS
