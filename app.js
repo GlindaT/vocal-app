@@ -165,9 +165,14 @@ let mediaRecorder;
 let recordedChunks = [];
 let studioStream;
 
-document.getElementById("audioFile").addEventListener("change", function(e) {
+safeAddEvent("audioFile", "change", function(e) {
   const file = e.target.files[0];
-  document.getElementById("player").src = URL.createObjectURL(file);
+  if (!file) return;
+
+  const player = document.getElementById("player");
+  if (player) {
+    player.src = URL.createObjectURL(file);
+  }
 });
 
 async function startStudioRecording() {
@@ -198,11 +203,16 @@ function stopStudioRecording() {
 }
 
 // -------- LETRAS ESTUDIO --------
-document.getElementById("lyricsFile").addEventListener("change", function(e) {
+safeAddEvent("lyricsFile", "change", function(e) {
   const file = e.target.files[0];
+  if (!file) return;
+
   const reader = new FileReader();
   reader.onload = function(event) {
-    document.getElementById("lyricsDisplay").innerText = event.target.result;
+    const display = document.getElementById("lyricsDisplay");
+    if (display) {
+      display.innerText = event.target.result;
+    }
   };
   reader.readAsText(file);
 });
@@ -281,14 +291,14 @@ let karaokeBlob = null;
 let lyricInterval = null;
 let lyricLineIndex = 0;
 
-document.getElementById("karaokeTrackFile").addEventListener("change", function(e) {
+safeAddEvent("karaokeTrackFile", "change", function(e) {
   const file = e.target.files[0];
   if (!file) return;
   document.getElementById("karaokeTrack").src = URL.createObjectURL(file);
   setKaraokeStatus("✅ Pista cargada — Carga la letra y presiona Iniciar");
 });
 
-document.getElementById("karaokeLyricsFile").addEventListener("change", function(e) {
+safeAddEvent("karaokeLyricsFile", "change", function(e) {
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
@@ -856,29 +866,31 @@ function setSplitterStatus(msg, type) {
 }
 
 // ======== EVENT LISTENERS ========
-document.getElementById("btnAfinador").addEventListener("click",   () => showTab("afinador"));
-document.getElementById("btnEstudio").addEventListener("click",    () => showTab("estudio"));
-document.getElementById("btnBiblioteca").addEventListener("click", () => showTab("biblioteca"));
-document.getElementById("btnKaraoke").addEventListener("click",    () => showTab("karaoke"));
-document.getElementById("btnSplitter").addEventListener("click",   () => showTab("splitter"));
-document.getElementById("btnConfig").addEventListener("click",     () => showTab("config"));
+safeAddEvent("btnAfinador", "click", () => showTab("afinador"));
+safeAddEvent("btnEstudio", "click", () => showTab("estudio"));
+safeAddEvent("btnBiblioteca", "click", () => showTab("biblioteca"));
+safeAddEvent("btnKaraoke", "click", () => showTab("karaoke"));
+safeAddEvent("btnSplitter", "click", () => showTab("splitter"));
+safeAddEvent("btnConfig", "click", () => showTab("config"));
 
-document.getElementById("recordBtn").addEventListener("click", toggleRecording);
-document.getElementById("startStudioBtn").addEventListener("click", startStudioRecording);
-document.getElementById("stopStudioBtn").addEventListener("click", stopStudioRecording);
-document.getElementById("startKaraokeBtn").addEventListener("click", toggleKaraokeRecording);
-document.getElementById("stopKaraokeBtn").addEventListener("click", stopKaraokeRecording);
-document.getElementById("saveKaraokeBtn").addEventListener("click", saveKaraokeToLibrary);
-document.getElementById("retryKaraokeBtn").addEventListener("click", retryKaraoke);
-document.getElementById("saveApiKeyBtn").addEventListener("click", saveApiKey);
-document.getElementById("showApiKeyBtn").addEventListener("click", toggleApiKeyVisibility);
-document.getElementById("whisperBtn").addEventListener("click", generateLyricsWithWhisper);
-document.getElementById("splitBtn").addEventListener("click", splitAudio);
-document.getElementById("saveLalalKeyBtn").addEventListener("click", saveLalalKey);
-document.getElementById("showLalalKeyBtn").addEventListener("click", toggleLalalKeyVisibility);
+safeAddEvent("recordBtn", "click", toggleRecording);
+safeAddEvent("startStudioBtn", "click", startStudioRecording);
+safeAddEvent("stopStudioBtn", "click", stopStudioRecording);
+safeAddEvent("startKaraokeBtn", "click", toggleKaraokeRecording);
+safeAddEvent("stopKaraokeBtn", "click", stopKaraokeRecording);
+safeAddEvent("saveKaraokeBtn", "click", saveKaraokeToLibrary);
+safeAddEvent("retryKaraokeBtn", "click", retryKaraoke);
+safeAddEvent("saveApiKeyBtn", "click", saveApiKey);
+safeAddEvent("showApiKeyBtn", "click", toggleApiKeyVisibility);
+safeAddEvent("whisperBtn", "click", generateLyricsWithWhisper);
+safeAddEvent("splitBtn", "click", splitAudio);
+safeAddEvent("saveLalalKeyBtn", "click", saveLalalKey);
+safeAddEvent("showLalalKeyBtn", "click", toggleLalalKeyVisibility);
 
 // ======== INICIALIZAR ========
-generateNotes();
-loadLibrary();
-loadApiKey();
-loadLalalKey();
+document.addEventListener("DOMContentLoaded", function () {
+  generateNotes();
+  loadLibrary();
+  loadApiKey();
+  loadLalalKey();
+});
