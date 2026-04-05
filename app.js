@@ -1,4 +1,3 @@
-
 // -------- NAVEGACIÓN --------
 function showTab(tabId) {
   document.querySelectorAll(".tab").forEach(tab => {
