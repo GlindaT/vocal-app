@@ -871,7 +871,7 @@ function setSplitterStatus(msg, type) {
 // ======== FINAL DEL ARCHIVO: EL GRAN CONECTOR ========
 document.addEventListener("DOMContentLoaded", function () {
   
-  // 1. Pestañas (Navegación)
+  // NAVEGACIÓN (Sidebar)
   safeAddEvent("btnAfinador", "click", () => showTab("afinador"));
   safeAddEvent("btnEstudio", "click", () => showTab("estudio"));
   safeAddEvent("btnBiblioteca", "click", () => showTab("biblioteca"));
@@ -879,34 +879,33 @@ document.addEventListener("DOMContentLoaded", function () {
   safeAddEvent("btnSplitter", "click", () => showTab("splitter"));
   safeAddEvent("btnConfig", "click", () => showTab("config"));
 
-  // 2. Archivos (Eventos 'change')
+  // CARGA DE ARCHIVOS (Inputs)
   safeAddEvent("audioFile", "change", cargarAudioEstudio);
   safeAddEvent("lyricsFile", "change", cargarLetrasEstudio);
   safeAddEvent("karaokeTrackFile", "change", cargarPistaKaraoke);
   safeAddEvent("karaokeLyricsFile", "change", cargarLetrasKaraoke);
+  // Nota: El splitter no necesita evento 'change' porque validas al hacer click en splitBtn
 
-  // 3. Botones de Acción (Eventos 'click')
+  // BOTONES DE ACCIÓN
   safeAddEvent("recordBtn", "click", toggleRecording);
   safeAddEvent("startStudioBtn", "click", startStudioRecording);
   safeAddEvent("stopStudioBtn", "click", stopStudioRecording);
+  safeAddEvent("whisperBtn", "click", generateLyricsWithWhisper);
   safeAddEvent("startKaraokeBtn", "click", toggleKaraokeRecording);
   safeAddEvent("stopKaraokeBtn", "click", stopKaraokeRecording);
   safeAddEvent("saveKaraokeBtn", "click", saveKaraokeToLibrary);
   safeAddEvent("retryKaraokeBtn", "click", retryKaraoke);
-  
-  // 4. API Keys y Herramientas IA (Lo que acabas de poner)
+  safeAddEvent("splitBtn", "click", splitAudio);
+
+  // CONFIGURACIÓN (API Keys)
   safeAddEvent("saveApiKeyBtn", "click", saveApiKey);
   safeAddEvent("showApiKeyBtn", "click", toggleApiKeyVisibility);
-  safeAddEvent("whisperBtn", "click", generateLyricsWithWhisper);
-  safeAddEvent("splitBtn", "click", splitAudio); // <--- Conector Splitter
-  safeAddEvent("saveLalalKeyBtn", "click", saveLalalKey); // <--- Conector Lalal
-  safeAddEvent("showLalalKeyBtn", "click", toggleLalalKeyVisibility); // <--- Conector Lalal
+  safeAddEvent("saveLalalKeyBtn", "click", saveLalalKey);
+  safeAddEvent("showLalalKeyBtn", "click", toggleLalalKeyVisibility);
 
-  // 5. Cargas iniciales de memoria
+  // INICIALIZADORES DE DATOS
   generateNotes();
   loadLibrary();
   loadApiKey();
   loadLalalKey();
-
-  console.log("🚀 VocalApp: ¡Sistema configurado y listo para brillar!");
 });
