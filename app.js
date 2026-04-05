@@ -3,7 +3,14 @@ function showTab(tabId) {
   document.querySelectorAll(".tab").forEach(tab => {
     tab.classList.remove("active");
   });
-  document.getElementById(tabId).classList.add("active");
+
+  const target = document.getElementById(tabId);
+  if (!target) {
+    console.error("No existe la pestaña con id:", tabId);
+    return;
+  }
+
+  target.classList.add("active");
 }
 
 // -------- AFINADOR --------
