@@ -1,24 +1,16 @@
 // -------- NAVEGACIÓN --------
 function showTab(tabId) {
+  // Quita la clase active de todas las secciones
   document.querySelectorAll(".tab").forEach(tab => {
     tab.classList.remove("active");
   });
 
+  // Agrega la clase active solo a la que clicaste
   const target = document.getElementById(tabId);
-  if (!target) {
-    console.error("No existe la pestaña con id:", tabId);
-    return;
-  }
-
-  target.classList.add("active");
-}
-
-function safeAddEvent(id, event, handler) {
-  const el = document.getElementById(id);
-  if (el) {
-    el.addEventListener(event, handler);
+  if (target) {
+    target.classList.add("active");
   } else {
-    console.warn("No se encontró el elemento con id:", id);
+    console.error("No se encontró la pestaña:", tabId);
   }
 }
 // -------- AFINADOR --------
@@ -173,7 +165,8 @@ let mediaRecorder;
 let recordedChunks = [];
 let studioStream;
 
-safeAddEvent("audioFile", "change", function(e) {
+// Creamos esta función para que la lógica no se pierda
+function cargarAudioEstudio(e) {
   const file = e.target.files[0];
   if (!file) return;
 
@@ -181,7 +174,7 @@ safeAddEvent("audioFile", "change", function(e) {
   if (player) {
     player.src = URL.createObjectURL(file);
   }
-});
+}
 
 async function startStudioRecording() {
   studioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -211,7 +204,7 @@ function stopStudioRecording() {
 }
 
 // -------- LETRAS ESTUDIO --------
-safeAddEvent("lyricsFile", "change", function(e) {
+function cargarLetrasEstudio(e) {
   const file = e.target.files[0];
   if (!file) return;
 
@@ -223,7 +216,7 @@ safeAddEvent("lyricsFile", "change", function(e) {
     }
   };
   reader.readAsText(file);
-});
+}
 
 // -------- BIBLIOTECA --------
 function saveToLibrary(blob) {
@@ -299,14 +292,16 @@ let karaokeBlob = null;
 let lyricInterval = null;
 let lyricLineIndex = 0;
 
-safeAddEvent("karaokeTrackFile", "change", function(e) {
+// -------- KARAOKE: FUNCIONES DE CARGA --------
+
+function cargarPistaKaraoke(e) {
   const file = e.target.files[0];
   if (!file) return;
   document.getElementById("karaokeTrack").src = URL.createObjectURL(file);
   setKaraokeStatus("✅ Pista cargada — Carga la letra y presiona Iniciar");
-});
+}
 
-safeAddEvent("karaokeLyricsFile", "change", function(e) {
+function cargarLetrasKaraoke(e) {
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
@@ -314,7 +309,7 @@ safeAddEvent("karaokeLyricsFile", "change", function(e) {
     processLyrics(event.target.result, file.name);
   };
   reader.readAsText(file);
-});
+}
 
 function processLyrics(text, filename) {
   if (filename.endsWith(".lrc") || /$$\d+:\d+/.test(text)) {
@@ -873,9 +868,10 @@ function setSplitterStatus(msg, type) {
     type === "success" ? "#22c55e" : "#94a3b8";
 }
 
-// ======== INICIALIZACIÓN UNIFICADA (REEMPLAZA SOLO EL FINAL DE TU ARCHIVO) ========
+// ======== FINAL DEL ARCHIVO: EL GRAN CONECTOR ========
 document.addEventListener("DOMContentLoaded", function () {
-  // 1. Vincular Navegación de Pestañas
+  
+  // 1. Pestañas (Navegación)
   safeAddEvent("btnAfinador", "click", () => showTab("afinador"));
   safeAddEvent("btnEstudio", "click", () => showTab("estudio"));
   safeAddEvent("btnBiblioteca", "click", () => showTab("biblioteca"));
@@ -883,7 +879,13 @@ document.addEventListener("DOMContentLoaded", function () {
   safeAddEvent("btnSplitter", "click", () => showTab("splitter"));
   safeAddEvent("btnConfig", "click", () => showTab("config"));
 
-  // 2. Vincular Funciones de Botones
+  // 2. Archivos (Eventos 'change')
+  safeAddEvent("audioFile", "change", cargarAudioEstudio);
+  safeAddEvent("lyricsFile", "change", cargarLetrasEstudio);
+  safeAddEvent("karaokeTrackFile", "change", cargarPistaKaraoke);
+  safeAddEvent("karaokeLyricsFile", "change", cargarLetrasKaraoke);
+
+  // 3. Botones de Acción (Eventos 'click')
   safeAddEvent("recordBtn", "click", toggleRecording);
   safeAddEvent("startStudioBtn", "click", startStudioRecording);
   safeAddEvent("stopStudioBtn", "click", stopStudioRecording);
@@ -891,18 +893,20 @@ document.addEventListener("DOMContentLoaded", function () {
   safeAddEvent("stopKaraokeBtn", "click", stopKaraokeRecording);
   safeAddEvent("saveKaraokeBtn", "click", saveKaraokeToLibrary);
   safeAddEvent("retryKaraokeBtn", "click", retryKaraoke);
+  
+  // 4. API Keys y Herramientas IA (Lo que acabas de poner)
   safeAddEvent("saveApiKeyBtn", "click", saveApiKey);
   safeAddEvent("showApiKeyBtn", "click", toggleApiKeyVisibility);
   safeAddEvent("whisperBtn", "click", generateLyricsWithWhisper);
-  safeAddEvent("splitBtn", "click", splitAudio);
-  safeAddEvent("saveLalalKeyBtn", "click", saveLalalKey);
-  safeAddEvent("showLalalKeyBtn", "click", toggleLalalKeyVisibility);
+  safeAddEvent("splitBtn", "click", splitAudio); // <--- Conector Splitter
+  safeAddEvent("saveLalalKeyBtn", "click", saveLalalKey); // <--- Conector Lalal
+  safeAddEvent("showLalalKeyBtn", "click", toggleLalalKeyVisibility); // <--- Conector Lalal
 
-  // 3. Ejecutar Cargas Iniciales
+  // 5. Cargas iniciales de memoria
   generateNotes();
   loadLibrary();
   loadApiKey();
   loadLalalKey();
 
-  console.log("✅ Sistema de navegación y funciones vinculado correctamente.");
+  console.log("🚀 VocalApp: ¡Sistema configurado y listo para brillar!");
 });
