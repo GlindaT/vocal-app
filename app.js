@@ -873,32 +873,36 @@ function setSplitterStatus(msg, type) {
     type === "success" ? "#22c55e" : "#94a3b8";
 }
 
-// ======== EVENT LISTENERS ========
-safeAddEvent("btnAfinador", "click", () => showTab("afinador"));
-safeAddEvent("btnEstudio", "click", () => showTab("estudio"));
-safeAddEvent("btnBiblioteca", "click", () => showTab("biblioteca"));
-safeAddEvent("btnKaraoke", "click", () => showTab("karaoke"));
-safeAddEvent("btnSplitter", "click", () => showTab("splitter"));
-safeAddEvent("btnConfig", "click", () => showTab("config"));
-
-safeAddEvent("recordBtn", "click", toggleRecording);
-safeAddEvent("startStudioBtn", "click", startStudioRecording);
-safeAddEvent("stopStudioBtn", "click", stopStudioRecording);
-safeAddEvent("startKaraokeBtn", "click", toggleKaraokeRecording);
-safeAddEvent("stopKaraokeBtn", "click", stopKaraokeRecording);
-safeAddEvent("saveKaraokeBtn", "click", saveKaraokeToLibrary);
-safeAddEvent("retryKaraokeBtn", "click", retryKaraoke);
-safeAddEvent("saveApiKeyBtn", "click", saveApiKey);
-safeAddEvent("showApiKeyBtn", "click", toggleApiKeyVisibility);
-safeAddEvent("whisperBtn", "click", generateLyricsWithWhisper);
-safeAddEvent("splitBtn", "click", splitAudio);
-safeAddEvent("saveLalalKeyBtn", "click", saveLalalKey);
-safeAddEvent("showLalalKeyBtn", "click", toggleLalalKeyVisibility);
-
-// ======== INICIALIZAR ========
+// ======== INICIALIZACIÓN UNIFICADA (REEMPLAZA SOLO EL FINAL DE TU ARCHIVO) ========
 document.addEventListener("DOMContentLoaded", function () {
+  // 1. Vincular Navegación de Pestañas
+  safeAddEvent("btnAfinador", "click", () => showTab("afinador"));
+  safeAddEvent("btnEstudio", "click", () => showTab("estudio"));
+  safeAddEvent("btnBiblioteca", "click", () => showTab("biblioteca"));
+  safeAddEvent("btnKaraoke", "click", () => showTab("karaoke"));
+  safeAddEvent("btnSplitter", "click", () => showTab("splitter"));
+  safeAddEvent("btnConfig", "click", () => showTab("config"));
+
+  // 2. Vincular Funciones de Botones
+  safeAddEvent("recordBtn", "click", toggleRecording);
+  safeAddEvent("startStudioBtn", "click", startStudioRecording);
+  safeAddEvent("stopStudioBtn", "click", stopStudioRecording);
+  safeAddEvent("startKaraokeBtn", "click", toggleKaraokeRecording);
+  safeAddEvent("stopKaraokeBtn", "click", stopKaraokeRecording);
+  safeAddEvent("saveKaraokeBtn", "click", saveKaraokeToLibrary);
+  safeAddEvent("retryKaraokeBtn", "click", retryKaraoke);
+  safeAddEvent("saveApiKeyBtn", "click", saveApiKey);
+  safeAddEvent("showApiKeyBtn", "click", toggleApiKeyVisibility);
+  safeAddEvent("whisperBtn", "click", generateLyricsWithWhisper);
+  safeAddEvent("splitBtn", "click", splitAudio);
+  safeAddEvent("saveLalalKeyBtn", "click", saveLalalKey);
+  safeAddEvent("showLalalKeyBtn", "click", toggleLalalKeyVisibility);
+
+  // 3. Ejecutar Cargas Iniciales
   generateNotes();
   loadLibrary();
   loadApiKey();
   loadLalalKey();
+
+  console.log("✅ Sistema de navegación y funciones vinculado correctamente.");
 });
