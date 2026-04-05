@@ -1,3 +1,4 @@
+
 // -------- NAVEGACIÓN --------
 function showTab(tabId) {
   document.querySelectorAll(".tab").forEach(tab => {
@@ -636,27 +637,7 @@ function setWhisperStatus(msg, type) {
     type === "success" ? "#22c55e" : "#94a3b8";
 }
 
-// ======== EVENT LISTENERS ========
-document.getElementById("btnAfinador").addEventListener("click",  () => showTab("afinador"));
-document.getElementById("btnEstudio").addEventListener("click",   () => showTab("estudio"));
-document.getElementById("btnBiblioteca").addEventListener("click",() => showTab("biblioteca"));
-document.getElementById("btnKaraoke").addEventListener("click",   () => showTab("karaoke"));
-document.getElementById("btnSplitter").addEventListener("click",  () => showTab("splitter"));
-document.getElementById("btnConfig").addEventListener("click",    () => showTab("config"));
-
-document.getElementById("recordBtn").addEventListener("click", toggleRecording);
-document.getElementById("startStudioBtn").addEventListener("click", startStudioRecording);
-document.getElementById("stopStudioBtn").addEventListener("click", stopStudioRecording);
-document.getElementById("startKaraokeBtn").addEventListener("click", toggleKaraokeRecording);
-document.getElementById("stopKaraokeBtn").addEventListener("click", stopKaraokeRecording);
-document.getElementById("saveKaraokeBtn").addEventListener("click", saveKaraokeToLibrary);
-document.getElementById("retryKaraokeBtn").addEventListener("click", retryKaraoke);
-document.getElementById("saveApiKeyBtn").addEventListener("click", saveApiKey);
-document.getElementById("showApiKeyBtn").addEventListener("click", toggleApiKeyVisibility);
-document.getElementById("whisperBtn").addEventListener("click", generateLyricsWithWhisper);
-
 // ======== LALAL.AI CONFIG ========
-
 function loadLalalKey() {
   const saved = localStorage.getItem("lalalApiKey");
   if (saved) {
@@ -701,7 +682,6 @@ function getLalalKey() {
 }
 
 // ======== SPLITTER ========
-
 async function splitAudio() {
   const apiKey = getLalalKey();
   if (!apiKey) return;
@@ -712,14 +692,12 @@ async function splitAudio() {
     return;
   }
 
-  // Verificar tamaño máximo (200MB)
   if (file.size > 200 * 1024 * 1024) {
     setSplitterStatus("⚠️ El archivo supera los 200MB", "error");
     return;
   }
 
   const stemType = document.querySelector('input[name="stemType"]:checked').value;
-
   const btn = document.getElementById("splitBtn");
   btn.disabled = true;
   document.getElementById("splitterResults").style.display = "none";
@@ -727,15 +705,12 @@ async function splitAudio() {
   setSplitterStatus("⏳ Subiendo audio a Lalal.ai...", "loading");
 
   try {
-    // PASO 1 — Subir el archivo
     const formData = new FormData();
     formData.append("file", file);
 
     const uploadResponse = await fetch("https://www.lalal.ai/api/upload/", {
       method: "POST",
-      headers: {
-        "Authorization": "license " + apiKey
-      },
+      headers: { "Authorization": "license " + apiKey },
       body: formData
     });
 
@@ -751,7 +726,6 @@ async function splitAudio() {
 
     setSplitterStatus("⏳ Procesando separación... esto puede tardar 1-2 minutos", "loading");
 
-    // PASO 2 — Iniciar separación
     const splitResponse = await fetch("https://www.lalal.ai/api/split/", {
       method: "POST",
       headers: {
@@ -760,8 +734,8 @@ async function splitAudio() {
       },
       body: JSON.stringify({
         id: fileId,
-        filter: 1,        // 1 = vocals/instrumental
-        splitter: "phoenix"  // mejor modelo disponible
+        filter: 1,
+        splitter: "phoenix"
       })
     });
 
@@ -772,7 +746,6 @@ async function splitAudio() {
       return;
     }
 
-    // PASO 3 — Esperar resultado (polling)
     setSplitterStatus("⏳ Esperando resultado...", "loading");
     await pollSplitterResult(fileId, apiKey, stemType);
 
@@ -782,20 +755,17 @@ async function splitAudio() {
   }
 }
 
-// --- Polling: revisar cada 5 segundos si ya terminó ---
 async function pollSplitterResult(fileId, apiKey, stemType) {
   const btn = document.getElementById("splitBtn");
   let attempts = 0;
-  const maxAttempts = 24; // 2 minutos máximo
+  const maxAttempts = 24;
 
   const interval = setInterval(async function() {
     attempts++;
 
     try {
       const checkResponse = await fetch("https://www.lalal.ai/api/check/?id=" + fileId, {
-        headers: {
-          "Authorization": "license " + apiKey
-        }
+        headers: { "Authorization": "license " + apiKey }
       });
 
       const checkData = await checkResponse.json();
@@ -817,10 +787,7 @@ async function pollSplitterResult(fileId, apiKey, stemType) {
         btn.disabled = false;
 
       } else {
-        setSplitterStatus(
-          "⏳ Procesando... (" + (attempts * 5) + "s)",
-          "loading"
-        );
+        setSplitterStatus("⏳ Procesando... (" + (attempts * 5) + "s)", "loading");
       }
 
     } catch (err) {
@@ -829,10 +796,9 @@ async function pollSplitterResult(fileId, apiKey, stemType) {
       btn.disabled = false;
     }
 
-  }, 5000); // revisar cada 5 segundos
+  }, 5000);
 }
 
-// --- Mostrar resultados ---
 function showSplitterResults(task, stemType) {
   const resultsBox = document.getElementById("splitterResults");
   resultsBox.style.display = "block";
@@ -840,7 +806,6 @@ function showSplitterResults(task, stemType) {
   const vocalsUrl       = task.stem?.vocals?.url       || null;
   const instrumentalUrl = task.stem?.instrumental?.url || null;
 
-  // Voz
   const vocalsBox = document.getElementById("vocalsResult");
   if ((stemType === "vocals" || stemType === "both") && vocalsUrl) {
     document.getElementById("vocalsAudio").src = vocalsUrl;
@@ -850,7 +815,6 @@ function showSplitterResults(task, stemType) {
     vocalsBox.style.display = "none";
   }
 
-  // Música
   const instrBox = document.getElementById("instrumentalResult");
   if ((stemType === "instrumental" || stemType === "both") && instrumentalUrl) {
     document.getElementById("instrumentalAudio").src = instrumentalUrl;
@@ -863,7 +827,6 @@ function showSplitterResults(task, stemType) {
   setSplitterStatus("✅ ¡Separación completa!", "success");
 }
 
-// --- Helper status Splitter ---
 function setSplitterStatus(msg, type) {
   const el = document.getElementById("splitterStatus");
   el.style.display = "block";
@@ -873,11 +836,27 @@ function setSplitterStatus(msg, type) {
     type === "success" ? "#22c55e" : "#94a3b8";
 }
 
-// ======== EVENT LISTENERS SPLITTER Y CONFIG ========
+// ======== EVENT LISTENERS ========
+document.getElementById("btnAfinador").addEventListener("click",   () => showTab("afinador"));
+document.getElementById("btnEstudio").addEventListener("click",    () => showTab("estudio"));
+document.getElementById("btnBiblioteca").addEventListener("click", () => showTab("biblioteca"));
+document.getElementById("btnKaraoke").addEventListener("click",    () => showTab("karaoke"));
+document.getElementById("btnSplitter").addEventListener("click",   () => showTab("splitter"));
+document.getElementById("btnConfig").addEventListener("click",     () => showTab("config"));
+
+document.getElementById("recordBtn").addEventListener("click", toggleRecording);
+document.getElementById("startStudioBtn").addEventListener("click", startStudioRecording);
+document.getElementById("stopStudioBtn").addEventListener("click", stopStudioRecording);
+document.getElementById("startKaraokeBtn").addEventListener("click", toggleKaraokeRecording);
+document.getElementById("stopKaraokeBtn").addEventListener("click", stopKaraokeRecording);
+document.getElementById("saveKaraokeBtn").addEventListener("click", saveKaraokeToLibrary);
+document.getElementById("retryKaraokeBtn").addEventListener("click", retryKaraoke);
+document.getElementById("saveApiKeyBtn").addEventListener("click", saveApiKey);
+document.getElementById("showApiKeyBtn").addEventListener("click", toggleApiKeyVisibility);
+document.getElementById("whisperBtn").addEventListener("click", generateLyricsWithWhisper);
 document.getElementById("splitBtn").addEventListener("click", splitAudio);
 document.getElementById("saveLalalKeyBtn").addEventListener("click", saveLalalKey);
 document.getElementById("showLalalKeyBtn").addEventListener("click", toggleLalalKeyVisibility);
-
 
 // ======== INICIALIZAR ========
 generateNotes();
