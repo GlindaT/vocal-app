@@ -1,3 +1,4 @@
+console.log("🚀 El archivo script.js se ha cargado correctamente");
 // -------- NAVEGACIÓN --------
 function showTab(tabId) {
   // Quita la clase active de todas las secciones
@@ -909,3 +910,4 @@ document.addEventListener("DOMContentLoaded", function () {
   loadApiKey();
   loadLalalKey();
 });
+console.log("🏁 He llegado al final del archivo sin errores");
