@@ -854,7 +854,7 @@ function showSplitterResults(downloadUrl) {
 // ==========================================
 // 1. VARIABLES GLOBALES Y CONFIGURACIÓN
 // ==========================================
-let instrumentalUrlGlobal = null;
+
 let letraLrcGlobal = "";
 const API_KEY_CLOUDMERSIVE = "1b8014f4-9e84-4cab-b7a1-b5982618a343"; // Tu llave real
 
