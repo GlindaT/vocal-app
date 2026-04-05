@@ -13,6 +13,14 @@ function showTab(tabId) {
   target.classList.add("active");
 }
 
+function safeAddEvent(id, event, handler) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.addEventListener(event, handler);
+  } else {
+    console.warn("No se encontró el elemento con id:", id);
+  }
+}
 // -------- AFINADOR --------
 let audioContext;
 let analyser;
