@@ -607,8 +607,14 @@ function getApiKey() {
 
 // ======== WHISPER ========
 async function generateLyricsWithWhisper() {
-  const apiKey = getApiKey();
-  if (!apiKey) return;
+  // 1. Obtener y limpiar la API Key
+  const rawKey = typeof getApiKey === 'function' ? getApiKey() : localStorage.getItem('config_openai');
+  const apiKey = rawKey ? rawKey.trim() : null;
+  
+  if (!apiKey) {
+    setWhisperStatus("⚠️ No hay API Key en Configuración", "error");
+    return;
+  }
 
   const trackFile = document.getElementById("karaokeTrackFile").files[0];
   if (!trackFile) {
@@ -616,56 +622,55 @@ async function generateLyricsWithWhisper() {
     return;
   }
 
-  if (trackFile.size > 25 * 1024 * 1024) {
-    setWhisperStatus("⚠️ El archivo supera los 25MB", "error");
-    return;
-  }
-
   const btn = document.getElementById("whisperBtn");
-  btn.disabled = true;
-  setWhisperStatus("⏳ Enviando audio a Whisper...", "loading");
+  if (btn) btn.disabled = true;
+  setWhisperStatus("⏳ Preparando envío a OpenAI...", "loading");
 
   try {
     const formData = new FormData();
     formData.append("file", trackFile);
     formData.append("model", "whisper-1");
     formData.append("response_format", "verbose_json");
-    formData.append("timestamp_granularities[]", "segment");
 
-    setWhisperStatus("⏳ Transcribiendo... esto puede tardar unos segundos", "loading");
+    setWhisperStatus("⏳ Transcribiendo... (esto puede tardar un poco)", "loading");
 
     const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
       method: "POST",
-      headers: { "Authorization": "Bearer " + apiKey },
+      headers: { 
+        "Authorization": "Bearer " + apiKey 
+      },
       body: formData
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      setWhisperStatus("❌ Error: " + (error.error?.message || "Error desconocido"), "error");
-      btn.disabled = false;
+      const errorData = await response.text(); 
+      console.error("Detalle del error:", errorData);
+      setWhisperStatus("❌ Error de API: Revisa tus créditos o la llave", "error");
+      if (btn) btn.disabled = false;
       return;
     }
 
     const data = await response.json();
-    const lrc = convertToLRC(data.segments);
+    
+    if (data.segments) {
+      // Aquí usamos tus funciones originales para procesar la letra
+      const lrc = convertToLRC(data.segments);
+      karaokeIsTimed = true;
+      karaokeLyricsData = parseLRC(lrc);
+      
+      // Actualizar el área de texto de la letra si existe
+      const lyricsArea = document.getElementById("karaokeLyricsInput");
+      if (lyricsArea) lyricsArea.value = lrc;
 
-    karaokeIsTimed = true;
-    karaokeLyricsData = parseLRC(lrc);
-
-    setWhisperStatus(
-      "✅ Letra generada con " + data.segments.length + " líneas — Lista para cantar",
-      "success"
-    );
-
-    updateLyricsDisplay(0);
-    document.getElementById("karaokeScreenBox").style.display = "block";
+      setWhisperStatus(`✅ ¡Listo! ${data.segments.length} líneas generadas.`, "success");
+    }
 
   } catch (err) {
-    setWhisperStatus("❌ Error de conexión: " + err.message, "error");
+    console.error("Error de red o conexión:", err);
+    setWhisperStatus("❌ Error de conexión: Revisa tu internet o la API Key", "error");
+  } finally {
+    if (btn) btn.disabled = false;
   }
-
-  btn.disabled = false;
 }
 
 function convertToLRC(segments) {
