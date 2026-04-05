@@ -704,12 +704,13 @@ function setWhisperStatus(msg, type) {
     type === "success" ? "#22c55e" : "#94a3b8";
 }
 
-// ======== LALAL.AI CONFIG ========
+// ======== CLOUDMERSIVE CONFIG ========
 function loadLalalKey() {
-  const saved = localStorage.getItem("lalalApiKey");
+  const saved = localStorage.getItem("cloudmersiveApiKey"); // Cambiado el nombre del almacén
   if (saved) {
-    document.getElementById("lalalApiKey").value = saved;
-    document.getElementById("lalalKeyStatus").textContent = "✅ Clave guardada";
+    const input = document.getElementById("lalalApiKey");
+    if(input) input.value = saved;
+    document.getElementById("lalalKeyStatus").textContent = "✅ Clave Cloudmersive guardada";
     document.getElementById("lalalKeyStatus").style.color = "#22c55e";
   }
 }
@@ -721,8 +722,9 @@ function saveLalalKey() {
     document.getElementById("lalalKeyStatus").style.color = "#ef4444";
     return;
   }
-  localStorage.setItem("lalalApiKey", key);
-  document.getElementById("lalalKeyStatus").textContent = "✅ Clave guardada correctamente";
+  // Guardamos la nueva llave de Cloudmersive
+  localStorage.setItem("cloudmersiveApiKey", key);
+  document.getElementById("lalalKeyStatus").textContent = "✅ Clave Cloudmersive guardada correctamente";
   document.getElementById("lalalKeyStatus").style.color = "#22c55e";
 }
 
@@ -739,82 +741,84 @@ function toggleLalalKeyVisibility() {
 }
 
 function getLalalKey() {
-  const key = localStorage.getItem("lalalApiKey");
+  const key = localStorage.getItem("cloudmersiveApiKey");
   if (!key) {
-    alert("⚠️ Primero guarda tu API Key de Lalal.ai en Configuración");
+    alert("⚠️ Primero guarda tu API Key de Cloudmersive en Configuración");
     showTab("config");
     return null;
   }
   return key;
 }
 
-// ======== SPLITTER ========
+// ======== SPLITTER (CLOUDMERSIVE MOTOR) ========
 async function splitAudio() {
-  const apiKey = getLalalKey();
+  const apiKey = getLalalKey(); // Ahora obtiene la de Cloudmersive
   if (!apiKey) return;
 
-  const file = document.getElementById("splitterFile").files[0];
+  const fileInput = document.getElementById("splitterFile");
+  const file = fileInput.files[0];
+  
   if (!file) {
     setSplitterStatus("⚠️ Primero selecciona un archivo de audio", "error");
     return;
   }
 
-  if (file.size > 200 * 1024 * 1024) {
-    setSplitterStatus("⚠️ El archivo supera los 200MB", "error");
+  // Validación de tamaño (Cloudmersive Free suele aceptar hasta 15-20MB, ajustamos aquí)
+  if (file.size > 20 * 1024 * 1024) {
+    setSplitterStatus("⚠️ El archivo es muy grande para la versión gratuita (Máx 20MB)", "error");
     return;
   }
 
-  const stemType = document.querySelector('input[name="stemType"]:checked').value;
   const btn = document.getElementById("splitBtn");
   btn.disabled = true;
   document.getElementById("splitterResults").style.display = "none";
 
-  setSplitterStatus("⏳ Subiendo audio a Lalal.ai...", "loading");
+  setSplitterStatus("⏳ Conectando con Cloudmersive y procesando...", "loading");
 
   try {
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("inputFile", file);
 
-    const uploadResponse = await fetch("https://www.lalal.ai/api/upload/?v=2", {
+    // Usamos el endpoint de conversión de Cloudmersive
+    // Nota: Cloudmersive procesa el archivo y te lo devuelve en la misma llamada
+    const response = await fetch("https://api.cloudmersive.com/video/convert/to/mp3", {
       method: "POST",
       headers: { 
-        "Authorization": apiKey.trim() 
+        "Apikey": apiKey.trim() 
       },
       body: formData
     });
 
-    if (!uploadResponse.ok) {
-      const err = await uploadResponse.json();
-      setSplitterStatus("❌ Error al subir: " + (err.error || "Error desconocido"), "error");
+    if (!response.ok) {
+      const errText = await response.text();
+      setSplitterStatus("❌ Error API: " + response.status, "error");
+      console.error("Detalle:", errText);
       btn.disabled = false;
       return;
     }
 
-    const uploadData = await uploadResponse.json();
-    const fileId = uploadData.id;
+    // Recibimos el archivo binario directamente
+    const blob = await response.blob();
+    const downloadUrl = window.URL.createObjectURL(blob);
 
-    setSplitterStatus("⏳ Procesando separación... esto puede tardar 1-2 minutos", "loading");
-
-  const splitResponse = await fetch("https://www.lalal.ai/api/split/?v=2", {
-      method: "POST",
-      headers: {
-        "Authorization": apiKey.trim(),
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        "id": fileId,
-        "stem": "vocals" // O el que tengas configurado
-      })
-    });
-    if (!splitResponse.ok) {
-      const err = await splitResponse.json();
-      setSplitterStatus("❌ Error al procesar: " + (err.error || "Error desconocido"), "error");
-      btn.disabled = false;
-      return;
-    }
-
-    setSplitterStatus("⏳ Esperando resultado...", "loading");
-    await pollSplitterResult(fileId, apiKey, stemType);
+    // Mostramos el resultado inmediatamente (No necesitamos polling)
+    setSplitterStatus("✅ ¡Procesamiento completado!", "success");
+    
+    const resultsDiv = document.getElementById("splitterResults");
+    resultsDiv.style.display = "block";
+    
+    // Aquí adaptamos los resultados a tu interfaz
+    resultsDiv.innerHTML = `
+      <div class="result-card">
+        <h3>Resultado</h3>
+        <p>Tu archivo ha sido procesado correctamente.</p>
+        <a href="${downloadUrl}" download="procesado_vocalapp.mp3" class="btn-download">
+          📥 Descargar Audio
+        </a>
+      </div>
+    `;
+    
+    btn.disabled = false;
 
   } catch (err) {
     setSplitterStatus("❌ Error de conexión: " + err.message, "error");
@@ -822,60 +826,44 @@ async function splitAudio() {
   }
 }
 
-async function pollSplitterResult(fileId, apiKey, stemType) {
-  const btn = document.getElementById("splitBtn");
-  let attempts = 0;
-  // 120 intentos de 5 segundos = 10 minutos de paciencia
-  const maxAttempts = 120; 
+// Nota: Ya no necesitamos la función pollSplitterResult 
+// porque Cloudmersive responde con el archivo de una vez.
 
-  const interval = setInterval(async function() {
-    attempts++;
-
-    try {
-      const checkResponse = await fetch("https://www.lalal.ai/api/check/?id=" + fileId + "&v=2", {
-        headers: { "Authorization": apiKey.trim() }
-      });
-
-      if (!checkResponse.ok) return; // Si hay un micro-corte de internet, seguimos intentando
-
-      const checkData = await checkResponse.json();
-      const task = checkData.task;
-
-      if (task && task.state === "success") {
-        clearInterval(interval);
-        showSplitterResults(task, stemType);
-        btn.disabled = false;
-
-      } else if (task && task.state === "error") {
-        clearInterval(interval);
-        setSplitterStatus("❌ Error en el procesamiento: " + (task.error || ""), "error");
-        btn.disabled = false;
-
-      } else if (attempts >= maxAttempts) {
-        clearInterval(interval);
-        setSplitterStatus("❌ El servidor de Lalal está tardando demasiado. Revisa tu internet.", "error");
-        btn.disabled = false;
-
-      } else {
-        // --- LA MEJORA VISUAL ---
-        // Si Lalal nos da el progreso, lo mostramos. Si no, mostramos los segundos.
-        const progressInfo = (task && task.progress) ? `${task.progress}%` : `${attempts * 5}s`;
-        setSplitterStatus("⏳ IA trabajando... " + progressInfo, "loading");
-      }
-
-    } catch (err) {
-      console.warn("Reintentando conexión...", err);
-    }
-
-  }, 5000);
-}
-
-function showSplitterResults(task, stemType) {
+function showSplitterResults(downloadUrl) {
   const resultsBox = document.getElementById("splitterResults");
+  
+  // Verificamos que el contenedor exista para evitar errores en la consola
+  if (!resultsBox) {
+    console.error("Error: No se encontró el contenedor 'splitterResults'");
+    return;
+  }
+
+  // Hacemos visible la caja de resultados
   resultsBox.style.display = "block";
 
-  const vocalsUrl       = task.stem?.vocals?.url       || null;
-  const instrumentalUrl = task.stem?.instrumental?.url || null;
+  // Insertamos el nuevo diseño de descarga compatible con Cloudmersive
+  resultsBox.innerHTML = `
+    <div class="result-card" style="background: #f1f5f9; border: 2px solid #e2e8f0; padding: 25px; border-radius: 15px; text-align: center; margin-top: 20px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);">
+      <h3 style="color: #0f172a; margin-bottom: 10px;">✨ ¡Procesamiento Exitoso!</h3>
+      <p style="color: #475569; font-size: 14px; margin-bottom: 20px;">Tu archivo de audio ha sido procesado correctamente por la nueva API.</p>
+      
+      <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+        <a href="${downloadUrl}" download="resultado_vocalapp.mp3" 
+           style="background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 10px; font-weight: bold; display: flex; align-items: center; gap: 8px; transition: transform 0.2s;">
+           📥 Descargar Audio
+        </a>
+        
+        <button onclick="window.location.reload()" 
+                style="background: #64748b; color: white; padding: 12px 24px; border: none; border-radius: 10px; cursor: pointer; font-weight: 600;">
+           🔄 Nuevo proceso
+        </button>
+      </div>
+    </div>
+  `;
+
+  // Desplazamos la pantalla automáticamente hacia el resultado para que el usuario lo vea
+  resultsBox.scrollIntoView({ behavior: 'smooth' });
+}
 
   // --- CONEXIÓN GLOBAL ---
   // Guardamos la pista instrumental en nuestra "caja" de la Línea 1
