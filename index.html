@@ -208,14 +208,72 @@
         </div>
       </section>
 
-      <!-- CONFIGURACIÓN -->
       <section id="config" class="tab">
-        <h1>⚙️ Configuración</h1>
-      </section>
+  <h1>⚙️ Configuración</h1>
 
-    </main>
+  <div class="card" style="margin-bottom: 24px;">
+    <h2>🤖 OpenAI / Whisper</h2>
+    <p style="color:#94a3b8; margin-bottom:12px;">
+      Guarda tu API Key para generar letras automáticamente con Whisper.
+    </p>
+
+    <input
+      type="password"
+      id="openaiApiKey"
+      placeholder="sk-..."
+      style="
+        width:100%;
+        padding:12px;
+        border-radius:8px;
+        border:none;
+        outline:none;
+        margin-bottom:12px;
+      "
+    >
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <button id="saveApiKeyBtn" type="button" class="btn-save">💾 Guardar clave</button>
+      <button id="showApiKeyBtn" type="button" class="btn-retry">👁 Ver</button>
+    </div>
+
+    <div
+      id="apiKeyStatus"
+      style="margin-top:12px; font-size:14px; color:#94a3b8;"
+    >
+      Estado: sin guardar
+    </div>
   </div>
 
-  <script src="app.js"></script>
-</body>
-</html>
+  <div class="card">
+    <h2>✂️ Lalal.ai</h2>
+    <p style="color:#94a3b8; margin-bottom:12px;">
+      Guarda tu API Key para usar el separador de voz e instrumental.
+    </p>
+
+    <input
+      type="password"
+      id="lalalApiKey"
+      placeholder="Ingresa tu clave de Lalal.ai"
+      style="
+        width:100%;
+        padding:12px;
+        border-radius:8px;
+        border:none;
+        outline:none;
+        margin-bottom:12px;
+      "
+    >
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <button id="saveLalalKeyBtn" type="button" class="btn-save">💾 Guardar clave</button>
+      <button id="showLalalKeyBtn" type="button" class="btn-retry">👁 Ver</button>
+    </div>
+
+    <div
+      id="lalalKeyStatus"
+      style="margin-top:12px; font-size:14px; color:#94a3b8;"
+    >
+      Estado: sin guardar
+    </div>
+  </div>
+</section>
