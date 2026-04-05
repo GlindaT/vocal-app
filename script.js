@@ -848,25 +848,6 @@ function showSplitterResults(downloadUrl) {
   resultsBox.scrollIntoView({ behavior: 'smooth' });
 }
 
- // ==========================================
-// 1. VARIABLES GLOBALES DE CONEXIÓN (PÉGALO AQUÍ)
-// ==========================================
-// ==========================================
-// 1. VARIABLES GLOBALES Y CONFIGURACIÓN
-// ==========================================
-
-let letraLrcGlobal = "";
-const API_KEY_CLOUDMERSIVE = "1b8014f4-9e84-4cab-b7a1-b5982618a343"; // Tu llave real
-
-function safeAddEvent(id, event, handler) {
-  const el = document.getElementById(id);
-  if (el) {
-    el.addEventListener(event, handler);
-  } else {
-    console.warn(`Aviso: No se encontró el botón con ID "${id}"`);
-  }
-}
-
 function setSplitterStatus(msg, type) {
   const el = document.getElementById("splitterStatus");
   if (!el) return;
