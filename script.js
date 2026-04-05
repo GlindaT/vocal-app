@@ -1,5 +1,9 @@
 console.log("🚀 El archivo script.js se ha cargado correctamente");
-
+// ==========================================
+// 1. VARIABLES GLOBALES DE CONEXIÓN (PÉGALO AQUÍ)
+// ==========================================
+let instrumentalUrlGlobal = null;
+let letraLrcGlobal = "";
 // 1. DEFINICIÓN DE LA HERRAMIENTA (INDISPENSABLE)
 function safeAddEvent(id, event, handler) {
   const el = document.getElementById(id);
@@ -866,6 +870,12 @@ function showSplitterResults(task, stemType) {
   const vocalsUrl       = task.stem?.vocals?.url       || null;
   const instrumentalUrl = task.stem?.instrumental?.url || null;
 
+  // --- CONEXIÓN GLOBAL ---
+  // Guardamos la pista instrumental en nuestra "caja" de la Línea 1
+  if (instrumentalUrl) {
+    instrumentalUrlGlobal = instrumentalUrl; 
+  }
+
   const vocalsBox = document.getElementById("vocalsResult");
   if ((stemType === "vocals" || stemType === "both") && vocalsUrl) {
     document.getElementById("vocalsAudio").src = vocalsUrl;
@@ -875,16 +885,39 @@ function showSplitterResults(task, stemType) {
     vocalsBox.style.display = "none";
   }
 
-  const instrBox = document.getElementById("instrumentalResult");
+  const instBox = document.getElementById("instrumentalResult");
   if ((stemType === "instrumental" || stemType === "both") && instrumentalUrl) {
     document.getElementById("instrumentalAudio").src = instrumentalUrl;
     document.getElementById("instrumentalDownload").href = instrumentalUrl;
-    instrBox.style.display = "block";
+    instBox.style.display = "block";
   } else {
-    instrBox.style.display = "none";
+    instBox.style.display = "none";
   }
 
-  setSplitterStatus("✅ ¡Separación completa!", "success");
+  // --- BOTÓN MÁGICO PARA IR AL KARAOKE ---
+  // Solo lo creamos si no existe ya uno en pantalla
+  if (!document.getElementById("btnMagicoKaraoke")) {
+    const btn = document.createElement("button");
+    btn.id = "btnMagicoKaraoke";
+    btn.innerHTML = "🎤 ¡Todo listo! Ir al Karaoke";
+    btn.style.marginTop = "20px";
+    btn.style.padding = "12px 24px";
+    btn.style.backgroundColor = "#6a11cb";
+    btn.style.color = "white";
+    btn.style.border = "none";
+    btn.style.borderRadius = "8px";
+    btn.style.cursor = "pointer";
+    btn.style.fontWeight = "bold";
+    
+    btn.onclick = function() {
+       // Llamamos al puente que pusiste al final del archivo
+       enviarAKaraoke(instrumentalUrl, letraLrcGlobal);
+    };
+    resultsBox.appendChild(btn);
+  }
+
+  // Tu mensaje original de éxito
+  setSplitterStatus("✅ Separación completa", "success");
 }
 
 function setSplitterStatus(msg, type) {
@@ -937,4 +970,26 @@ document.addEventListener("DOMContentLoaded", function () {
   loadApiKey();
   loadLalalKey();
 });
+// ==========================================
+// NUEVA FUNCIÓN DE CONEXIÓN (PÉGALO AQUÍ)
+// ==========================================
+function enviarAKaraoke(urlInstrumental, textoLrc) {
+    // 1. Guardamos los datos en las "cajas" globales que pusiste en la línea 1
+    instrumentalUrlGlobal = urlInstrumental;
+    letraLrcGlobal = textoLrc;
+
+    // 2. Buscamos el cuadro de texto del Karaoke para poner la letra
+    const lyricsInput = document.getElementById("karaokeLyricsInput");
+    if (lyricsInput) {
+        lyricsInput.value = textoLrc;
+    }
+
+    // 3. Saltamos a la pestaña de Karaoke
+    if (typeof showTab === 'function') {
+        showTab('karaoke');
+    }
+
+    alert("✨ ¡Pista y letra enviadas! Ya puedes iniciar el Karaoke.");
+}
+
 console.log("🏁 He llegado al final del archivo sin errores");
