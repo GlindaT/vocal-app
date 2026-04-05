@@ -140,46 +140,52 @@
     </section>
 
     <!-- CONFIG -->
-    <section id="config" class="tab">
-      <h1>⚙️ Configuración</h1>
-      <div class="card">
-        <h3>🔑 API Key de OpenAI</h3>
-        <p style="color:#94a3b8; font-size:14px;">
-          Tu clave se guarda localmente en tu navegador, 
-          nunca se envía a ningún servidor externo.
-        </p>
-        <div class="config-row">
-          <input 
-            type="password" 
-            id="openaiApiKey" 
-            placeholder="sk-..." 
-            style="
-              flex:1; 
-              padding:10px; 
-              border-radius:8px; 
-              border:1px solid #334155;
-              background:#0f172a; 
-              color:white; 
-              font-size:14px;
-            "
-          >
-          <button id="showApiKeyBtn" class="btn-secondary">👁 Ver</button>
-          <button id="saveApiKeyBtn" class="btn-save">💾 Guardar</button>
-        </div>
-        <div id="apiKeyStatus" style="
-          margin-top:10px; 
-          font-size:13px; 
-          color:#64748b;
-        ">
-          Sin clave guardada
-        </div>
-      </div>
-    </section>
+<section id="config" class="tab">
+  <h1>⚙️ Configuración</h1>
 
-  </main>
-</div>
+  <div class="card">
+    <h3>🔑 API Key de OpenAI</h3>
+    <p style="color:#94a3b8; font-size:14px;">
+      Para Whisper — se guarda solo en tu navegador
+    </p>
+    <div class="config-row">
+      <input 
+        type="password" 
+        id="openaiApiKey" 
+        placeholder="sk-..." 
+        style="flex:1; padding:10px; border-radius:8px; 
+               border:1px solid #334155; background:#0f172a; 
+               color:white; font-size:14px;"
+      >
+      <button id="showApiKeyBtn" class="btn-secondary">👁 Ver</button>
+      <button id="saveApiKeyBtn" class="btn-save">💾 Guardar</button>
+    </div>
+    <div id="apiKeyStatus" style="margin-top:10px; font-size:13px; color:#64748b;">
+      Sin clave guardada
+    </div>
+  </div>
 
-<script src="app.js"></script>
-</body>
-</html>
+  <div class="card">
+    <h3>✂️ API Key de Lalal.ai</h3>
+    <p style="color:#94a3b8; font-size:14px;">
+      Para Splitter — se guarda solo en tu navegador
+    </p>
+    <div class="config-row">
+      <input 
+        type="password" 
+        id="lalalApiKey" 
+        placeholder="tu clave de activación..." 
+        style="flex:1; padding:10px; border-radius:8px; 
+               border:1px solid #334155; background:#0f172a; 
+               color:white; font-size:14px;"
+      >
+      <button id="showLalalKeyBtn" class="btn-secondary">👁 Ver</button>
+      <button id="saveLalalKeyBtn" class="btn-save">💾 Guardar</button>
+    </div>
+    <div id="lalalKeyStatus" style="margin-top:10px; font-size:13px; color:#64748b;">
+      Sin clave guardada
+    </div>
+  </div>
+
+</section>
 
