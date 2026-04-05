@@ -659,6 +659,9 @@ async function generateLyricsWithWhisper() {
     if (data.segments) {
       // Aquí usamos tus funciones originales para procesar la letra
       const lrc = convertToLRC(data.segments);
+      // === PÉGALA AQUÍ (Línea de conexión) ===
+      letraLrcGlobal = lrc; 
+      // ======================================
       karaokeIsTimed = true;
       karaokeLyricsData = parseLRC(lrc);
       
