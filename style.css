@@ -1,1 +1,332 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0f172a;
+  color: white;
+}
 
+.app {
+  display: flex;
+  height: 100vh;
+}
+
+.sidebar {
+  width: 220px;
+  background: #1e293b;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar h2 {
+  margin-bottom: 20px;
+}
+
+.sidebar button {
+  background: none;
+  border: none;
+  color: #cbd5f5;
+  padding: 12px;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: 0.2s;
+}
+
+.sidebar button:hover {
+  background: #334155;
+  color: white;
+}
+
+.content {
+  flex: 1;
+  padding: 40px;
+  overflow-y: auto;
+}
+
+.tab {
+  display: none;
+}
+
+.tab.active {
+  display: block;
+}
+
+/* Afinador */
+.needle {
+  width: 300px;
+  height: 10px;
+  background: #334155;
+  margin: 30px auto;
+  position: relative;
+  border-radius: 10px;
+}
+
+.indicator {
+  width: 6px;
+  height: 25px;
+  background: red;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 4px;
+  transition: left 0.1s, background 0.2s;
+}
+
+button#recordBtn {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 10px;
+  background: #22c55e;
+  color: black;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+#libraryList div {
+  background: #1e293b;
+  padding: 15px;
+  border-radius: 10px;
+}
+
+.lyrics-box {
+  margin-top: 20px;
+  padding: 20px;
+  background: #1e293b;
+  border-radius: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+  text-align: left;
+  white-space: pre-wrap;
+}
+
+.current-line {
+  color: #22c55e;
+  font-weight: bold;
+}
+
+/* KARAOKE */
+.card {
+  background: #1e293b;
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 20px;
+}
+
+.karaoke-file-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.karaoke-file-row label {
+  color: #94a3b8;
+  font-size: 14px;
+  min-width: 160px;
+}
+
+.karaoke-file-row input[type="file"] {
+  background: #0f172a;
+  color: white;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.karaoke-buttons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.karaoke-buttons label {
+  color: #94a3b8;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.karaoke-lyrics-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+  min-height: 120px;
+  justify-content: center;
+}
+
+.lyrics-prev,
+.lyrics-next {
+  color: #475569;
+  font-size: 17px;
+  transition: all 0.3s;
+  min-height: 24px;
+}
+
+.lyrics-current {
+  color: #facc15;
+  font-size: 30px;
+  font-weight: bold;
+  text-shadow: 0 0 20px rgba(250, 204, 21, 0.5);
+  animation: glowPulse 1.2s ease-in-out infinite alternate;
+  min-height: 40px;
+}
+
+@keyframes glowPulse {
+  from { text-shadow: 0 0 10px rgba(250, 204, 21, 0.3); }
+  to   { text-shadow: 0 0 30px rgba(250, 204, 21, 0.9); }
+}
+
+.karaoke-note {
+  font-size: 28px;
+  font-weight: bold;
+  color: #22c55e;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.tuner-status {
+  text-align: center;
+  color: #94a3b8;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+.karaoke-status {
+  font-size: 14px;
+  color: #64748b;
+  text-align: center;
+  margin-bottom: 16px;
+  padding: 8px;
+}
+
+.karaoke-status.recording {
+  color: #ef4444;
+  animation: blink 1s step-start infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0.4; }
+}
+
+#startKaraokeBtn {
+  background: #22c55e;
+  color: black;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-weight: bold;
+  font-size: 15px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+#startKaraokeBtn:hover:not(:disabled) { background: #16a34a; }
+
+#startKaraokeBtn:disabled {
+  background: #334155;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.btn-danger {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-weight: bold;
+  font-size: 15px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.btn-danger:hover:not(:disabled) { background: #dc2626; }
+
+.btn-danger:disabled {
+  background: #334155;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.karaoke-decision {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.btn-save {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+  flex: 1;
+}
+
+.btn-save:hover { background: #2563eb; }
+
+.btn-retry {
+  background: #f59e0b;
+  color: black;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+  flex: 1;
+}
+
+.btn-retry:hover { background: #d97706; }
+
+/* CONFIG */
+.config-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.btn-secondary {
+  background: #334155;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: 0.2s;
+}
+
+.btn-secondary:hover { background: #475569; }
+
+.btn-whisper {
+  background: #7c3aed;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+  font-size: 14px;
+}
+
+.btn-whisper:hover:not(:disabled) { background: #6d28d9; }
+
+.btn-whisper:disabled {
+  background: #334155;
+  color: #64748b;
+  cursor: not-allowed;
+}
