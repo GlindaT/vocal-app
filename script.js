@@ -1,19 +1,41 @@
 console.log("🚀 El archivo script.js se ha cargado correctamente");
-// -------- NAVEGACIÓN --------
+
+// 1. DEFINICIÓN DE LA HERRAMIENTA (INDISPENSABLE)
+function safeAddEvent(id, event, handler) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.addEventListener(event, handler);
+  } else {
+    // Si no encuentra el botón, te avisará en la consola sin romper el código
+    console.warn(`Aviso: No se encontró el botón con ID "${id}" en el HTML.`);
+  }
+}
+
+// 2. FUNCIÓN PARA MOSTRAR PESTAÑAS
 function showTab(tabId) {
-  // Quita la clase active de todas las secciones
+  console.log("Cambiando a pestaña:", tabId);
   document.querySelectorAll(".tab").forEach(tab => {
     tab.classList.remove("active");
   });
 
-  // Agrega la clase active solo a la que clicaste
   const target = document.getElementById(tabId);
   if (target) {
     target.classList.add("active");
   } else {
-    console.error("No se encontró la pestaña:", tabId);
+    console.error("No se encontró la sección con ID:", tabId);
   }
 }
+
+// 3. CONEXIÓN DE BOTONES (Usando la herramienta definida arriba)
+document.addEventListener("DOMContentLoaded", () => {
+  safeAddEvent("btnAfinador", "click", () => showTab("afinador"));
+  safeAddEvent("btnEstudio", "click", () => showTab("estudio"));
+  safeAddEvent("btnBiblioteca", "click", () => showTab("biblioteca"));
+  safeAddEvent("btnKaraoke", "click", () => showTab("karaoke"));
+  safeAddEvent("btnSplitter", "click", () => showTab("splitter"));
+  safeAddEvent("btnConfig", "click", () => showTab("config"));
+  console.log("✅ Todos los botones de navegación han sido vinculados.");
+});
 // -------- AFINADOR --------
 let audioContext;
 let analyser;
