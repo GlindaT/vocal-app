@@ -758,80 +758,55 @@ function getLalalKey() {
 
 // ======== SPLITTER (CLOUDMERSIVE MOTOR) ========
 async function splitAudio() {
-  const apiKey = getLalalKey(); // Ahora obtiene la de Cloudmersive
-  if (!apiKey) {
-    return;
-  }
-
   const fileInput = document.getElementById("splitterFile");
-  const file = fileInput.files[0];
+  const file = fileInput ? fileInput.files[0] : null;
   
   if (!file) {
-    setSplitterStatus("⚠️ Primero selecciona un archivo de audio", "error");
-    return;
-  }
-
-  // Validación de tamaño (Cloudmersive Free suele aceptar hasta 15-20MB, ajustamos aquí)
-  if (file.size > 20 * 1024 * 1024) {
-    setSplitterStatus("⚠️ El archivo es muy grande para la versión gratuita (Máx 20MB)", "error");
+    setSplitterStatus("⚠️ Selecciona un archivo de audio", "error");
     return;
   }
 
   const btn = document.getElementById("splitBtn");
   btn.disabled = true;
-  document.getElementById("splitterResults").style.display = "none";
+  setSplitterStatus("⏳ Procesando con Cloudmersive... espera un momento", "loading");
 
-  setSplitterStatus("⏳ Conectando con Cloudmersive y procesando...", "loading");
+  const formData = new FormData();
+  formData.append("inputFile", file);
 
   try {
-    const formData = new FormData();
-    formData.append("inputFile", file);
-
-    // Usamos el endpoint de conversión de Cloudmersive
-    // Nota: Cloudmersive procesa el archivo y te lo devuelve en la misma llamada
     const response = await fetch("https://api.cloudmersive.com/video/convert/to/mp3", {
       method: "POST",
-      headers: { 
-        "Apikey": apiKey.trim() 
-      },
+      headers: { "Apikey": API_KEY_CLOUDMERSIVE },
       body: formData
     });
 
-    if (!response.ok) {
-      const errText = await response.text();
-      setSplitterStatus("❌ Error API: " + response.status, "error");
-      console.error("Detalle:", errText);
-      btn.disabled = false;
-      return;
+    if (response.ok) {
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      setSplitterStatus("✅ ¡Procesado con éxito!", "success");
+      showSplitterResults(url); 
+    } else {
+      setSplitterStatus("❌ Error en la API. Revisa tu saldo en Cloudmersive.", "error");
     }
-
-    // Recibimos el archivo binario directamente
-    const blob = await response.blob();
-    const downloadUrl = window.URL.createObjectURL(blob);
-
-    // Mostramos el resultado inmediatamente (No necesitamos polling)
-    setSplitterStatus("✅ ¡Procesamiento completado!", "success");
-    
-    const resultsDiv = document.getElementById("splitterResults");
-    resultsDiv.style.display = "block";
-    
-    // Aquí adaptamos los resultados a tu interfaz
-    resultsDiv.innerHTML = `
-      <div class="result-card">
-        <h3>Resultado</h3>
-        <p>Tu archivo ha sido procesado correctamente.</p>
-        <a href="${downloadUrl}" download="procesado_vocalapp.mp3" class="btn-download">
-          📥 Descargar Audio
-        </a>
-      </div>
-    `;
-    
-    btn.disabled = false;
-
   } catch (err) {
-    setSplitterStatus("❌ Error de conexión: " + err.message, "error");
+    setSplitterStatus("❌ Error de conexión", "error");
+  } finally {
     btn.disabled = false;
   }
+}
+
+function showSplitterResults(downloadUrl) {
+  const resultsBox = document.getElementById("splitterResults");
+  if (!resultsBox) return;
+  resultsBox.style.display = "block";
+  resultsBox.innerHTML = `
+    <div style="background: #f1f5f9; padding: 20px; border-radius: 10px; text-align: center;">
+      <p>✨ Audio listo:</p>
+      <a href="${downloadUrl}" download="resultado.mp3" style="background:#10b981; color:white; padding:10px 20px; text-decoration:none; border-radius:5px;">
+        📥 Descargar MP3
+      </a>
+    </div>
+  `;
 }
 
 // Nota: Ya no necesitamos la función pollSplitterResult 
@@ -953,6 +928,16 @@ function setSplitterStatus(msg, type) {
 
 // ======== FINAL DEL ARCHIVO: EL GRAN CONECTOR ========
 document.addEventListener("DOMContentLoaded", function () {
+  // Conecta el botón de separar
+  safeAddEvent("splitBtn", "click", splitAudio);
+  
+  // Conecta las pestañas
+  safeAddEvent("btnSplitter", "click", () => showTab("splitter"));
+  safeAddEvent("btnConfig", "click", () => showTab("config"));
+  
+  // Carga la llave guardada
+  loadLalalKey(); 
+});
   
   // NAVEGACIÓN (Sidebar)
   safeAddEvent("btnAfinador", "click", () => showTab("afinador"));
