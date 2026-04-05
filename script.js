@@ -775,7 +775,7 @@ async function splitAudio() {
     const formData = new FormData();
     formData.append("file", file);
 
-    const uploadResponse = await fetch("https://www.lalal.ai/api/upload/", {
+    const uploadResponse = await fetch("https://www.lalal.ai/api/upload/?v=2", {
       method: "POST",
       headers: { "Authorization": apiKey.trim() },
       body: formData
@@ -793,7 +793,7 @@ async function splitAudio() {
 
     setSplitterStatus("⏳ Procesando separación... esto puede tardar 1-2 minutos", "loading");
 
-  const splitResponse = await fetch("https://www.lalal.ai/api/split/", {
+  const splitResponse = await fetch("https://www.lalal.ai/api/split/?v=2", {
       method: "POST",
       headers: {
         "Authorization": apiKey.trim(),
@@ -832,7 +832,7 @@ async function pollSplitterResult(fileId, apiKey, stemType) {
     attempts++;
 
     try {
-      const checkResponse = await fetch("https://www.lalal.ai/api/check/?id=" + fileId, {
+      const checkResponse = await fetch("https://www.lalal.ai/api/check/?id=" + fileId + "&v=2", {
         headers: { "Authorization": apiKey.trim() }
       });
 
