@@ -134,56 +134,68 @@
     </section>
 
     <!-- SPLITTER -->
-    <section id="splitter" class="tab">
-      <h1>✂️ Splitter</h1>
-      <p>Separación de voz y música (fase avanzada)</p>
-    </section>
-
-    <!-- CONFIG -->
-<section id="config" class="tab">
-  <h1>⚙️ Configuración</h1>
+<section id="splitter" class="tab">
+  <h1>✂️ Splitter</h1>
+  <p style="color:#94a3b8;">Separa la voz de la música de cualquier canción</p>
 
   <div class="card">
-    <h3>🔑 API Key de OpenAI</h3>
-    <p style="color:#94a3b8; font-size:14px;">
-      Para Whisper — se guarda solo en tu navegador
-    </p>
-    <div class="config-row">
-      <input 
-        type="password" 
-        id="openaiApiKey" 
-        placeholder="sk-..." 
-        style="flex:1; padding:10px; border-radius:8px; 
-               border:1px solid #334155; background:#0f172a; 
-               color:white; font-size:14px;"
-      >
-      <button id="showApiKeyBtn" class="btn-secondary">👁 Ver</button>
-      <button id="saveApiKeyBtn" class="btn-save">💾 Guardar</button>
+    <div class="karaoke-file-row">
+      <label>🎵 Canción:</label>
+      <input type="file" id="splitterFile" accept="audio/*,.mp3,.wav,.ogg">
     </div>
-    <div id="apiKeyStatus" style="margin-top:10px; font-size:13px; color:#64748b;">
-      Sin clave guardada
+
+    <div style="margin-top:16px;">
+      <label style="color:#94a3b8; font-size:14px;">¿Qué quieres separar?</label>
+      <div style="display:flex; gap:16px; margin-top:8px;">
+        <label style="color:white; cursor:pointer;">
+          <input type="radio" name="stemType" value="vocals" checked> 🎤 Solo voz
+        </label>
+        <label style="color:white; cursor:pointer;">
+          <input type="radio" name="stemType" value="instrumental"> 🎸 Solo música
+        </label>
+        <label style="color:white; cursor:pointer;">
+          <input type="radio" name="stemType" value="both"> 🎵 Ambos
+        </label>
+      </div>
+    </div>
+
+    <div style="margin-top:20px;">
+      <button id="splitBtn" class="btn-whisper" style="font-size:15px; padding:12px 28px;">
+        ✂️ Separar
+      </button>
     </div>
   </div>
 
-  <div class="card">
-    <h3>✂️ API Key de Lalal.ai</h3>
-    <p style="color:#94a3b8; font-size:14px;">
-      Para Splitter — se guarda solo en tu navegador
-    </p>
-    <div class="config-row">
-      <input 
-        type="password" 
-        id="lalalApiKey" 
-        placeholder="tu clave de activación..." 
-        style="flex:1; padding:10px; border-radius:8px; 
-               border:1px solid #334155; background:#0f172a; 
-               color:white; font-size:14px;"
-      >
-      <button id="showLalalKeyBtn" class="btn-secondary">👁 Ver</button>
-      <button id="saveLalalKeyBtn" class="btn-save">💾 Guardar</button>
+  <div id="splitterStatus" style="
+    display:none;
+    margin-top:10px;
+    padding:14px;
+    border-radius:8px;
+    background:#0f172a;
+    color:#94a3b8;
+    font-size:14px;
+    text-align:center;
+  "></div>
+
+  <div id="splitterResults" class="card" style="display:none;">
+    <h3>🎧 Resultados:</h3>
+    <div id="vocalsResult" style="margin-bottom:16px; display:none;">
+      <p style="color:#94a3b8; margin-bottom:6px;">🎤 Voz:</p>
+      <audio id="vocalsAudio" controls style="width:100%;"></audio>
+      <a id="vocalsDownload" download="voz.mp3">
+        <button class="btn-save" style="margin-top:8px; width:100%;">
+          ⬇️ Descargar Voz
+        </button>
+      </a>
     </div>
-    <div id="lalalKeyStatus" style="margin-top:10px; font-size:13px; color:#64748b;">
-      Sin clave guardada
+    <div id="instrumentalResult" style="display:none;">
+      <p style="color:#94a3b8; margin-bottom:6px;">🎸 Música:</p>
+      <audio id="instrumentalAudio" controls style="width:100%;"></audio>
+      <a id="instrumentalDownload" download="musica.mp3">
+        <button class="btn-save" style="margin-top:8px; width:100%;">
+          ⬇️ Descargar Música
+        </button>
+      </a>
     </div>
   </div>
 
