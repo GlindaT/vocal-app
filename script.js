@@ -767,7 +767,9 @@ function getLalalKey() {
 // ======== SPLITTER (CLOUDMERSIVE MOTOR) ========
 async function splitAudio() {
   const apiKey = getLalalKey(); // Ahora obtiene la de Cloudmersive
-  if (!apiKey) return;
+  if (!apiKey) {
+    return;
+  }
 
   const fileInput = document.getElementById("splitterFile");
   const file = fileInput.files[0];
@@ -927,7 +929,6 @@ function showSplitterResults(downloadUrl) {
 
   // Tu mensaje original de éxito
   setSplitterStatus("✅ Separación completa", "success");
-}
 
 function setSplitterStatus(msg, type) {
   const el = document.getElementById("splitterStatus");
