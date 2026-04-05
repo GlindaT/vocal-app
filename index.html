@@ -208,6 +208,7 @@
         </div>
       </section>
 
+      <!-- CONFIGURACION -->
       <section id="config" class="tab">
   <h1>⚙️ Configuración</h1>
 
@@ -221,25 +222,15 @@
       type="password"
       id="openaiApiKey"
       placeholder="sk-..."
-      style="
-        width:100%;
-        padding:12px;
-        border-radius:8px;
-        border:none;
-        outline:none;
-        margin-bottom:12px;
-      "
+      style="width:100%; padding:12px; border-radius:8px; border:none; outline:none;"
     >
 
-    <div style="display:flex; gap:10px; flex-wrap:wrap;">
-      <button id="saveApiKeyBtn" type="button" class="btn-save">💾 Guardar clave</button>
-      <button id="showApiKeyBtn" type="button" class="btn-retry">👁 Ver</button>
+    <div class="config-row">
+      <button id="saveApiKeyBtn" type="button" class="btn-whisper">💾 Guardar clave</button>
+      <button id="showApiKeyBtn" type="button" class="btn-secondary">👁 Ver</button>
     </div>
 
-    <div
-      id="apiKeyStatus"
-      style="margin-top:12px; font-size:14px; color:#94a3b8;"
-    >
+    <div id="apiKeyStatus" style="margin-top:12px; font-size:14px; color:#94a3b8;">
       Estado: sin guardar
     </div>
   </div>
@@ -254,25 +245,15 @@
       type="password"
       id="lalalApiKey"
       placeholder="Ingresa tu clave de Lalal.ai"
-      style="
-        width:100%;
-        padding:12px;
-        border-radius:8px;
-        border:none;
-        outline:none;
-        margin-bottom:12px;
-      "
+      style="width:100%; padding:12px; border-radius:8px; border:none; outline:none;"
     >
 
-    <div style="display:flex; gap:10px; flex-wrap:wrap;">
-      <button id="saveLalalKeyBtn" type="button" class="btn-save">💾 Guardar clave</button>
-      <button id="showLalalKeyBtn" type="button" class="btn-retry">👁 Ver</button>
+    <div class="config-row">
+      <button id="saveLalalKeyBtn" type="button" class="btn-whisper">💾 Guardar clave</button>
+      <button id="showLalalKeyBtn" type="button" class="btn-secondary">👁 Ver</button>
     </div>
 
-    <div
-      id="lalalKeyStatus"
-      style="margin-top:12px; font-size:14px; color:#94a3b8;"
-    >
+    <div id="lalalKeyStatus" style="margin-top:12px; font-size:14px; color:#94a3b8;">
       Estado: sin guardar
     </div>
   </div>
