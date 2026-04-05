@@ -883,9 +883,9 @@ function showSplitterResults(downloadUrl) {
 
   // --- CONEXIÓN GLOBAL ---
   // Guardamos la pista instrumental en nuestra "caja" de la Línea 1
-  if (instrumentalUrl) {
-    instrumentalUrlGlobal = instrumentalUrl; 
-  }
+ if (typeof instrumentalUrl !== 'undefined' && instrumentalUrl) {
+  instrumentalUrlGlobal = instrumentalUrl; 
+}
 
   const vocalsBox = document.getElementById("vocalsResult");
   if ((stemType === "vocals" || stemType === "both") && vocalsUrl) {
