@@ -777,7 +777,9 @@ async function splitAudio() {
 
     const uploadResponse = await fetch("https://www.lalal.ai/api/upload/?v=2", {
       method: "POST",
-      headers: { "Authorization": apiKey.trim() },
+      headers: { 
+        "Authorization": apiKey.trim() 
+      },
       body: formData
     });
 
@@ -800,12 +802,10 @@ async function splitAudio() {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        id: fileId,
-        filter: 1,
-        splitter: "phoenix"
+        "id": fileId,
+        "stem": "vocals" // O el que tengas configurado
       })
     });
-
     if (!splitResponse.ok) {
       const err = await splitResponse.json();
       setSplitterStatus("❌ Error al procesar: " + (err.error || "Error desconocido"), "error");
