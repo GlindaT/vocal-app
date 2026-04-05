@@ -7,247 +7,87 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="app">
 
-    <nav class="sidebar">
-      <h2>🎤 VocalApp</h2>
-      <button id="btnAfinador" type="button">Afinador</button>
-      <button id="btnEstudio" type="button">Estudio</button>
-      <button id="btnBiblioteca" type="button">Biblioteca</button>
-      <button id="btnKaraoke" type="button">Karaoke</button>
-      <button id="splitBtn" onclick="splitAudio()">Separar Voces</button>
-      <button id="btnConfig" type="button">Configuración</button>
-    </nav>
+<div class="app">
 
-    <main class="content">
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <h2>🎤 VocalApp</h2>
 
-      <!-- AFINADOR -->
-      <section id="afinador" class="tab active">
-        <h1>🎵 Afinador</h1>
-        <select id="targetNote"></select>
-        <br><br>
-        <button id="recordBtn" type="button">Grabar</button>
-        <h2 id="note">Nota: --</h2>
-        <h3 id="status">---</h3>
-        <div class="needle">
-          <div id="indicator" class="indicator"></div>
-        </div>
-      </section>
+    <button id="btnAfinador" type="button">Afinador</button>
+    <button id="btnEstudio" type="button">Estudio</button>
+    <button id="btnBiblioteca" type="button">Biblioteca</button>
+    <button id="btnKaraoke" type="button">Karaoke</button>
+    <button id="btnSplitter" type="button">Splitter</button>
+    <button id="btnConfig" type="button">Configuración</button>
+  </nav>
 
-      <!-- ESTUDIO -->
-      <section id="estudio" class="tab">
-        <h1>🎧 Estudio</h1>
-        <input type="file" id="audioFile" accept="audio/*">
-        <br><br>
-        <audio id="player" controls></audio>
-        <br><br>
-        <button id="startStudioBtn" type="button">🎙️ Grabar</button>
-        <button id="stopStudioBtn" type="button">⏹️ Detener</button>
+  <!-- CONTENIDO -->
+  <main class="content">
 
-        <h2>Tu grabación:</h2>
-        <audio id="studioRecording" controls></audio>
+    <!-- AFINADOR -->
+    <section id="afinador" class="tab active">
+      <h1>🎵 Afinador</h1>
 
-        <h3>📄 Letra</h3>
-        <input type="file" id="lyricsFile" accept=".txt">
-        <div id="lyricsDisplay" class="lyrics-box">
-          Aquí aparecerá la letra...
-        </div>
-      </section>
+      <button id="recordBtn">Grabar</button>
 
-      <!-- BIBLIOTECA -->
-      <section id="biblioteca" class="tab">
-        <h1>📁 Biblioteca</h1>
-        <div id="libraryList"></div>
-      </section>
+      <h2 id="note">Nota: --</h2>
+    </section>
 
-      <!-- KARAOKE -->
-      <section id="karaoke" class="tab">
-        <h1>🎤 Karaoke</h1>
-        <p>Carga una pista y la letra, canta y decide si guardas o repites.</p>
+    <!-- ESTUDIO -->
+    <section id="estudio" class="tab">
+      <h1>🎧 Estudio</h1>
 
-        <div class="karaoke-setup card">
+      <input type="file" id="audioFile" accept="audio/*">
+      <br><br>
 
-          <div class="karaoke-file-row">
-            <label for="karaokeTrackFile">🎵 Pista de fondo:</label>
-            <input type="file" id="karaokeTrackFile" accept="audio/*">
-          </div>
+      <audio id="player" controls></audio>
+    </section>
 
-          <audio id="karaokeTrack" controls style="width: 100%; margin-top: 10px;"></audio>
+    <!-- BIBLIOTECA -->
+    <section id="biblioteca" class="tab">
+      <h1>📁 Biblioteca</h1>
+      <div id="libraryList"></div>
+    </section>
 
-          <div class="karaoke-file-row" style="margin-top: 16px;">
-            <label for="karaokeLyricsFile">📝 Letras (.txt o .lrc):</label>
-            <input type="file" id="karaokeLyricsFile" accept=".lrc,.txt">
-          </div>
+    <!-- KARAOKE -->
+    <section id="karaoke" class="tab">
+      <h1>🎤 Karaoke</h1>
 
-          <div class="karaoke-file-row" style="margin-top: 16px;">
-            <label>🤖 Generar letra automáticamente:</label>
-            <button id="whisperBtn" class="btn-whisper" type="button">
-              ✨ Generar con Whisper
-            </button>
-          </div>
+      <input type="file" id="karaokeTrackFile" accept="audio/*">
+      <br><br>
 
-          <div
-            id="whisperStatus"
-            style="
-              display:none;
-              margin-top:10px;
-              padding:10px;
-              border-radius:8px;
-              background:#0f172a;
-              color:#94a3b8;
-              font-size:13px;
-            "
-          ></div>
+      <audio id="karaokeTrack" controls></audio>
+    </section>
 
-          <div class="karaoke-buttons" style="margin-top: 20px;">
-            <button id="startKaraokeBtn" type="button">🎤 Iniciar Karaoke</button>
-            <button id="stopKaraokeBtn" type="button" disabled class="btn-danger">⏹️ Detener</button>
-            <label for="recordMix">
-              <input type="checkbox" id="recordMix"> Grabar mix completo
-            </label>
-          </div>
-        </div>
+    <!-- SPLITTER -->
+    <section id="splitter" class="tab">
+      <h1>✂️ Splitter</h1>
 
-        <div id="karaokeStatus" class="karaoke-status">Estado: Listo</div>
+      <input type="file" id="splitterFile" accept="audio/*">
+      <br><br>
 
-        <div class="card" id="karaokeScreenBox" style="display: none;">
-          <div id="karaokeLyricsDisplay" class="karaoke-lyrics-display">
-            <span id="lyricsPrev" class="lyrics-prev"></span>
-            <span id="lyricsCurrent" class="lyrics-current">Esperando letra...</span>
-            <span id="lyricsNext" class="lyrics-next"></span>
-          </div>
-        </div>
+      <button id="splitBtn">Separar audio</button>
+    </section>
 
-        <div class="card" id="karaokeTunerBox" style="display: none;">
-          <div id="karaokeNoteDisplay" class="karaoke-note">🎵 --</div>
-          <div class="needle">
-            <div id="karaokeIndicator" class="indicator"></div>
-          </div>
-          <div id="karaokeTunerStatus" class="tuner-status">Esperando...</div>
-        </div>
+    <!-- CONFIG -->
+    <section id="config" class="tab">
+      <h1>⚙️ Configuración</h1>
 
-        <div class="card" id="karaokeRecordingBox" style="display: none;">
-          <h3>🎧 Tu interpretación:</h3>
-          <audio id="karaokeMixRecording" controls style="width: 100%;"></audio>
-          <div class="karaoke-decision">
-            <button id="saveKaraokeBtn" class="btn-save" type="button">💾 Guardar en Biblioteca</button>
-            <button id="retryKaraokeBtn" class="btn-retry" type="button">🔄 Repetir</button>
-          </div>
-        </div>
-      </section>
+      <input
+        type="password"
+        id="openaiApiKey"
+        placeholder="API Key"
+      >
+      <br><br>
 
-      <!-- SPLITTER -->
-      <section id="splitter" class="tab">
-        <h1>✂️ Splitter</h1>
-        <p style="color:#94a3b8;">Separa la voz de la música de cualquier canción</p>
+      <button id="saveApiKeyBtn">Guardar</button>
+    </section>
 
-        <div class="card">
-          <div class="karaoke-file-row">
-            <label for="splitterFile">🎵 Canción:</label>
-            <input type="file" id="splitterFile" accept="audio/*,.mp3,.wav,.ogg">
-          </div>
+  </main>
 
-          <div style="margin-top: 16px;">
-  <label style="color:#94a3b8; font-size:14px;">¿Qué quieres separar?</label>
-  <div style="display:flex; gap:16px; margin-top:8px;">
-    <label style="color:white; cursor:pointer;">
-      <input type="radio" name="stemType" value="vocals" checked> 🎤 Solo voz
-    </label>
-    <label style="color:white; cursor:pointer;">
-      <input type="radio" name="stemType" value="instrumental"> 🎸 Solo música
-    </label>
-    <label style="color:white; cursor:pointer;">
-      <input type="radio" name="stemType" value="both"> 🎵 Ambos
-    </label>
-  </div>
 </div>
 
-<div style="margin-top: 20px;">
-  <button id="splitBtn" class="btn-whisper" type="button" style="font-size:15px; padding:12px 28px;">
-    ✂️ Separar
-  </button>
-</div>
-
-<div id="splitterStatus" style="display:none; margin-top:10px; padding:14px; border-radius:8px; background:#0f172a; color:#94a3b8; font-size:14px; text-align:center;"></div>
-
-<div id="splitterResults" style="display:none; margin-top:20px; padding:16px; border-radius:12px; background:rgba(30, 41, 59, 0.5); border: 1px solid #334155;">
-    </div>
-
-        <div id="splitterResults" class="card" style="display:none;">
-          <h3>🎧 Resultados:</h3>
-
-          <div id="vocalsResult" style="margin-bottom:16px; display:none;">
-            <p style="color:#94a3b8; margin-bottom:6px;">🎤 Voz:</p>
-            <audio id="vocalsAudio" controls style="width:100%;"></audio>
-            <a id="vocalsDownload" download="voz.mp3">
-              <button class="btn-save" type="button" style="margin-top:8px; width:100%;">
-                ⬇️ Descargar Voz
-              </button>
-            </a>
-          </div>
-
-          <div id="instrumentalResult" style="display:none;">
-            <p style="color:#94a3b8; margin-bottom:6px;">🎸 Música:</p>
-            <audio id="instrumentalAudio" controls style="width:100%;"></audio>
-            <a id="instrumentalDownload" download="musica.mp3">
-              <button class="btn-save" type="button" style="margin-top:8px; width:100%;">
-                ⬇️ Descargar Música
-              </button>
-            </a>
-          </div>
-        </div>
-      </section>
-
-      <section id="config" class="tab">
-        <h1>⚙️ Configuración</h1>
-        
-        <div class="card" style="margin-bottom: 24px;">
-          <h2>🤖 OpenAI / Whisper</h2>
-          <p style="color:#94a3b8; margin-bottom:12px;">
-      Guarda tu API Key para generar letras automáticamente con Whisper.
-          </p>
-          <input
-            type="password"
-            id="openaiApiKey"
-            placeholder="sk-..."
-            style="width:100%; padding:12px; border-radius:8px; border:none; outline:none;"
-          >
-          
-          <div class="config-row">
-            <button id="saveApiKeyBtn" type="button" class="btn-whisper">💾 Guardar clave</button>
-            <button id="showApiKeyBtn" type="button" class="btn-secondary">👁 Ver</button>
-          </div>
-          
-          <div id="apiKeyStatus" style="margin-top:12px; font-size:14px; color:#94a3b8;">
-            Estado: sin guardar
-          </div>
-        </div>
-        
-        <div class="card">
-          <h2>✂️ Lalal.ai</h2>
-          <p style="color:#94a3b8; margin-bottom:12px;">
-            Guarda tu API Key para usar el separador de voz e instrumental.
-          </p>
-          
-          <input
-            type="password"
-            id="lalalApiKey"
-            placeholder="Ingresa tu clave de Lalal.ai"
-            style="width:100%; padding:12px; border-radius:8px; border:none; outline:none;"
-          >
-          
-          <div class="config-row">
-            <button id="saveLalalKeyBtn" type="button" class="btn-whisper">💾 Guardar clave</button>
-            <button id="showLalalKeyBtn" type="button" class="btn-secondary">👁 Ver</button>
-          </div>
-          
-          <div id="lalalKeyStatus" style="margin-top:12px; font-size:14px; color:#94a3b8;">
-            Estado: sin guardar
-          </div>
-        </div>
-      </section>
-
-    </main> </div> <script src="script.js"></script>
-
+<script src="script.js"></script>
 </body>
 </html>
