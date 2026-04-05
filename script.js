@@ -186,10 +186,49 @@ function cargarPistaKaraoke(e) {
 // SPLITTER (SIMPLIFICADO)
 // ==========================================
 async function splitAudio() {
-  const file = $("splitterFile")?.files[0];
-  if (!file) return alert("Carga un archivo");
+  const fileInput = $("splitterFile");
+  const file = fileInput?.files[0];
 
-  alert("Aquí iría la API (backend recomendado)");
+  if (!file) {
+    alert("⚠️ Selecciona un archivo primero");
+    return;
+  }
+
+  const btn = $("splitBtn");
+  btn.disabled = true;
+  btn.textContent = "Procesando...";
+
+  try {
+    const formData = new FormData();
+    formData.append("inputFile", file);
+
+    const response = await fetch("https://api.cloudmersive.com/video/convert/to/mp3", {
+      method: "POST",
+      headers: {
+        "Apikey": localStorage.getItem("cloudmersiveApiKey") || ""
+      },
+      body: formData
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(errorText);
+      alert("❌ Error de API (revisa la clave o saldo)");
+      return;
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+
+    showResult(url);
+
+  } catch (err) {
+    console.error(err);
+    alert("❌ Error de conexión");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Separar audio";
+  }
 }
 
 // ==========================================
