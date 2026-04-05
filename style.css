@@ -297,7 +297,24 @@ button#recordBtn {
   flex-wrap: wrap;
   margin-top: 12px;
 }
+#config input {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #334155;
+  background: #0f172a;
+  color: white;
+  outline: none;
+  margin-top: 8px;
+}
 
+#config input::placeholder {
+  color: #94a3b8;
+}
+
+#config .card h2 {
+  margin-bottom: 8px;
+}
 .btn-secondary {
   background: #334155;
   color: white;
