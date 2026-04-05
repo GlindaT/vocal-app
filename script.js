@@ -777,7 +777,7 @@ async function splitAudio() {
 
     const uploadResponse = await fetch("https://www.lalal.ai/api/upload/", {
       method: "POST",
-      headers: { "Authorization": "license " + apiKey },
+      headers: { "Authorization": apiKey.trim() },
       body: formData
     });
 
@@ -793,10 +793,10 @@ async function splitAudio() {
 
     setSplitterStatus("⏳ Procesando separación... esto puede tardar 1-2 minutos", "loading");
 
-    const splitResponse = await fetch("https://www.lalal.ai/api/split/", {
+  const splitResponse = await fetch("https://www.lalal.ai/api/split/", {
       method: "POST",
       headers: {
-        "Authorization": "license " + apiKey,
+        "Authorization": apiKey.trim(),
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
@@ -833,7 +833,7 @@ async function pollSplitterResult(fileId, apiKey, stemType) {
 
     try {
       const checkResponse = await fetch("https://www.lalal.ai/api/check/?id=" + fileId, {
-        headers: { "Authorization": "license " + apiKey }
+        headers: { "Authorization": apiKey.trim() }
       });
 
       if (!checkResponse.ok) return; // Si hay un micro-corte de internet, seguimos intentando
