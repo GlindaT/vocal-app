@@ -131,17 +131,30 @@ function updateIndicator(cents) {
 }
 
 function generateNotes() {
-  const noteNames = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+  const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
   const select = document.getElementById("targetNote");
+
+  if (!select) {
+    console.error('No se encontró el select con id "targetNote"');
+    return;
+  }
+
+  select.innerHTML = "";
 
   for (let octave = 0; octave <= 8; octave++) {
     for (let i = 0; i < noteNames.length; i++) {
       const noteName = noteNames[i] + octave;
-      const freq = 440 * Math.pow(2, (i + (octave - 4) * 12 - 9) / 12);
+      const semitoneDistance = (octave - 4) * 12 + i - 9;
+      const freq = 440 * Math.pow(2, semitoneDistance / 12);
+
       const option = document.createElement("option");
-      option.value = freq;
+      option.value = freq.toFixed(2);
       option.textContent = noteName;
-      if (noteName === "A4") option.selected = true;
+
+      if (noteName === "A4") {
+        option.selected = true;
+      }
+
       select.appendChild(option);
     }
   }
