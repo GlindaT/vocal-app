@@ -231,6 +231,25 @@ async function splitAudio() {
   }
 }
 
+function showResult(url) {
+  let container = document.getElementById("splitResult");
+
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "splitResult";
+    container.style.marginTop = "20px";
+    document.getElementById("splitter").appendChild(container);
+  }
+
+  container.innerHTML = `
+    <p>✅ API respondió correctamente</p>
+    <audio controls src="${url}"></audio>
+    <br><br>
+    <a href="${url}" download="resultado.mp3">
+      <button>Descargar</button>
+    </a>
+  `;
+}
 // ==========================================
 // CONFIG
 // ==========================================
