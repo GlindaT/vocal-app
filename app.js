@@ -655,7 +655,232 @@ document.getElementById("saveApiKeyBtn").addEventListener("click", saveApiKey);
 document.getElementById("showApiKeyBtn").addEventListener("click", toggleApiKeyVisibility);
 document.getElementById("whisperBtn").addEventListener("click", generateLyricsWithWhisper);
 
+// ======== LALAL.AI CONFIG ========
+
+function loadLalalKey() {
+  const saved = localStorage.getItem("lalalApiKey");
+  if (saved) {
+    document.getElementById("lalalApiKey").value = saved;
+    document.getElementById("lalalKeyStatus").textContent = "✅ Clave guardada";
+    document.getElementById("lalalKeyStatus").style.color = "#22c55e";
+  }
+}
+
+function saveLalalKey() {
+  const key = document.getElementById("lalalApiKey").value.trim();
+  if (!key) {
+    document.getElementById("lalalKeyStatus").textContent = "⚠️ Ingresa una clave válida";
+    document.getElementById("lalalKeyStatus").style.color = "#ef4444";
+    return;
+  }
+  localStorage.setItem("lalalApiKey", key);
+  document.getElementById("lalalKeyStatus").textContent = "✅ Clave guardada correctamente";
+  document.getElementById("lalalKeyStatus").style.color = "#22c55e";
+}
+
+function toggleLalalKeyVisibility() {
+  const input = document.getElementById("lalalApiKey");
+  const btn = document.getElementById("showLalalKeyBtn");
+  if (input.type === "password") {
+    input.type = "text";
+    btn.textContent = "🙈 Ocultar";
+  } else {
+    input.type = "password";
+    btn.textContent = "👁 Ver";
+  }
+}
+
+function getLalalKey() {
+  const key = localStorage.getItem("lalalApiKey");
+  if (!key) {
+    alert("⚠️ Primero guarda tu API Key de Lalal.ai en Configuración");
+    showTab("config");
+    return null;
+  }
+  return key;
+}
+
+// ======== SPLITTER ========
+
+async function splitAudio() {
+  const apiKey = getLalalKey();
+  if (!apiKey) return;
+
+  const file = document.getElementById("splitterFile").files[0];
+  if (!file) {
+    setSplitterStatus("⚠️ Primero selecciona un archivo de audio", "error");
+    return;
+  }
+
+  // Verificar tamaño máximo (200MB)
+  if (file.size > 200 * 1024 * 1024) {
+    setSplitterStatus("⚠️ El archivo supera los 200MB", "error");
+    return;
+  }
+
+  const stemType = document.querySelector('input[name="stemType"]:checked').value;
+
+  const btn = document.getElementById("splitBtn");
+  btn.disabled = true;
+  document.getElementById("splitterResults").style.display = "none";
+
+  setSplitterStatus("⏳ Subiendo audio a Lalal.ai...", "loading");
+
+  try {
+    // PASO 1 — Subir el archivo
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const uploadResponse = await fetch("https://www.lalal.ai/api/upload/", {
+      method: "POST",
+      headers: {
+        "Authorization": "license " + apiKey
+      },
+      body: formData
+    });
+
+    if (!uploadResponse.ok) {
+      const err = await uploadResponse.json();
+      setSplitterStatus("❌ Error al subir: " + (err.error || "Error desconocido"), "error");
+      btn.disabled = false;
+      return;
+    }
+
+    const uploadData = await uploadResponse.json();
+    const fileId = uploadData.id;
+
+    setSplitterStatus("⏳ Procesando separación... esto puede tardar 1-2 minutos", "loading");
+
+    // PASO 2 — Iniciar separación
+    const splitResponse = await fetch("https://www.lalal.ai/api/split/", {
+      method: "POST",
+      headers: {
+        "Authorization": "license " + apiKey,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        id: fileId,
+        filter: 1,        // 1 = vocals/instrumental
+        splitter: "phoenix"  // mejor modelo disponible
+      })
+    });
+
+    if (!splitResponse.ok) {
+      const err = await splitResponse.json();
+      setSplitterStatus("❌ Error al procesar: " + (err.error || "Error desconocido"), "error");
+      btn.disabled = false;
+      return;
+    }
+
+    // PASO 3 — Esperar resultado (polling)
+    setSplitterStatus("⏳ Esperando resultado...", "loading");
+    await pollSplitterResult(fileId, apiKey, stemType);
+
+  } catch (err) {
+    setSplitterStatus("❌ Error de conexión: " + err.message, "error");
+    btn.disabled = false;
+  }
+}
+
+// --- Polling: revisar cada 5 segundos si ya terminó ---
+async function pollSplitterResult(fileId, apiKey, stemType) {
+  const btn = document.getElementById("splitBtn");
+  let attempts = 0;
+  const maxAttempts = 24; // 2 minutos máximo
+
+  const interval = setInterval(async function() {
+    attempts++;
+
+    try {
+      const checkResponse = await fetch("https://www.lalal.ai/api/check/?id=" + fileId, {
+        headers: {
+          "Authorization": "license " + apiKey
+        }
+      });
+
+      const checkData = await checkResponse.json();
+      const task = checkData.task;
+
+      if (task && task.state === "success") {
+        clearInterval(interval);
+        showSplitterResults(task, stemType);
+        btn.disabled = false;
+
+      } else if (task && task.state === "error") {
+        clearInterval(interval);
+        setSplitterStatus("❌ Error en el procesamiento: " + (task.error || ""), "error");
+        btn.disabled = false;
+
+      } else if (attempts >= maxAttempts) {
+        clearInterval(interval);
+        setSplitterStatus("❌ Tiempo de espera agotado, intenta de nuevo", "error");
+        btn.disabled = false;
+
+      } else {
+        setSplitterStatus(
+          "⏳ Procesando... (" + (attempts * 5) + "s)",
+          "loading"
+        );
+      }
+
+    } catch (err) {
+      clearInterval(interval);
+      setSplitterStatus("❌ Error revisando resultado: " + err.message, "error");
+      btn.disabled = false;
+    }
+
+  }, 5000); // revisar cada 5 segundos
+}
+
+// --- Mostrar resultados ---
+function showSplitterResults(task, stemType) {
+  const resultsBox = document.getElementById("splitterResults");
+  resultsBox.style.display = "block";
+
+  const vocalsUrl       = task.stem?.vocals?.url       || null;
+  const instrumentalUrl = task.stem?.instrumental?.url || null;
+
+  // Voz
+  const vocalsBox = document.getElementById("vocalsResult");
+  if ((stemType === "vocals" || stemType === "both") && vocalsUrl) {
+    document.getElementById("vocalsAudio").src = vocalsUrl;
+    document.getElementById("vocalsDownload").href = vocalsUrl;
+    vocalsBox.style.display = "block";
+  } else {
+    vocalsBox.style.display = "none";
+  }
+
+  // Música
+  const instrBox = document.getElementById("instrumentalResult");
+  if ((stemType === "instrumental" || stemType === "both") && instrumentalUrl) {
+    document.getElementById("instrumentalAudio").src = instrumentalUrl;
+    document.getElementById("instrumentalDownload").href = instrumentalUrl;
+    instrBox.style.display = "block";
+  } else {
+    instrBox.style.display = "none";
+  }
+
+  setSplitterStatus("✅ ¡Separación completa!", "success");
+}
+
+// --- Helper status Splitter ---
+function setSplitterStatus(msg, type) {
+  const el = document.getElementById("splitterStatus");
+  el.style.display = "block";
+  el.textContent = msg;
+  el.style.color =
+    type === "error"   ? "#ef4444" :
+    type === "success" ? "#22c55e" : "#94a3b8";
+}
+
+// ======== EVENT LISTENERS SPLITTER Y CONFIG ========
+document.getElementById("splitBtn").addEventListener("click", splitAudio);
+document.getElementById("saveLalalKeyBtn").addEventListener("click", saveLalalKey);
+document.getElementById("showLalalKeyBtn").addEventListener("click", toggleLalalKeyVisibility);
+
+
 // ======== INICIALIZAR ========
 generateNotes();
 loadLibrary();
 loadApiKey();
+loadLalalKey();
