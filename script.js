@@ -959,7 +959,7 @@ document.addEventListener("DOMContentLoaded", function () {
   loadLibrary();
   loadApiKey();
   loadLalalKey();
-});
+
 // ==========================================
 // NUEVA FUNCIÓN DE CONEXIÓN (PÉGALO AQUÍ)
 // ==========================================
