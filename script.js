@@ -1,19 +1,25 @@
-console.log("🚀 El archivo script.js se ha cargado correctamente");
+// ==========================================
+// 1. VARIABLES GLOBALES Y CONFIGURACIÓN
+// ==========================================
+let instrumentalUrlGlobal = null;
+let letraLrcGlobal = "";
+const API_KEY_CLOUDMERSIVE = "1b8014f4-9e84-4cab-b7a1-b5982618a343"; // Tu llave real
 
-
-// 2. FUNCIÓN PARA MOSTRAR PESTAÑAS
-function showTab(tabId) {
-  console.log("Cambiando a pestaña:", tabId);
-  document.querySelectorAll(".tab").forEach(tab => {
-    tab.classList.remove("active");
-  });
-
-  const target = document.getElementById(tabId);
-  if (target) {
-    target.classList.add("active");
+function safeAddEvent(id, event, handler) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.addEventListener(event, handler);
   } else {
-    console.error("No se encontró la sección con ID:", tabId);
+    console.warn(`Aviso: No se encontró el botón con ID "${id}"`);
   }
+}
+
+function setSplitterStatus(msg, type) {
+  const el = document.getElementById("splitterStatus");
+  if (!el) return;
+  el.style.display = "block";
+  el.textContent = msg;
+  el.style.color = type === "error" ? "#ef4444" : type === "success" ? "#22c55e" : "#3b82f6";
 }
 
 // 3. CONEXIÓN DE BOTONES (Usando la herramienta definida arriba)
@@ -870,18 +876,6 @@ function showSplitterResults(downloadUrl) {
  // ==========================================
 // 1. VARIABLES GLOBALES DE CONEXIÓN (PÉGALO AQUÍ)
 // ==========================================
-let instrumentalUrlGlobal = null;
-let letraLrcGlobal = "";
-// 1. DEFINICIÓN DE LA HERRAMIENTA (INDISPENSABLE)
-function safeAddEvent(id, event, handler) {
-  const el = document.getElementById(id);
-  if (el) {
-    el.addEventListener(event, handler);
-  } else {
-    // Si no encuentra el botón, te avisará en la consola sin romper el código
-    console.warn(`Aviso: No se encontró el botón con ID "${id}" en el HTML.`);
-  }
-}
 
   const vocalsBox = document.getElementById("vocalsResult");
   if ((stemType === "vocals" || stemType === "both") && vocalsUrl) {
