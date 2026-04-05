@@ -1,19 +1,5 @@
 console.log("🚀 El archivo script.js se ha cargado correctamente");
-// ==========================================
-// 1. VARIABLES GLOBALES DE CONEXIÓN (PÉGALO AQUÍ)
-// ==========================================
-let instrumentalUrlGlobal = null;
-let letraLrcGlobal = "";
-// 1. DEFINICIÓN DE LA HERRAMIENTA (INDISPENSABLE)
-function safeAddEvent(id, event, handler) {
-  const el = document.getElementById(id);
-  if (el) {
-    el.addEventListener(event, handler);
-  } else {
-    // Si no encuentra el botón, te avisará en la consola sin romper el código
-    console.warn(`Aviso: No se encontró el botón con ID "${id}" en el HTML.`);
-  }
-}
+
 
 // 2. FUNCIÓN PARA MOSTRAR PESTAÑAS
 function showTab(tabId) {
@@ -881,10 +867,20 @@ function showSplitterResults(downloadUrl) {
   resultsBox.scrollIntoView({ behavior: 'smooth' });
 }
 
-  // --- CONEXIÓN GLOBAL ---
-  // Guardamos la pista instrumental en nuestra "caja" de la Línea 1
- if (typeof instrumentalUrl !== 'undefined' && instrumentalUrl) {
-  instrumentalUrlGlobal = instrumentalUrl; 
+ // ==========================================
+// 1. VARIABLES GLOBALES DE CONEXIÓN (PÉGALO AQUÍ)
+// ==========================================
+let instrumentalUrlGlobal = null;
+let letraLrcGlobal = "";
+// 1. DEFINICIÓN DE LA HERRAMIENTA (INDISPENSABLE)
+function safeAddEvent(id, event, handler) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.addEventListener(event, handler);
+  } else {
+    // Si no encuentra el botón, te avisará en la consola sin romper el código
+    console.warn(`Aviso: No se encontró el botón con ID "${id}" en el HTML.`);
+  }
 }
 
   const vocalsBox = document.getElementById("vocalsResult");
