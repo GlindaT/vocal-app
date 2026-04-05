@@ -825,7 +825,8 @@ async function splitAudio() {
 async function pollSplitterResult(fileId, apiKey, stemType) {
   const btn = document.getElementById("splitBtn");
   let attempts = 0;
-  const maxAttempts = 24;
+  // 120 intentos de 5 segundos = 10 minutos de paciencia
+  const maxAttempts = 120; 
 
   const interval = setInterval(async function() {
     attempts++;
@@ -834,6 +835,8 @@ async function pollSplitterResult(fileId, apiKey, stemType) {
       const checkResponse = await fetch("https://www.lalal.ai/api/check/?id=" + fileId, {
         headers: { "Authorization": "license " + apiKey }
       });
+
+      if (!checkResponse.ok) return; // Si hay un micro-corte de internet, seguimos intentando
 
       const checkData = await checkResponse.json();
       const task = checkData.task;
@@ -850,17 +853,18 @@ async function pollSplitterResult(fileId, apiKey, stemType) {
 
       } else if (attempts >= maxAttempts) {
         clearInterval(interval);
-        setSplitterStatus("❌ Tiempo de espera agotado, intenta de nuevo", "error");
+        setSplitterStatus("❌ El servidor de Lalal está tardando demasiado. Revisa tu internet.", "error");
         btn.disabled = false;
 
       } else {
-        setSplitterStatus("⏳ Procesando... (" + (attempts * 5) + "s)", "loading");
+        // --- LA MEJORA VISUAL ---
+        // Si Lalal nos da el progreso, lo mostramos. Si no, mostramos los segundos.
+        const progressInfo = (task && task.progress) ? `${task.progress}%` : `${attempts * 5}s`;
+        setSplitterStatus("⏳ IA trabajando... " + progressInfo, "loading");
       }
 
     } catch (err) {
-      clearInterval(interval);
-      setSplitterStatus("❌ Error revisando resultado: " + err.message, "error");
-      btn.disabled = false;
+      console.warn("Reintentando conexión...", err);
     }
 
   }, 5000);
