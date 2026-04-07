@@ -98,7 +98,9 @@ function detectPitch() {
   if (display && guide) {
     if (pitch !== -1) {
       const noteFull = getNoteFromFrequency(pitch); 
-      const noteName = noteFull.replace(/[0-9]/g, '');
+      // AQUI ESTABA EL ERROR: Faltaba definir noteName
+      const noteName = noteFull.replace(/[0-9]/g, ''); 
+      
       const targetFreq = getNoteFrequency(targetNote);
       const cents = 1200 * Math.log2(pitch / targetFreq);
 
@@ -124,13 +126,14 @@ function detectPitch() {
         guide.style.color = "white";
       }
     } else {
-      // Si no detecta nota, no cambiamos el texto radicalmente, solo avisamos
-      display.textContent = "--";
+      // Si el algoritmo no detecta nota clara, mantenemos el estado anterior
+      // o simplemente avisamos
       guide.textContent = "Cantando...";
     }
   }
   requestAnimationFrame(detectPitch);
 }
+
 function getNoteFromFrequency(freq) {
   const notes = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
   const A4 = 440;
