@@ -130,7 +130,6 @@ function showTab(tabId) {
 // ==========================================
 // AFINADOR
 // ==========================================
-let audioContext, analyser, stream;
 let studioMediaRecorder = null;
 let studioStream = null;
 let studioChunks = [];
@@ -138,6 +137,7 @@ let studioRecordedBlob = null;
 let studioTrackFileName = "";
 let selectedVoiceBlob = null;
 let selectedVoiceId = null;
+let transcriptionSegments = [];
 
 async function toggleRecording() {
   const btn = document.getElementById("recordBtn");
@@ -299,6 +299,8 @@ function stopTrack() {
 
   player.pause();
   player.currentTime = 0;
+  updateKaraokeHighlight(0);
+}
 }
 
 async function startStudioRecording() {
@@ -598,6 +600,14 @@ async function transcribeSelectedVoice() {
     return;
   }
 
+  const maxSizeMB = 4;
+  const fileSizeMB = selectedVoiceBlob.size / (1024 * 1024);
+
+  if (fileSizeMB > maxSizeMB) {
+    alert(`⚠️ El archivo pesa ${fileSizeMB.toFixed(2)} MB. Por ahora usa un archivo de voz de hasta ${maxSizeMB} MB para transcribir.`);
+    return;
+  }
+
   const status = $("selectedVoiceStatus");
   const lyricsText = $("lyricsText");
 
@@ -608,6 +618,7 @@ async function transcribeSelectedVoice() {
     formData.append("file", selectedVoiceBlob, "voz.webm");
     formData.append("model", "whisper-1");
     formData.append("language", "es");
+    formData.append("response_format", "verbose_json");
 
     const response = await fetch("/api/transcribe", {
       method: "POST",
@@ -628,11 +639,71 @@ async function transcribeSelectedVoice() {
       lyricsText.value = result.text || "";
     }
 
-    if (status) status.textContent = "Estado: transcripción completada";
+    transcriptionSegments = (result.segments || []).map(segment => ({
+      start: segment.start,
+      end: segment.end,
+      text: segment.text
+    }));
+
+    renderKaraokeLyrics(transcriptionSegments);
+
+    if (status) status.textContent = "Estado: transcripción completada con sincronización";
   } catch (error) {
     console.error(error);
     alert("❌ Error de conexión al transcribir");
     if (status) status.textContent = "Estado: error de conexión";
+  }
+}
+
+function renderKaraokeLyrics(segments) {
+  const container = $("karaokeLyrics");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  if (!segments.length) {
+    container.innerHTML = `<p class="karaoke-placeholder">No hay segmentos para mostrar.</p>`;
+    return;
+  }
+
+  segments.forEach((segment, index) => {
+    const line = document.createElement("p");
+    line.className = "karaoke-line";
+    line.dataset.index = index;
+    line.dataset.start = segment.start;
+    line.dataset.end = segment.end;
+    line.textContent = segment.text.trim();
+    container.appendChild(line);
+  });
+}
+
+function updateKaraokeHighlight(currentTime) {
+  const lines = document.querySelectorAll(".karaoke-line");
+  if (!lines.length) return;
+
+  let activeLine = null;
+
+  lines.forEach((line) => {
+    const start = parseFloat(line.dataset.start);
+    const end = parseFloat(line.dataset.end);
+
+    line.classList.remove("active", "past", "upcoming");
+
+    if (currentTime >= start && currentTime <= end) {
+      line.classList.add("active");
+      activeLine = line;
+    } else if (currentTime > end) {
+      line.classList.add("past");
+    } else {
+      line.classList.add("upcoming");
+    }
+  });
+
+  if (activeLine) {
+    activeLine.scrollIntoView({
+      behavior: "smooth",
+      block: "center"
+    });
   }
 }
 
@@ -761,9 +832,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     
 
     // init
-    await loadLibrary();
-  } catch (error) {
-    console.error(error);
-    alert("❌ Error inicializando la app");
-  }
-});
+await loadLibrary();
+
+const player = $("player");
+if (player) {
+  player.addEventListener("timeupdate", () => {
+    updateKaraokeHighlight(player.currentTime);
+  });
+
+  player.addEventListener("ended", () => {
+    updateKaraokeHighlight(player.currentTime);
+  });
+}
