@@ -52,14 +52,20 @@ let audioContext, analyser, stream;
 
 async function toggleRecording() {
   const btn = $("recordBtn");
+
   if (!state.isRecording) {
     state.isRecording = true;
     btn.textContent = "Detener";
+    btn.classList.add("recording"); // Cambia a color rojo
     await startAfinador();
   } else {
     state.isRecording = false;
-    btn.textContent = "Grabar";
+    btn.textContent = "Iniciar"; // Cambiamos "Grabar" por "Iniciar" para que sea más claro
+    btn.classList.remove("recording"); // Vuelve a color verde
     stopAfinador();
+    // Limpiamos la pantalla cuando se detiene
+    $("noteDisplay").textContent = "--";
+    $("guideText").textContent = "";
   }
 }
 
