@@ -315,9 +315,3 @@ input[type="text"] {
   font-weight: bold;
   transform: scale(1.05);
 }
-
-#selectedVoiceStatus {
-  margin-top: 15px;
-  color: var(--text-muted);
-  font-weight: bold;
-}
