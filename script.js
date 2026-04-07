@@ -831,15 +831,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     
 
     // init
-await loadLibrary();
+    await loadLibrary();
+    
+    const player = $("player");
+    if (player) {
+      player.addEventListener("timeupdate", () => {
+        updateKaraokeHighlight(player.currentTime);
+      });
 
-const player = $("player");
-if (player) {
-  player.addEventListener("timeupdate", () => {
-    updateKaraokeHighlight(player.currentTime);
-  });
-
-  player.addEventListener("ended", () => {
-    updateKaraokeHighlight(player.currentTime);
-  });
-}
+      player.addEventListener("ended", () => {
+        updateKaraokeHighlight(player.currentTime);
+      });
+    }
