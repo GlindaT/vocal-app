@@ -7,6 +7,8 @@ const state = {
   isRecording: false
 };
 
+let db = null;
+
 function $(id) {
   return document.getElementById(id);
 }
@@ -14,6 +16,86 @@ function $(id) {
 function safeAdd(id, event, handler) {
   const el = $(id);
   if (el) el.addEventListener(event, handler);
+}
+
+// ==========================================
+// INDEXED DB - BIBLIOTECA
+// ==========================================
+function initDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open("VocalAppDB", 1);
+
+    request.onupgradeneeded = function (event) {
+      const database = event.target.result;
+
+      if (!database.objectStoreNames.contains("library")) {
+        const store = database.createObjectStore("library", {
+          keyPath: "id",
+          autoIncrement: true
+        });
+
+        store.createIndex("type", "type", { unique: false });
+        store.createIndex("date", "date", { unique: false });
+      }
+    };
+
+    request.onsuccess = function (event) {
+      db = event.target.result;
+      resolve(db);
+    };
+
+    request.onerror = function () {
+      reject("❌ Error al abrir IndexedDB");
+    };
+  });
+}
+
+function addLibraryItem(item) {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(["library"], "readwrite");
+    const store = transaction.objectStore("library");
+    const request = store.add(item);
+
+    request.onsuccess = function () {
+      resolve();
+    };
+
+    request.onerror = function () {
+      reject("❌ Error al guardar en IndexedDB");
+    };
+  });
+}
+
+function getAllLibraryItems() {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(["library"], "readonly");
+    const store = transaction.objectStore("library");
+    const request = store.getAll();
+
+    request.onsuccess = function () {
+      resolve(request.result);
+    };
+
+    request.onerror = function () {
+      reject("❌ Error al leer Biblioteca");
+    };
+  });
+}
+
+function deleteLibraryItemFromDB(id) {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(["library"], "readwrite");
+    const store = transaction.objectStore("library");
+    const request = store.delete(id);
+
+    request.onsuccess = function () {
+      resolve();
+    };
+
+    request.onerror = function () {
+      reject("❌ Error al eliminar archivo");
+    };
+  });
 }
 
 // ==========================================
@@ -301,70 +383,87 @@ function saveStudioRecording() {
 // ==========================================
 // BIBLIOTECA
 // ==========================================
-function saveToLibrary(blob, options = {}) {
-  const reader = new FileReader();
-
-  reader.onloadend = function () {
-    const library = JSON.parse(localStorage.getItem("library")) || [];
-
-    library.push({
-      name: options.name || `Audio ${library.length + 1}`,
+async function saveToLibrary(blob, options = {}) {
+  try {
+    await addLibraryItem({
+      name: options.name || `Audio`,
       type: options.type || "audio",
-      audio: reader.result,
+      audioBlob: blob,
       date: new Date().toLocaleString("es-ES")
     });
 
-    localStorage.setItem("library", JSON.stringify(library));
-    loadLibrary();
-  };
-
-  reader.readAsDataURL(blob);
+    await loadLibrary();
+  } catch (error) {
+    console.error(error);
+    alert("❌ No se pudo guardar en Biblioteca");
+  }
 }
 
-function loadLibrary() {
+async function loadLibrary() {
   const container = $("libraryList");
   if (!container) return;
 
-  const library = JSON.parse(localStorage.getItem("library")) || [];
-  container.innerHTML = "";
+  container.innerHTML = "<p>Cargando biblioteca...</p>";
 
-  if (library.length === 0) {
-    container.innerHTML = "<p>No hay archivos guardados todavía.</p>";
-    return;
+  try {
+    const library = await getAllLibraryItems();
+
+    container.innerHTML = "";
+
+    if (!library.length) {
+      container.innerHTML = "<p>No hay archivos guardados todavía.</p>";
+      return;
+    }
+
+    library.forEach((item) => {
+      const div = document.createElement("div");
+      div.className = "library-item";
+
+      const audioURL = URL.createObjectURL(item.audioBlob);
+
+      div.innerHTML = `
+        <p><strong>${item.name}</strong></p>
+        <p>Tipo: ${item.type || "audio"}</p>
+        <p>Fecha: ${item.date || "-"}</p>
+        <audio controls src="${audioURL}"></audio>
+        <br><br>
+        <button type="button" data-id="${item.id}" class="delete-library-btn">🗑️ Eliminar</button>
+      `;
+
+      container.appendChild(div);
+    });
+
+    document.querySelectorAll(".delete-library-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = Number(btn.dataset.id);
+        await deleteLibraryItem(id);
+      });
+    });
+
+  } catch (error) {
+    console.error(error);
+    container.innerHTML = "<p>❌ Error al cargar la biblioteca.</p>";
   }
-
-  library.forEach((item, i) => {
-    const div = document.createElement("div");
-    div.className = "library-item";
-
-    div.innerHTML = `
-      <p><strong>${item.name}</strong></p>
-      <p>Tipo: ${item.type || "audio"}</p>
-      <p>Fecha: ${item.date || "-"}</p>
-      <audio controls src="${item.audio}"></audio>
-      <br><br>
-      <button type="button" onclick="deleteLibraryItem(${i})">🗑️ Eliminar</button>
-    `;
-
-    container.appendChild(div);
-  });
 }
 
-function deleteLibraryItem(index) {
-  const library = JSON.parse(localStorage.getItem("library")) || [];
-  library.splice(index, 1);
-  localStorage.setItem("library", JSON.stringify(library));
-  loadLibrary();
+async function deleteLibraryItem(id) {
+  try {
+    await deleteLibraryItemFromDB(id);
+    await loadLibrary();
+  } catch (error) {
+    console.error(error);
+    alert("❌ No se pudo eliminar el archivo");
+  }
 }
 
-function saveManualFileToLibrary() {
+async function saveManualFileToLibrary() {
   const fileInput = $("libraryFileInput");
   const typeSelect = $("libraryFileType");
   const nameInput = $("libraryFileName");
 
-  const file = fileInput?.files[0];
-  const type = typeSelect?.value || "audio";
-  const customName = nameInput?.value.trim();
+  const file = fileInput ? fileInput.files[0] : null;
+  const type = typeSelect ? typeSelect.value : "audio";
+  const customName = nameInput ? nameInput.value.trim() : "";
 
   if (!file) {
     alert("⚠️ Selecciona un archivo de audio");
@@ -373,30 +472,27 @@ function saveManualFileToLibrary() {
 
   const finalName = customName || file.name;
 
-  const reader = new FileReader();
-
-  reader.onloadend = function () {
-    const library = JSON.parse(localStorage.getItem("library")) || [];
-
-    library.push({
+  try {
+    await addLibraryItem({
       name: finalName,
       type: type,
-      audio: reader.result,
+      audioBlob: file,
       date: new Date().toLocaleString("es-ES")
     });
 
-    localStorage.setItem("library", JSON.stringify(library));
-    loadLibrary();
+    await loadLibrary();
 
-    fileInput.value = "";
-    nameInput.value = "";
-    typeSelect.value = "pista";
+    if (fileInput) fileInput.value = "";
+    if (nameInput) nameInput.value = "";
+    if (typeSelect) typeSelect.value = "pista";
 
     alert("✅ Archivo guardado en Biblioteca");
-  };
-
-  reader.readAsDataURL(file);
+  } catch (error) {
+    console.error(error);
+    alert("❌ No se pudo guardar el archivo");
+  }
 }
+
 // ==========================================
 // KARAOKE (BÁSICO LIMPIO)
 // ==========================================
@@ -485,39 +581,47 @@ function saveApiKey() {
 // ==========================================
 // INIT
 // ==========================================
-document.addEventListener("DOMContentLoaded", () => {
-  // navegación
-  safeAdd("btnAfinador", "click", () => showTab("afinador"));
-  safeAdd("btnEstudio", "click", () => showTab("estudio"));
-  safeAdd("btnBiblioteca", "click", () => showTab("biblioteca"));
-  safeAdd("btnKaraoke", "click", () => showTab("karaoke"));
-  safeAdd("btnSplitter", "click", () => showTab("splitter"));
-  safeAdd("btnConfig", "click", () => showTab("config"));
+document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    await initDB();
 
-  // afinador
-  safeAdd("recordBtn", "click", toggleRecording);
+    // navegación
+    safeAdd("btnAfinador", "click", () => showTab("afinador"));
+    safeAdd("btnEstudio", "click", () => showTab("estudio"));
+    safeAdd("btnBiblioteca", "click", () => showTab("biblioteca"));
+    safeAdd("btnKaraoke", "click", () => showTab("karaoke"));
+    safeAdd("btnSplitter", "click", () => showTab("splitter"));
+    safeAdd("btnConfig", "click", () => showTab("config"));
 
-  // estudio
-  safeAdd("audioFile", "change", cargarAudioEstudio);
-safeAdd("playTrackBtn", "click", playTrack);
-safeAdd("pauseTrackBtn", "click", pauseTrack);
-safeAdd("stopTrackBtn", "click", stopTrack);
-safeAdd("startStudioRecBtn", "click", startStudioRecording);
-safeAdd("stopStudioRecBtn", "click", stopStudioRecording);
-safeAdd("redoStudioRecBtn", "click", redoStudioRecording);
-safeAdd("saveStudioRecBtn", "click", saveStudioRecording);
+    // afinador
+    safeAdd("recordBtn", "click", toggleRecording);
 
-  // karaoke
-  safeAdd("karaokeTrackFile", "change", cargarPistaKaraoke);
+    // estudio
+    safeAdd("audioFile", "change", cargarAudioEstudio);
+    safeAdd("playTrackBtn", "click", playTrack);
+    safeAdd("pauseTrackBtn", "click", pauseTrack);
+    safeAdd("stopTrackBtn", "click", stopTrack);
+    safeAdd("startStudioRecBtn", "click", startStudioRecording);
+    safeAdd("stopStudioRecBtn", "click", stopStudioRecording);
+    safeAdd("redoStudioRecBtn", "click", redoStudioRecording);
+    safeAdd("saveStudioRecBtn", "click", saveStudioRecording);
 
-  // splitter
-  safeAdd("splitBtn", "click", splitAudio);
+    // biblioteca
+    safeAdd("saveLibraryFileBtn", "click", saveManualFileToLibrary);
 
-  // config
-  safeAdd("saveApiKeyBtn", "click", saveApiKey);
+    // karaoke
+    safeAdd("karaokeTrackFile", "change", cargarPistaKaraoke);
 
-  // init
-  loadLibrary();
-  safeAdd("saveLibraryFileBtn", "click", saveManualFileToLibrary);
+    // splitter
+    safeAdd("splitBtn", "click", splitAudio);
+
+    // config
+    safeAdd("saveApiKeyBtn", "click", saveApiKey);
+
+    // init
+    await loadLibrary();
+  } catch (error) {
+    console.error(error);
+    alert("❌ Error inicializando la app");
+  }
 });
-
