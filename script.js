@@ -164,21 +164,6 @@ function autoCorrelate(buf, sampleRate) {
   return bestCorrelation > 0.01 ? sampleRate / bestOffset : -1;
 }
 
-// Nueva función para obtener la diferencia en cents
-function getCentsOff(freq, noteFreq) {
-  return Math.floor(1200 * Math.log2(freq / noteFreq));
-}
-
-// Actualizamos esta para devolver también la frecuencia exacta de la nota objetivo
-function getNoteFrequency(note) {
-  const notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-  // Calculamos la frecuencia aproximada de la nota base (ej: C4)
-  const A4 = 440;
-  const index = notes.indexOf(note);
-  const n = index - 9; // Distancia desde A4
-  return A4 * Math.pow(2, n / 12);
-}
-
 // ==========================================
 // ESTUDIO
 // ==========================================
