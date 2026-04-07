@@ -86,12 +86,23 @@ function detectPitch() {
 
   const buffer = new Float32Array(analyser.fftSize);
   analyser.getFloatTimeDomainData(buffer);
-
   const pitch = autoCorrelate(buffer, audioContext.sampleRate);
 
+  const display = $("noteDisplay");
+  const target = $("targetNote").value;
+
   if (pitch !== -1) {
-    const note = getNoteFromFrequency(pitch);
-    $("note").textContent = "Nota: " + note;
+    const noteFull = getNoteFromFrequency(pitch); // Ej: "C4"
+    const noteName = noteFull.replace(/[0-9]/g, ''); // Quitamos el número para comparar solo la nota
+    
+    display.textContent = noteFull;
+
+    // Lógica de éxito
+    if (noteName === target) {
+      display.classList.add("success");
+    } else {
+      display.classList.remove("success");
+    }
   }
 
   requestAnimationFrame(detectPitch);
