@@ -95,26 +95,30 @@ function detectPitch() {
     
     const guide = $("guideText"); // El nuevo elemento
 
+    // Dentro de detectPitch, reemplaza el bloque de lógica visual por este:
     if (noteName === targetNote) {
-      display.textContent = noteFull;
-      display.style.color = "white"; // La nota se queda blanca
-
-      if (Math.abs(cents) < 20) {
-        guide.textContent = "¡Perfecto! ✅";
-        guide.style.color = "#22c55e"; // Verde
-      } else if (cents > 20) {
-        guide.textContent = "⬇️ Baja un poco";
-        guide.style.color = "#ef4444"; // Rojo
+      if (Math.abs(cents) < 15) {
+        display.textContent = noteFull;
+        display.style.color = "#22c55e"; // Verde
+        guide.textContent = "¡Perfecto!";
+        guide.style.color = "#22c55e";
+      } else if (cents > 15) {
+        display.textContent = noteFull;
+        display.style.color = "#ef4444";
+        guide.textContent = `⬇️ Estás agudo. Baja a ${targetNote}`;
+        guide.style.color = "#f59e0b"; // Naranja como en tu ejemplo
       } else {
-        guide.textContent = "⬆️ Sube un poco";
-        guide.style.color = "#ef4444"; // Rojo
+        display.textContent = noteFull;
+        display.style.color = "#ef4444";
+        guide.textContent = `⬆️ Estás grave. Sube a ${targetNote}`;
+        guide.style.color = "#f59e0b";
       }
     } else {
       display.textContent = noteFull;
+      display.style.color = "white";
       guide.textContent = `Buscando ${targetNote}...`;
       guide.style.color = "white";
     }
-  }
   requestAnimationFrame(detectPitch);
 }
 
