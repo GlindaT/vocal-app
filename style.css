@@ -277,3 +277,47 @@ input[type="text"] {
   color: var(--text-muted);
   font-weight: bold;
 }
+
+.karaoke-lyrics {
+  margin-top: 20px;
+  padding: 20px;
+  background: var(--bg-main);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.karaoke-placeholder {
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.karaoke-line {
+  font-size: 22px;
+  line-height: 1.6;
+  margin: 14px 0;
+  text-align: center;
+  color: var(--text-muted);
+  transition: all 0.25s ease;
+}
+
+.karaoke-line.past {
+  color: #64748b;
+}
+
+.karaoke-line.upcoming {
+  color: var(--text-muted);
+}
+
+.karaoke-line.active {
+  color: #22c55e;
+  font-weight: bold;
+  transform: scale(1.05);
+}
+
+#selectedVoiceStatus {
+  margin-top: 15px;
+  color: var(--text-muted);
+  font-weight: bold;
+}
