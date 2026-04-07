@@ -357,6 +357,46 @@ function deleteLibraryItem(index) {
   loadLibrary();
 }
 
+function saveManualFileToLibrary() {
+  const fileInput = $("libraryFileInput");
+  const typeSelect = $("libraryFileType");
+  const nameInput = $("libraryFileName");
+
+  const file = fileInput?.files[0];
+  const type = typeSelect?.value || "audio";
+  const customName = nameInput?.value.trim();
+
+  if (!file) {
+    alert("⚠️ Selecciona un archivo de audio");
+    return;
+  }
+
+  const finalName = customName || file.name;
+
+  const reader = new FileReader();
+
+  reader.onloadend = function () {
+    const library = JSON.parse(localStorage.getItem("library")) || [];
+
+    library.push({
+      name: finalName,
+      type: type,
+      audio: reader.result,
+      date: new Date().toLocaleString("es-ES")
+    });
+
+    localStorage.setItem("library", JSON.stringify(library));
+    loadLibrary();
+
+    fileInput.value = "";
+    nameInput.value = "";
+    typeSelect.value = "pista";
+
+    alert("✅ Archivo guardado en Biblioteca");
+  };
+
+  reader.readAsDataURL(file);
+}
 // ==========================================
 // KARAOKE (BÁSICO LIMPIO)
 // ==========================================
@@ -478,5 +518,6 @@ safeAdd("saveStudioRecBtn", "click", saveStudioRecording);
 
   // init
   loadLibrary();
+  safeAdd("saveLibraryFileBtn", "click", saveManualFileToLibrary);
 });
 
