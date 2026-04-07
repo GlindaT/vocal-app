@@ -28,10 +28,27 @@
     <!-- AFINADOR -->
     <section id="afinador" class="tab active">
       <h1>🎵 Afinador</h1>
+      
+      <div class="afinador-container">
+        <label for="targetNote">Nota objetivo:</label>
+        <select id="targetNote">
+          <option value="C">Do (C)</option>
+          <option value="C#">Do# (C#)</option>
+          <option value="D">Re (D)</option>
+          <option value="D#">Re# (D#)</option>
+          <option value="E">Mi (E)</option>
+          <option value="F">Fa (F)</option>
+          <option value="F#">Fa# (F#)</option>
+          <option value="G">Sol (G)</option>
+          <option value="G#">Sol# (G#)</option>
+          <option value="A">La (A)</option>
+          <option value="A#">La# (A#)</option>
+          <option value="B">Si (B)</option>
+        </select>
 
-      <button id="recordBtn">Grabar</button>
-
-      <h2 id="note">Nota: --</h2>
+        <button id="recordBtn">Grabar</button>
+        <h2 id="noteDisplay">--</h2>
+      </div>
     </section>
 
     <!-- ESTUDIO -->
