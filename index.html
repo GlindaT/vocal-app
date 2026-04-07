@@ -50,16 +50,48 @@
     <div id="guideText" style="font-size: 24px; font-weight: bold; margin-top: 10px;"></div>
   </div>
 </section>
+    
     <!-- ESTUDIO -->
-    <section id="estudio" class="tab">
-      <h1>🎧 Estudio</h1>
+<section id="estudio" class="tab">
+  <h1>🎧 Estudio</h1>
 
-      <input type="file" id="audioFile" accept="audio/*">
-      <br><br>
+  <div class="card">
+    <h3>Pista musical</h3>
+    <input type="file" id="audioFile" accept="audio/*">
 
-      <audio id="player" controls></audio>
-    </section>
+    <audio id="player" controls></audio>
 
+    <div class="studio-controls">
+      <button id="playTrackBtn" type="button">▶️ Reproducir</button>
+      <button id="pauseTrackBtn" type="button">⏸️ Pausar</button>
+      <button id="stopTrackBtn" type="button">⏹️ Detener</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Grabación de voz</h3>
+
+    <div class="studio-controls">
+      <button id="startStudioRecBtn" type="button">🎙️ Grabar voz</button>
+      <button id="stopStudioRecBtn" type="button">🛑 Detener grabación</button>
+      <button id="redoStudioRecBtn" type="button">🔁 Volver a grabar</button>
+      <button id="saveStudioRecBtn" type="button">💾 Guardar grabación</button>
+    </div>
+
+    <p id="studioStatus">Estado: sin grabación</p>
+
+    <audio id="voicePlayer" controls></audio>
+  </div>
+
+  <div class="card">
+    <h3>Letra</h3>
+    <textarea
+      id="lyricsText"
+      rows="10"
+      placeholder="Aquí vamos a mostrar o pegar la letra de la canción..."
+    ></textarea>
+  </div>
+</section>
     <!-- BIBLIOTECA -->
     <section id="biblioteca" class="tab">
       <h1>📁 Biblioteca</h1>
