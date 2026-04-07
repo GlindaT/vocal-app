@@ -52,7 +52,6 @@ let audioContext, analyser, stream;
 
 async function toggleRecording() {
   const btn = $("recordBtn");
-
   if (!state.isRecording) {
     state.isRecording = true;
     btn.textContent = "Detener";
@@ -67,11 +66,9 @@ async function toggleRecording() {
 async function startAfinador() {
   audioContext = new AudioContext();
   stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
   const mic = audioContext.createMediaStreamSource(stream);
   analyser = audioContext.createAnalyser();
   analyser.fftSize = 2048;
-
   mic.connect(analyser);
   detectPitch();
 }
@@ -80,88 +77,76 @@ function stopAfinador() {
   if (stream) stream.getTracks().forEach(t => t.stop());
   if (audioContext) audioContext.close();
 }
-// Nueva función para obtener la diferencia en cents
-function getCentsOff(freq, noteFreq) {
-  return Math.floor(1200 * Math.log2(freq / noteFreq));
-}
 
-// Y actualizamos la lógica dentro de detectPitch para mostrar si subir o bajar:
 function detectPitch() {
   if (!state.isRecording) return;
-
   const buffer = new Float32Array(analyser.fftSize);
   analyser.getFloatTimeDomainData(buffer);
   const pitch = autoCorrelate(buffer, audioContext.sampleRate);
-  
   const display = $("noteDisplay");
-  const targetNote = $("targetNote").value; // Lo que el usuario eligió (ej: "C")
+  const targetNote = $("targetNote").value;
 
   if (pitch !== -1 && display) {
-    // 1. Obtenemos la nota y la frecuencia
-    const noteFull = getNoteFromFrequency(pitch); // "C4"
-    const noteName = noteFull.replace(/[0-9]/g, ''); // "C"
+    const noteFull = getNoteFromFrequency(pitch); 
+    const noteName = noteFull.replace(/[0-9]/g, '');
     
-    // 2. Calculamos la diferencia en "cents" (centésimas de semitono)
-    // Usamos una fórmula estándar de afinación
-    const targetFreq = 440 * Math.pow(2, (getNoteIndex(targetNote) - 9) / 12);
-    const cents = 1200 * Math.log2(pitch / targetFreq);
+    // Calculamos la diferencia en cents basándonos en la nota detectada
+    const currentFreq = pitch;
+    const targetFreq = getNoteFrequency(targetNote); // Usamos la función que calcula freq base
+    const cents = 1200 * Math.log2(currentFreq / targetFreq);
 
-    // 3. Lógica de visualización
     if (noteName === targetNote) {
-      if (Math.abs(cents) < 15) { // Margen de error pequeño (está afinado)
+      if (Math.abs(cents) < 20) { // Margen de tolerancia
         display.textContent = `${noteFull} ✅`;
-        display.style.color = "#22c55e"; // Verde
-      } else if (cents > 15) {
+        display.style.color = "#22c55e";
+      } else if (cents > 20) {
         display.textContent = `${noteFull} ⬇️ (Baja)`;
-        display.style.color = "#ef4444"; // Rojo (muy alta)
+        display.style.color = "#ef4444";
       } else {
         display.textContent = `${noteFull} ⬆️ (Sube)`;
-        display.style.color = "#ef4444"; // Rojo (muy baja)
+        display.style.color = "#ef4444";
       }
     } else {
       display.textContent = `${noteFull} 🎯 (${targetNote})`;
       display.style.color = "white";
     }
   }
-
   requestAnimationFrame(detectPitch);
 }
 
-// Helper adicional: necesitamos esta función para convertir la nota a número
-function getNoteIndex(note) {
+function getNoteFromFrequency(freq) {
   const notes = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
-  return notes.indexOf(note);
+  const A4 = 440;
+  const n = Math.round(12 * Math.log2(freq / A4));
+  const index = (n + 9) % 12;
+  const octave = 4 + Math.floor((n + 9) / 12);
+  return notes[(index + 12) % 12] + octave;
+}
+
+function getNoteFrequency(note) {
+  const notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+  const A4 = 440;
+  const index = notes.indexOf(note);
+  const n = index - 9; 
+  return A4 * Math.pow(2, n / 12);
 }
 
 function autoCorrelate(buf, sampleRate) {
   let bestOffset = -1;
   let bestCorrelation = 0;
-
   for (let offset = 8; offset < 1000; offset++) {
     let correlation = 0;
     for (let i = 0; i < buf.length - offset; i++) {
       correlation += Math.abs(buf[i] - buf[i + offset]);
     }
-    correlation = 1 - correlation / buf.length;
-
+    correlation = 1 - (correlation / buf.length);
     if (correlation > bestCorrelation) {
       bestCorrelation = correlation;
       bestOffset = offset;
     }
   }
-
-  return bestCorrelation > 0.01 ? sampleRate / bestOffset : -1;
+  return bestCorrelation > 0.05 ? sampleRate / bestOffset : -1;
 }
-// Actualizamos esta para devolver también la frecuencia exacta de la nota objetivo
-function getNoteFrequency(note) {
-  const notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-  // Calculamos la frecuencia aproximada de la nota base (ej: C4)
-  const A4 = 440;
-  const index = notes.indexOf(note);
-  const n = index - 9; // Distancia desde A4
-  return A4 * Math.pow(2, n / 12);
-}
-
 // ==========================================
 // ESTUDIO
 // ==========================================
