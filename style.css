@@ -163,6 +163,15 @@ audio {
 /* ==========================================
    AFINADOR
 ========================================== */
+.afinador-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  height: 60vh;
+  text-align: center; /* Esto ayuda a que el texto no se rompa */
+}
 #noteDisplay {
   font-size: 120px; /* Mucho más grande */
   font-weight: 900;
@@ -209,16 +218,6 @@ audio {
 ::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: 10px;
-}
-
-.afinador-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
-  height: 60vh;
-  text-align: center; /* Esto ayuda a que el texto no se rompa */
 }
 
 .success {
