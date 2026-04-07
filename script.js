@@ -324,3 +324,4 @@ document.addEventListener("DOMContentLoaded", () => {
   // init
   loadLibrary();
 });
+}
