@@ -81,33 +81,57 @@ function stopAfinador() {
   if (audioContext) audioContext.close();
 }
 
+// Nueva función para obtener la diferencia en cents
+function getCentsOff(freq, noteFreq) {
+  return Math.floor(1200 * Math.log2(freq / noteFreq));
+}
+
+// Actualizamos esta para devolver también la frecuencia exacta de la nota objetivo
+function getNoteFrequency(note) {
+  const notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+  // Calculamos la frecuencia aproximada de la nota base (ej: C4)
+  const A4 = 440;
+  const index = notes.indexOf(note);
+  const n = index - 9; // Distancia desde A4
+  return A4 * Math.pow(2, n / 12);
+}
+
+// Y actualizamos la lógica dentro de detectPitch para mostrar si subir o bajar:
 function detectPitch() {
   if (!state.isRecording) return;
 
   const buffer = new Float32Array(analyser.fftSize);
   analyser.getFloatTimeDomainData(buffer);
   const pitch = autoCorrelate(buffer, audioContext.sampleRate);
-
   const display = $("noteDisplay");
   const target = $("targetNote").value;
 
   if (pitch !== -1) {
-    const noteFull = getNoteFromFrequency(pitch); // Ej: "C4"
-    const noteName = noteFull.replace(/[0-9]/g, ''); // Quitamos el número para comparar solo la nota
-    
-    display.textContent = noteFull;
+    const noteFull = getNoteFromFrequency(pitch);
+    const noteName = noteFull.replace(/[0-9]/g, '');
+    const cents = getCentsOff(pitch, getNoteFrequency(target));
 
-    // Lógica de éxito
-    if (noteName === target) {
-      display.classList.add("success");
-    } else {
-      display.classList.remove("success");
+    if (display) {
+      if (noteName === target) {
+        // Si está en el rango de +/- 10 cents, lo damos por bueno
+        if (Math.abs(cents) < 10) {
+          display.textContent = `${noteFull} ✅ (Perfecto)`;
+          display.classList.add("success");
+        } else if (cents > 0) {
+          display.textContent = `${noteFull} ⬇️ (Baja un poco)`;
+          display.classList.remove("success");
+        } else {
+          display.textContent = `${noteFull} ⬆️ (Sube un poco)`;
+          display.classList.remove("success");
+        }
+      } else {
+        display.textContent = `${noteFull} (Buscando ${target}...)`;
+        display.classList.remove("success");
+      }
     }
   }
-
   requestAnimationFrame(detectPitch);
 }
-
 function autoCorrelate(buf, sampleRate) {
   let bestOffset = -1;
   let bestCorrelation = 0;
