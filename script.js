@@ -49,6 +49,11 @@ function showTab(tabId) {
 // AFINADOR
 // ==========================================
 let audioContext, analyser, stream;
+let studioMediaRecorder = null;
+let studioStream = null;
+let studioChunks = [];
+let studioRecordedBlob = null;
+let studioTrackFileName = "";
 
 async function toggleRecording() {
   const btn = document.getElementById("recordBtn");
@@ -173,26 +178,140 @@ function autoCorrelate(buf, sampleRate) {
   }
   return bestCorrelation > 0.05 ? sampleRate / bestOffset : -1;
 }
+
 // ==========================================
 // ESTUDIO
 // ==========================================
 function cargarAudioEstudio(e) {
   const file = e.target.files[0];
-  if (file) $("player").src = URL.createObjectURL(file);
+  if (!file) return;
+
+  studioTrackFileName = file.name;
+
+  const url = URL.createObjectURL(file);
+  $("player").src = url;
+  $("studioStatus").textContent = `Estado: pista cargada (${file.name})`;
+}
+
+function playTrack() {
+  const player = $("player");
+
+  if (!player || !player.src) {
+    alert("⚠️ Primero sube una pista");
+    return;
+  }
+
+  player.play();
+}
+
+function pauseTrack() {
+  const player = $("player");
+  if (player) player.pause();
+}
+
+function stopTrack() {
+  const player = $("player");
+  if (!player) return;
+
+  player.pause();
+  player.currentTime = 0;
+}
+
+async function startStudioRecording() {
+  try {
+    const player = $("player");
+
+    studioChunks = [];
+    studioRecordedBlob = null;
+    $("voicePlayer").src = "";
+
+    $("studioStatus").textContent = "Estado: preparando grabación...";
+
+    studioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    studioMediaRecorder = new MediaRecorder(studioStream);
+
+    studioMediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        studioChunks.push(event.data);
+      }
+    };
+
+    studioMediaRecorder.onstop = () => {
+      studioRecordedBlob = new Blob(studioChunks, { type: "audio/webm" });
+      const audioURL = URL.createObjectURL(studioRecordedBlob);
+      $("voicePlayer").src = audioURL;
+      $("studioStatus").textContent = "Estado: grabación lista para escuchar o guardar";
+    };
+
+    studioMediaRecorder.start();
+    $("studioStatus").textContent = "Estado: grabando voz...";
+
+    if (player && player.src) {
+      player.currentTime = 0;
+      player.play();
+    }
+
+  } catch (error) {
+    console.error(error);
+    $("studioStatus").textContent = "Estado: error al acceder al micrófono";
+    alert("❌ No se pudo acceder al micrófono");
+  }
+}
+
+function stopStudioRecording() {
+  if (studioMediaRecorder && studioMediaRecorder.state !== "inactive") {
+    studioMediaRecorder.stop();
+  }
+
+  if (studioStream) {
+    studioStream.getTracks().forEach(track => track.stop());
+  }
+
+  const player = $("player");
+  if (player) {
+    player.pause();
+  }
+}
+
+function redoStudioRecording() {
+  studioChunks = [];
+  studioRecordedBlob = null;
+  $("voicePlayer").src = "";
+  $("studioStatus").textContent = "Estado: grabación eliminada. Lista para volver a grabar.";
+}
+
+function saveStudioRecording() {
+  if (!studioRecordedBlob) {
+    alert("⚠️ No hay grabación para guardar");
+    return;
+  }
+
+  const baseName = studioTrackFileName
+    ? `Voz - ${studioTrackFileName}`
+    : "Grabación de voz";
+
+  saveToLibrary(studioRecordedBlob, {
+    name: baseName,
+    type: "grabacion"
+  });
+
+  $("studioStatus").textContent = "Estado: grabación guardada en Biblioteca";
 }
 
 // ==========================================
 // BIBLIOTECA
 // ==========================================
-function saveToLibrary(blob) {
+function saveToLibrary(blob, options = {}) {
   const reader = new FileReader();
 
   reader.onloadend = function () {
     const library = JSON.parse(localStorage.getItem("library")) || [];
 
     library.push({
-      name: "Grabación " + (library.length + 1),
-      audio: reader.result
+      name: options.name || `Audio ${library.length + 1}`,
+      type: options.type || "audio",
+      audio: reader.result,
+      date: new Date().toLocaleString("es-ES")
     });
 
     localStorage.setItem("library", JSON.stringify(library));
@@ -209,16 +328,33 @@ function loadLibrary() {
   const library = JSON.parse(localStorage.getItem("library")) || [];
   container.innerHTML = "";
 
+  if (library.length === 0) {
+    container.innerHTML = "<p>No hay archivos guardados todavía.</p>";
+    return;
+  }
+
   library.forEach((item, i) => {
     const div = document.createElement("div");
+    div.className = "library-item";
 
-    const audio = document.createElement("audio");
-    audio.controls = true;
-    audio.src = item.audio;
+    div.innerHTML = `
+      <p><strong>${item.name}</strong></p>
+      <p>Tipo: ${item.type || "audio"}</p>
+      <p>Fecha: ${item.date || "-"}</p>
+      <audio controls src="${item.audio}"></audio>
+      <br><br>
+      <button type="button" onclick="deleteLibraryItem(${i})">🗑️ Eliminar</button>
+    `;
 
-    div.appendChild(audio);
     container.appendChild(div);
   });
+}
+
+function deleteLibraryItem(index) {
+  const library = JSON.parse(localStorage.getItem("library")) || [];
+  library.splice(index, 1);
+  localStorage.setItem("library", JSON.stringify(library));
+  loadLibrary();
 }
 
 // ==========================================
@@ -323,6 +459,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // estudio
   safeAdd("audioFile", "change", cargarAudioEstudio);
+safeAdd("playTrackBtn", "click", playTrack);
+safeAdd("pauseTrackBtn", "click", pauseTrack);
+safeAdd("stopTrackBtn", "click", stopTrack);
+safeAdd("startStudioRecBtn", "click", startStudioRecording);
+safeAdd("stopStudioRecBtn", "click", stopStudioRecording);
+safeAdd("redoStudioRecBtn", "click", redoStudioRecording);
+safeAdd("saveStudioRecBtn", "click", saveStudioRecording);
 
   // karaoke
   safeAdd("karaokeTrackFile", "change", cargarPistaKaraoke);
