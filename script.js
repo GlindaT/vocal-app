@@ -51,21 +51,19 @@ function showTab(tabId) {
 let audioContext, analyser, stream;
 
 async function toggleRecording() {
-  const btn = $("recordBtn");
-
+  const btn = document.getElementById("recordBtn");
   if (!state.isRecording) {
     state.isRecording = true;
     btn.textContent = "Detener";
-    btn.classList.add("recording"); // Cambia a color rojo
+    btn.classList.add("recording");
     await startAfinador();
   } else {
     state.isRecording = false;
-    btn.textContent = "Iniciar"; // Cambiamos "Grabar" por "Iniciar" para que sea más claro
-    btn.classList.remove("recording"); // Vuelve a color verde
+    btn.textContent = "Iniciar";
+    btn.classList.remove("recording");
     stopAfinador();
-    // Limpiamos la pantalla cuando se detiene
-    $("noteDisplay").textContent = "--";
-    $("guideText").textContent = "";
+    document.getElementById("noteDisplay").textContent = "--";
+    document.getElementById("guideText").textContent = "";
   }
 }
 
@@ -97,27 +95,37 @@ function detectPitch() {
 
   if (display && guide) {
     if (pitch !== -1) {
+      // 1. Obtnemos la nota detectada (ej: "C4")
       const noteFull = getNoteFromFrequency(pitch); 
-      // AQUI ESTABA EL ERROR: Faltaba definir noteName
+      // 2. Extraemos el nombre de la nota sin octava (ej: "C")
       const noteName = noteFull.replace(/[0-9]/g, ''); 
       
-      const targetFreq = getNoteFrequency(targetNote);
-      const cents = 1200 * Math.log2(pitch / targetFreq);
+      // 3. Calculamos la octava actual para ajustar el objetivo
+      const currentOctave = parseInt(noteFull.replace(/[^0-9]/g, ''));
+      const targetFreqBase = getNoteFrequency(targetNote); // Retorna freq para Octava 4
+      const targetFreqInCurrentOctave = targetFreqBase * Math.pow(2, currentOctave - 4);
+
+      // 4. Medimos la desviación en Cents
+      const cents = 1200 * Math.log2(pitch / targetFreqInCurrentOctave);
 
       display.textContent = noteFull;
       
+      // Margen de tolerancia (30 cents es cómodo)
+      const maxDesviation = 30;
+
+      // 5. Lógica de mensajes visuales
       if (noteName === targetNote) {
-        if (Math.abs(cents) < 15) {
-          display.style.color = "#22c55e";
+        if (Math.abs(cents) < maxDesviation) {
+          display.style.color = "#22c55e"; // Verde
           guide.textContent = "¡Perfecto! ✅";
           guide.style.color = "#22c55e";
-        } else if (cents > 15) {
-          display.style.color = "#ef4444";
-          guide.textContent = `⬇️ Baja a ${targetNote}`;
+        } else if (cents > maxDesviation) {
+          display.style.color = "#f59e0b"; // Naranja
+          guide.textContent = `⬇️ Baja un poco`;
           guide.style.color = "#f59e0b";
         } else {
-          display.style.color = "#ef4444";
-          guide.textContent = `⬆️ Sube a ${targetNote}`;
+          display.style.color = "#f59e0b"; // Naranja
+          guide.textContent = `⬆️ Sube un poco`;
           guide.style.color = "#f59e0b";
         }
       } else {
@@ -126,8 +134,6 @@ function detectPitch() {
         guide.style.color = "white";
       }
     } else {
-      // Si el algoritmo no detecta nota clara, mantenemos el estado anterior
-      // o simplemente avisamos
       guide.textContent = "Cantando...";
     }
   }
