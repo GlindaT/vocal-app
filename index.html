@@ -92,11 +92,35 @@
     ></textarea>
   </div>
 </section>
+    
     <!-- BIBLIOTECA -->
-    <section id="biblioteca" class="tab">
-      <h1>📁 Biblioteca</h1>
-      <div id="libraryList"></div>
-    </section>
+<section id="biblioteca" class="tab">
+  <h1>📁 Biblioteca</h1>
+
+  <div class="card">
+    <h3>Subir archivo a Biblioteca</h3>
+
+    <input type="text" id="libraryFileName" placeholder="Nombre del archivo (opcional)">
+    <br><br>
+
+    <select id="libraryFileType">
+      <option value="pista">Pista</option>
+      <option value="voz">Voz</option>
+      <option value="grabacion">Grabación</option>
+    </select>
+    <br><br>
+
+    <input type="file" id="libraryFileInput" accept="audio/*">
+    <br><br>
+
+    <button id="saveLibraryFileBtn" type="button">Guardar en Biblioteca</button>
+  </div>
+
+  <div class="card">
+    <h3>Archivos guardados</h3>
+    <div id="libraryList"></div>
+  </div>
+</section>
 
     <!-- KARAOKE -->
     <section id="karaoke" class="tab">
