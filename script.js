@@ -86,39 +86,51 @@ function stopAfinador() {
 
 function detectPitch() {
   if (!state.isRecording) return;
+  
   const buffer = new Float32Array(analyser.fftSize);
   analyser.getFloatTimeDomainData(buffer);
   const pitch = autoCorrelate(buffer, audioContext.sampleRate);
-  const display = $("noteDisplay");
-  const targetNote = $("targetNote").value;
+  
+  const display = document.getElementById("noteDisplay");
+  const guide = document.getElementById("guideText");
+  const targetNote = document.getElementById("targetNote").value;
 
-  // Dentro de detectPitch, reemplaza el bloque de lógica visual por este:
-    if (noteName === targetNote) {
-      if (Math.abs(cents) < 15) {
-        display.textContent = noteFull;
-        display.style.color = "#22c55e"; // Verde
-        guide.textContent = "¡Perfecto!";
-        guide.style.color = "#22c55e";
-      } else if (cents > 15) {
-        display.textContent = noteFull;
-        display.style.color = "#ef4444";
-        guide.textContent = `⬇️ Estás agudo. Baja a ${targetNote}`;
-        guide.style.color = "#f59e0b"; // Naranja como en tu ejemplo
+  if (display && guide) {
+    if (pitch !== -1) {
+      const noteFull = getNoteFromFrequency(pitch); 
+      const noteName = noteFull.replace(/[0-9]/g, '');
+      const targetFreq = getNoteFrequency(targetNote);
+      const cents = 1200 * Math.log2(pitch / targetFreq);
+
+      display.textContent = noteFull;
+      
+      if (noteName === targetNote) {
+        if (Math.abs(cents) < 15) {
+          display.style.color = "#22c55e";
+          guide.textContent = "¡Perfecto! ✅";
+          guide.style.color = "#22c55e";
+        } else if (cents > 15) {
+          display.style.color = "#ef4444";
+          guide.textContent = `⬇️ Baja a ${targetNote}`;
+          guide.style.color = "#f59e0b";
+        } else {
+          display.style.color = "#ef4444";
+          guide.textContent = `⬆️ Sube a ${targetNote}`;
+          guide.style.color = "#f59e0b";
+        }
       } else {
-        display.textContent = noteFull;
-        display.style.color = "#ef4444";
-        guide.textContent = `⬆️ Estás grave. Sube a ${targetNote}`;
-        guide.style.color = "#f59e0b";
+        display.style.color = "white";
+        guide.textContent = `Buscando ${targetNote}...`;
+        guide.style.color = "white";
       }
     } else {
-      display.textContent = noteFull;
-      display.style.color = "white";
-      guide.textContent = `Buscando ${targetNote}...`;
-      guide.style.color = "white";
+      // Si no detecta nota, no cambiamos el texto radicalmente, solo avisamos
+      display.textContent = "--";
+      guide.textContent = "Cantando...";
     }
+  }
   requestAnimationFrame(detectPitch);
 }
-
 function getNoteFromFrequency(freq) {
   const notes = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
   const A4 = 440;
