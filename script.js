@@ -301,7 +301,6 @@ function stopTrack() {
   player.currentTime = 0;
   updateKaraokeHighlight(0);
 }
-}
 
 async function startStudioRecording() {
   try {
