@@ -89,26 +89,30 @@ function detectPitch() {
   if (pitch !== -1 && display) {
     const noteFull = getNoteFromFrequency(pitch); 
     const noteName = noteFull.replace(/[0-9]/g, '');
-    
-    // Calculamos la diferencia en cents basándonos en la nota detectada
     const currentFreq = pitch;
-    const targetFreq = getNoteFrequency(targetNote); // Usamos la función que calcula freq base
+    const targetFreq = getNoteFrequency(targetNote);
     const cents = 1200 * Math.log2(currentFreq / targetFreq);
+    
+    const guide = $("guideText"); // El nuevo elemento
 
     if (noteName === targetNote) {
-      if (Math.abs(cents) < 20) { // Margen de tolerancia
-        display.textContent = `${noteFull} ✅`;
-        display.style.color = "#22c55e";
+      display.textContent = noteFull;
+      display.style.color = "white"; // La nota se queda blanca
+
+      if (Math.abs(cents) < 20) {
+        guide.textContent = "¡Perfecto! ✅";
+        guide.style.color = "#22c55e"; // Verde
       } else if (cents > 20) {
-        display.textContent = `${noteFull} ⬇️ (Baja)`;
-        display.style.color = "#ef4444";
+        guide.textContent = "⬇️ Baja un poco";
+        guide.style.color = "#ef4444"; // Rojo
       } else {
-        display.textContent = `${noteFull} ⬆️ (Sube)`;
-        display.style.color = "#ef4444";
+        guide.textContent = "⬆️ Sube un poco";
+        guide.style.color = "#ef4444"; // Rojo
       }
     } else {
-      display.textContent = `${noteFull} 🎯 (${targetNote})`;
-      display.style.color = "white";
+      display.textContent = noteFull;
+      guide.textContent = `Buscando ${targetNote}...`;
+      guide.style.color = "white";
     }
   }
   requestAnimationFrame(detectPitch);
