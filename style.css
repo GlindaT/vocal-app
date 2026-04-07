@@ -196,6 +196,7 @@ audio {
   justify-content: center;
   gap: 20px;
   height: 60vh;
+  text-align: center; /* Esto ayuda a que el texto no se rompa */
 }
 
 #noteDisplay {
