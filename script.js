@@ -92,16 +92,7 @@ function detectPitch() {
   const display = $("noteDisplay");
   const targetNote = $("targetNote").value;
 
-  if (pitch !== -1 && display) {
-    const noteFull = getNoteFromFrequency(pitch); 
-    const noteName = noteFull.replace(/[0-9]/g, '');
-    const currentFreq = pitch;
-    const targetFreq = getNoteFrequency(targetNote);
-    const cents = 1200 * Math.log2(currentFreq / targetFreq);
-    
-    const guide = $("guideText"); // El nuevo elemento
-
-    // Dentro de detectPitch, reemplaza el bloque de lógica visual por este:
+  // Dentro de detectPitch, reemplaza el bloque de lógica visual por este:
     if (noteName === targetNote) {
       if (Math.abs(cents) < 15) {
         display.textContent = noteFull;
