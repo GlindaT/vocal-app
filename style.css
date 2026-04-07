@@ -163,6 +163,19 @@ audio {
 /* ==========================================
    AFINADOR
 ========================================== */
+#noteDisplay {
+  font-size: 120px; /* Mucho más grande */
+  font-weight: 900;
+  margin: 0;
+  transition: color 0.3s ease;
+}
+
+#guideText {
+  font-size: 32px; /* Tamaño grande y legible */
+  margin: 20px 0;
+  font-weight: bold;
+}
+
 #recordBtn {
   background-color: #22c55e !important;
   color: white !important;
@@ -170,6 +183,7 @@ audio {
   font-size: 18px;
 }
 
+/* Botón de grabar "Activo" (Rojo) */
 /* Botón de grabar "Activo" (Rojo) */
 #recordBtn.recording {
   background-color: #ef4444 !important;
@@ -205,19 +219,6 @@ audio {
   gap: 20px;
   height: 60vh;
   text-align: center; /* Esto ayuda a que el texto no se rompa */
-}
-
-#noteDisplay {
-  font-size: 120px; /* Mucho más grande */
-  font-weight: 900;
-  margin: 0;
-  transition: color 0.3s ease;
-}
-
-#guideText {
-  font-size: 32px; /* Tamaño grande y legible */
-  margin: 20px 0;
-  font-weight: bold;
 }
 
 .success {
