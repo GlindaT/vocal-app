@@ -130,6 +130,11 @@ function showTab(tabId) {
 // ==========================================
 // AFINADOR
 // ==========================================
+let audioContext, analyser, stream;
+
+// ==========================================
+// ESTADO ESTUDIO / BIBLIOTECA
+// ==========================================
 let studioMediaRecorder = null;
 let studioStream = null;
 let studioChunks = [];
@@ -827,12 +832,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     // splitter
     safeAdd("splitBtn", "click", splitAudio);
 
-    // config
-    
-
     // init
     await loadLibrary();
-    
+
     const player = $("player");
     if (player) {
       player.addEventListener("timeupdate", () => {
@@ -843,3 +845,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         updateKaraokeHighlight(player.currentTime);
       });
     }
+
+  } catch (error) {
+    console.error(error);
+    alert("❌ Error inicializando la app");
+  }
+});
