@@ -592,6 +592,50 @@ async function loadSelectedVoiceFromLibrary() {
   }
 }
 
+async function transcribeSelectedVoice() {
+  if (!selectedVoiceBlob) {
+    alert("⚠️ Primero selecciona y carga una voz desde Biblioteca");
+    return;
+  }
+
+  const status = $("selectedVoiceStatus");
+  const lyricsText = $("lyricsText");
+
+  try {
+    if (status) status.textContent = "Estado: transcribiendo voz con Whisper...";
+
+    const formData = new FormData();
+    formData.append("file", selectedVoiceBlob, "voz.webm");
+    formData.append("model", "whisper-1");
+    formData.append("language", "es");
+
+    const response = await fetch("/api/transcribe", {
+      method: "POST",
+      body: formData
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(errorText);
+      alert("❌ Error al transcribir");
+      if (status) status.textContent = "Estado: error al transcribir";
+      return;
+    }
+
+    const result = await response.json();
+
+    if (lyricsText) {
+      lyricsText.value = result.text || "";
+    }
+
+    if (status) status.textContent = "Estado: transcripción completada";
+  } catch (error) {
+    console.error(error);
+    alert("❌ Error de conexión al transcribir");
+    if (status) status.textContent = "Estado: error de conexión";
+  }
+}
+
 // ==========================================
 // KARAOKE (BÁSICO LIMPIO)
 // ==========================================
@@ -702,6 +746,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     safeAdd("saveStudioRecBtn", "click", saveStudioRecording);
     safeAdd("refreshVoiceListBtn", "click", loadVoiceOptionsInStudio);
     safeAdd("loadSelectedVoiceBtn", "click", loadSelectedVoiceFromLibrary);
+    safeAdd("transcribeVoiceBtn", "click", transcribeSelectedVoice);
 
     // biblioteca
     safeAdd("saveLibraryFileBtn", "click", saveManualFileToLibrary);
