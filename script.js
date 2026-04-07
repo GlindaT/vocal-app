@@ -53,15 +53,15 @@ let audioContext, analyser, stream;
 async function toggleRecording() {
 const btn = $("recordBtn");
 
-if (!state.isRecording) {
-state.isRecording = true;
-btn.textContent = "Detener";
-await startAfinador();
+  if (!state.isRecording) {
+    state.isRecording = true;
+    btn.textContent = "Detener";
+    await startAfinador();
 } else {
-state.isRecording = false;
-btn.textContent = "Grabar";
-stopAfinador();
-}
+    state.isRecording = false;
+    btn.textContent = "Grabar";
+    stopAfinador();
+  }
 }
 
 async function startAfinador() {
