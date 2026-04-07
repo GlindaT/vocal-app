@@ -103,35 +103,47 @@ function detectPitch() {
   const buffer = new Float32Array(analyser.fftSize);
   analyser.getFloatTimeDomainData(buffer);
   const pitch = autoCorrelate(buffer, audioContext.sampleRate);
+  
   const display = $("noteDisplay");
-  const target = $("targetNote").value;
+  const targetNote = $("targetNote").value; // Lo que el usuario eligió (ej: "C")
 
-  if (pitch !== -1) {
-    const noteFull = getNoteFromFrequency(pitch);
-    const noteName = noteFull.replace(/[0-9]/g, '');
-    const cents = getCentsOff(pitch, getNoteFrequency(target));
+  if (pitch !== -1 && display) {
+    // 1. Obtenemos la nota y la frecuencia
+    const noteFull = getNoteFromFrequency(pitch); // "C4"
+    const noteName = noteFull.replace(/[0-9]/g, ''); // "C"
+    
+    // 2. Calculamos la diferencia en "cents" (centésimas de semitono)
+    // Usamos una fórmula estándar de afinación
+    const targetFreq = 440 * Math.pow(2, (getNoteIndex(targetNote) - 9) / 12);
+    const cents = 1200 * Math.log2(pitch / targetFreq);
 
-    if (display) {
-      if (noteName === target) {
-        // Si está en el rango de +/- 10 cents, lo damos por bueno
-        if (Math.abs(cents) < 10) {
-          display.textContent = `${noteFull} ✅ (Perfecto)`;
-          display.classList.add("success");
-        } else if (cents > 0) {
-          display.textContent = `${noteFull} ⬇️ (Baja un poco)`;
-          display.classList.remove("success");
-        } else {
-          display.textContent = `${noteFull} ⬆️ (Sube un poco)`;
-          display.classList.remove("success");
-        }
+    // 3. Lógica de visualización
+    if (noteName === targetNote) {
+      if (Math.abs(cents) < 15) { // Margen de error pequeño (está afinado)
+        display.textContent = `${noteFull} ✅`;
+        display.style.color = "#22c55e"; // Verde
+      } else if (cents > 15) {
+        display.textContent = `${noteFull} ⬇️ (Baja)`;
+        display.style.color = "#ef4444"; // Rojo (muy alta)
       } else {
-        display.textContent = `${noteFull} (Buscando ${target}...)`;
-        display.classList.remove("success");
+        display.textContent = `${noteFull} ⬆️ (Sube)`;
+        display.style.color = "#ef4444"; // Rojo (muy baja)
       }
+    } else {
+      display.textContent = `${noteFull} 🎯 (${targetNote})`;
+      display.style.color = "white";
     }
   }
+
   requestAnimationFrame(detectPitch);
 }
+
+// Helper adicional: necesitamos esta función para convertir la nota a número
+function getNoteIndex(note) {
+  const notes = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+  return notes.indexOf(note);
+}
+
 function autoCorrelate(buf, sampleRate) {
   let bestOffset = -1;
   let bestCorrelation = 0;
