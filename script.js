@@ -136,6 +136,8 @@ let studioStream = null;
 let studioChunks = [];
 let studioRecordedBlob = null;
 let studioTrackFileName = "";
+let selectedVoiceBlob = null;
+let selectedVoiceId = null;
 
 async function toggleRecording() {
   const btn = document.getElementById("recordBtn");
@@ -440,6 +442,8 @@ async function loadLibrary() {
       });
     });
 
+    await loadVoiceOptionsInStudio();
+
   } catch (error) {
     console.error(error);
     container.innerHTML = "<p>❌ Error al cargar la biblioteca.</p>";
@@ -490,6 +494,101 @@ async function saveManualFileToLibrary() {
   } catch (error) {
     console.error(error);
     alert("❌ No se pudo guardar el archivo");
+  }
+}
+
+async function getLibraryItemsByType(type) {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(["library"], "readonly");
+    const store = transaction.objectStore("library");
+    const index = store.index("type");
+    const request = index.getAll(type);
+
+    request.onsuccess = function () {
+      resolve(request.result);
+    };
+
+    request.onerror = function () {
+      reject("❌ Error al filtrar archivos por tipo");
+    };
+  });
+}
+
+async function loadVoiceOptionsInStudio() {
+  const select = $("voiceLibrarySelect");
+  if (!select) return;
+
+  select.innerHTML = `<option value="">Selecciona una voz guardada</option>`;
+
+  try {
+    const voices = await getLibraryItemsByType("voz");
+
+    if (!voices.length) {
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "No hay voces guardadas";
+      select.appendChild(option);
+      return;
+    }
+
+    voices.forEach((item) => {
+      const option = document.createElement("option");
+      option.value = item.id;
+      option.textContent = `${item.name} (${item.date || "sin fecha"})`;
+      select.appendChild(option);
+    });
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function getLibraryItemById(id) {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(["library"], "readonly");
+    const store = transaction.objectStore("library");
+    const request = store.get(id);
+
+    request.onsuccess = function () {
+      resolve(request.result);
+    };
+
+    request.onerror = function () {
+      reject("❌ Error al obtener archivo");
+    };
+  });
+}
+
+async function loadSelectedVoiceFromLibrary() {
+  const select = $("voiceLibrarySelect");
+  const player = $("selectedVoicePlayer");
+  const status = $("selectedVoiceStatus");
+
+  if (!select || !player || !status) return;
+
+  const selectedId = Number(select.value);
+
+  if (!selectedId) {
+    alert("⚠️ Selecciona una voz");
+    return;
+  }
+
+  try {
+    const item = await getLibraryItemById(selectedId);
+
+    if (!item) {
+      alert("⚠️ No se encontró el archivo");
+      return;
+    }
+
+    selectedVoiceBlob = item.audioBlob;
+    selectedVoiceId = item.id;
+
+    const audioURL = URL.createObjectURL(item.audioBlob);
+    player.src = audioURL;
+    status.textContent = `Estado: voz seleccionada -> ${item.name}`;
+  } catch (error) {
+    console.error(error);
+    alert("❌ No se pudo cargar la voz seleccionada");
   }
 }
 
@@ -605,6 +704,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     safeAdd("stopStudioRecBtn", "click", stopStudioRecording);
     safeAdd("redoStudioRecBtn", "click", redoStudioRecording);
     safeAdd("saveStudioRecBtn", "click", saveStudioRecording);
+    safeAdd("refreshVoiceListBtn", "click", loadVoiceOptionsInStudio);
+    safeAdd("loadSelectedVoiceBtn", "click", loadSelectedVoiceFromLibrary);
 
     // biblioteca
     safeAdd("saveLibraryFileBtn", "click", saveManualFileToLibrary);
