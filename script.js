@@ -671,11 +671,7 @@ function showResult(url) {
 // ==========================================
 // CONFIG
 // ==========================================
-function saveApiKey() {
-  const key = $("openaiApiKey").value.trim();
-  localStorage.setItem("openaiApiKey", key);
-  alert("Guardada");
-}
+
 
 // ==========================================
 // INIT
@@ -717,7 +713,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     safeAdd("splitBtn", "click", splitAudio);
 
     // config
-    safeAdd("saveApiKeyBtn", "click", saveApiKey);
+    
 
     // init
     await loadLibrary();
