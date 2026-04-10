@@ -936,6 +936,127 @@ function syncKaraokeMonitor(currentTime) {
   }
 }
 
+// 7. Mezclador de Audio (Pista + Voz)
+async function mixKaraoke() {
+  const fileInput = $("karaokeTrackFile");
+  const trackFile = fileInput ? fileInput.files[0] : null;
+
+  if (!trackFile || !karaokeRecordedBlob) {
+    alert("⚠️ Faltan ingredientes: Asegúrate de cargar una pista instrumental y grabar tu voz primero.");
+    return;
+  }
+
+  const btn = $("karaokeMixBtn");
+  const resultDiv = $("karaokeMixResult");
+  
+  btn.textContent = "🎧 Mezclando audios... ⏳";
+  btn.disabled = true;
+  resultDiv.innerHTML = "<p style='color: var(--text-muted);'>Uniendo la pista y tu voz. Esto puede tardar unos segundos...</p>";
+
+  try {
+    // Crear el motor de audio
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Decodificar la pista instrumental
+    const trackArrayBuffer = await trackFile.arrayBuffer();
+    const trackBuffer = await audioCtx.decodeAudioData(trackArrayBuffer);
+    
+    // Decodificar la voz grabada
+    const voiceArrayBuffer = await karaokeRecordedBlob.arrayBuffer();
+    const voiceBuffer = await audioCtx.decodeAudioData(voiceArrayBuffer);
+
+    // Preparar el estudio virtual invisible (OfflineAudioContext)
+    const offlineCtx = new OfflineAudioContext(
+      trackBuffer.numberOfChannels, // Usar los mismos canales de la pista (usualmente Stereo)
+      trackBuffer.length,           // Usar la duración de la pista original
+      trackBuffer.sampleRate
+    );
+
+    // Conectar Pista al estudio
+    const trackSource = offlineCtx.createBufferSource();
+    trackSource.buffer = trackBuffer;
+    trackSource.connect(offlineCtx.destination);
+    
+    // Conectar Voz al estudio
+    const voiceSource = offlineCtx.createBufferSource();
+    voiceSource.buffer = voiceBuffer;
+
+    // (Opcional) Subirle un poco el volumen a la voz para que resalte sobre la música
+    const voiceGain = offlineCtx.createGain();
+    voiceGain.gain.value = 1.3; // 30% más de volumen
+    voiceSource.connect(voiceGain);
+    voiceGain.connect(offlineCtx.destination);
+
+    // Dar Play a ambas al milisegundo 0
+    trackSource.start(0);
+    voiceSource.start(0);
+
+    // Renderizar (Grabar la mezcla completa)
+    const renderedBuffer = await offlineCtx.startRendering();
+
+    // Convertir la mezcla a un archivo WAV real
+    const finalWavBlob = exportStereoWav(renderedBuffer);
+    const finalUrl = URL.createObjectURL(finalWavBlob);
+
+    // Mostrar el reproductor final y el botón de descarga
+    resultDiv.innerHTML = `
+      <h4 style="color: #22c55e;">✅ ¡Mezcla completada!</h4>
+      <audio controls src="${finalUrl}" style="width: 100%; margin-bottom: 15px; border-radius: 8px;"></audio>
+      <a href="${finalUrl}" download="Mi_Karaoke_VocalApp.wav">
+        <button type="button" style="background: #22c55e; color: black; font-size: 16px;">💾 Descargar Canción Terminada</button>
+      </a>
+    `;
+
+  } catch (err) {
+    console.error("Error al mezclar:", err);
+    resultDiv.innerHTML = "<p style='color: #ef4444;'>❌ Hubo un error al mezclar los audios.</p>";
+  } finally {
+    btn.textContent = "🎧 Mezclar Pista + Voz";
+    btn.disabled = false;
+  }
+}
+
+// Función Mágica Auxiliar: Convierte el resultado del mezclador en un archivo WAV de alta calidad (Stereo)
+function exportStereoWav(buffer) {
+  const numOfChan = buffer.numberOfChannels;
+  const length = buffer.length * numOfChan * 2 + 44;
+  const result = new ArrayBuffer(length);
+  const view = new DataView(result);
+  const channels = [];
+  let pos = 0;
+
+  const writeString = (view, offset, string) => {
+    for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i));
+  };
+
+  writeString(view, 0, 'RIFF');
+  view.setUint32(4, 36 + buffer.length * 2 * numOfChan, true);
+  writeString(view, 8, 'WAVE');
+  writeString(view, 12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, numOfChan, true);
+  view.setUint32(24, buffer.sampleRate, true);
+  view.setUint32(28, buffer.sampleRate * 2 * numOfChan, true);
+  view.setUint16(32, numOfChan * 2, true);
+  view.setUint16(34, 16, true);
+  writeString(view, 36, 'data');
+  view.setUint32(40, buffer.length * 2 * numOfChan, true);
+
+  for (let i = 0; i < buffer.numberOfChannels; i++) channels.push(buffer.getChannelData(i));
+
+  pos = 44;
+  for (let i = 0; i < buffer.length; i++) {
+    for (let channel = 0; channel < numOfChan; channel++) {
+      let sample = Math.max(-1, Math.min(1, channels[channel][i]));
+      sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+      view.setInt16(pos, sample, true);
+      pos += 2;
+    }
+  }
+  return new Blob([result], { type: 'audio/wav' });
+}
+
 // ==========================================
 // SPLITTER (SIMPLIFICADO)
 // ==========================================
@@ -1085,6 +1206,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     safeAdd("karaokeStartBtn", "click", startKaraokeRecording);
     safeAdd("karaokeStopBtn", "click", stopKaraokeRecording);
     safeAdd("karaokeRestartBtn", "click", restartKaraokeRecording);
+    safeAdd("karaokeMixBtn", "click", mixKaraoke);
 
     // Hacer que el monitor de letras escuche la canción
     const kTrack = $("karaokeTrack");
