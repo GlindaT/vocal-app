@@ -1139,7 +1139,7 @@ function exportStereoWav(buffer) {
 }
 
 // ==========================================
-// SPLITTER IA (SIN LÍMITES - CASILLERO TEMPORAL)
+// SPLITTER IA (SIN LÍMITES - MODELO MDX23)
 // ==========================================
 async function splitAudio() {
   const fileInput = $("splitterFile");
@@ -1161,7 +1161,7 @@ async function splitAudio() {
   detailText.textContent = "Guardando en casillero temporal para evitar límites de tamaño.";
 
   try {
-    // 1. Subir al Casillero Temporal (tmpfiles.org)
+    // 1. Subir al Casillero Temporal
     const formData = new FormData();
     formData.append('file', file);
     
@@ -1173,12 +1173,11 @@ async function splitAudio() {
     const tmpData = await tmpResponse.json();
     if (!tmpData.data || !tmpData.data.url) throw new Error("Error al subir al casillero temporal.");
     
-    // Convertir el link normal a un link de descarga directa para la IA
     const directUrl = tmpData.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
 
-    // 2. Enviar el Link a nuestra "Cocina"
+    // 2. Enviar a Replicate
     statusText.textContent = "2/3 🚀 Iniciando IA...";
-    detailText.textContent = "El archivo está seguro. Despertando a Replicate...";
+    detailText.textContent = "Despertando al modelo avanzado MDX23...";
     
     const startResponse = await fetch("/api/split", {
       method: "POST",
@@ -1188,7 +1187,6 @@ async function splitAudio() {
 
     const prediction = await startResponse.json();
 
-    // Si Replicate nos devuelve error (Ej: Llave inválida)
     if (!startResponse.ok) throw new Error(prediction.error || "Error al conectar con Replicate");
 
     // 3. El Polling: Preguntar cada 4 segundos
@@ -1204,11 +1202,23 @@ async function splitAudio() {
           statusText.textContent = "✅ ¡Separación completada!";
           detailText.textContent = "Descargando archivos y guardando en tu Biblioteca...";
 
+          // 4. ESCUDO INTELIGENTE: Buscar Voz y Pista sin importar cómo se llamen
           const urls = statusData.output;
-          
+          let urlVoz, urlPista;
+
+          // Si la IA devuelve un Objeto
+          if (!Array.isArray(urls)) {
+            urlVoz = urls.vocals || urls.Vocals || urls.vocal;
+            urlPista = urls.other || urls.Instrumental || urls.instrumental || urls.no_vocals;
+          } else {
+            // Si la IA devuelve una Lista
+            urlVoz = urls.find(u => u.toLowerCase().includes('vocal')) || urls[0];
+            urlPista = urls.find(u => !u.toLowerCase().includes('vocal')) || urls[1] || urls[0];
+          }
+
           const [resVoz, resPista] = await Promise.all([
-            fetch(urls.vocals),
-            fetch(urls.other)
+            fetch(urlVoz),
+            fetch(urlPista)
           ]);
 
           const blobVoz = await resVoz.blob();
@@ -1226,7 +1236,6 @@ async function splitAudio() {
           clearInterval(interval);
           throw new Error("La IA falló al procesar el audio.");
         } else {
-          // Actualizamos el estado para que el usuario vea que está avanzando
           detailText.textContent = `Estado actual de la IA: ${statusData.status}... por favor espera.`;
         }
       } catch (pollError) {
