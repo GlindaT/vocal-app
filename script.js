@@ -598,17 +598,12 @@ async function loadSelectedVoiceFromLibrary() {
   }
 }
 
+// ==========================================
+// TRANSCRIPCIÓN CON TÉCNICA DE CHUNKING (SALAME)
+// ==========================================
 async function transcribeSelectedVoice() {
   if (!selectedVoiceBlob) {
     alert("⚠️ Primero selecciona y carga una voz desde Biblioteca");
-    return;
-  }
-
-  const maxSizeMB = 4;
-  const fileSizeMB = selectedVoiceBlob.size / (1024 * 1024);
-
-  if (fileSizeMB > maxSizeMB) {
-    alert(`⚠️ El archivo pesa ${fileSizeMB.toFixed(2)} MB. Por ahora usa un archivo de voz de hasta ${maxSizeMB} MB para transcribir.`);
     return;
   }
 
@@ -616,49 +611,127 @@ async function transcribeSelectedVoice() {
   const lyricsText = $("lyricsText");
 
   try {
-    if (status) status.textContent = "Estado: transcribiendo voz con Whisper...";
+    if (status) status.textContent = "Estado: Preparando audio (cortando en porciones)...";
 
-    const formData = new FormData();
-    formData.append("file", selectedVoiceBlob, "voz.webm");
-    formData.append("model", "whisper-1");
-    formData.append("language", "es");
-    formData.append("response_format", "verbose_json");
+    // 1. Decodificar el audio completo
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const arrayBuffer = await selectedVoiceBlob.arrayBuffer();
+    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
 
-    const response = await fetch("/api/transcribe", {
-      method: "POST",
-      body: formData
-    });
+    // 2. Configurar los cortes (Ej: 60 segundos por pedazo)
+    const CHUNK_SECONDS = 60; 
+    const sampleRate = audioBuffer.sampleRate;
+    const totalSamples = audioBuffer.length;
+    const samplesPerChunk = CHUNK_SECONDS * sampleRate;
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(errorText);
-      alert("❌ Error al transcribir");
-      if (status) status.textContent = "Estado: error al transcribir";
-      return;
+    let fullText = "";
+    let fullSegments = [];
+
+    // 3. Procesar cada pedazo
+    for (let start = 0; start < totalSamples; start += samplesPerChunk) {
+      const end = Math.min(start + samplesPerChunk, totalSamples);
+      const chunkNumber = Math.floor(start / samplesPerChunk) + 1;
+      const totalChunks = Math.ceil(totalSamples / samplesPerChunk);
+      
+      if (status) status.textContent = `Estado: Transcribiendo parte ${chunkNumber} de ${totalChunks}...`;
+
+      // Convertir el pedazo a WAV y luego a Base64
+      const wavBlob = audioBufferToWav(audioBuffer, start, end);
+      const base64Audio = await blobToBase64(wavBlob);
+
+      // Enviar a nuestra cocina segura (Vercel)
+      const response = await fetch("/api/transcribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ audioBase64: base64Audio })
+      });
+
+      if (!response.ok) {
+        throw new Error("Error en la respuesta del servidor");
+      }
+
+      const result = await response.json();
+      
+      // Unir los textos
+      fullText += (result.text || "") + " ";
+
+      // Unir los segmentos de Karaoke sumando el tiempo del pedazo anterior
+      const timeOffset = start / sampleRate;
+      (result.segments || []).forEach(seg => {
+        fullSegments.push({
+          start: seg.start + timeOffset,
+          end: seg.end + timeOffset,
+          text: seg.text
+        });
+      });
     }
 
-    const result = await response.json();
-
-    if (lyricsText) {
-      lyricsText.value = result.text || "";
-    }
-
-    transcriptionSegments = (result.segments || []).map(segment => ({
-      start: segment.start,
-      end: segment.end,
-      text: segment.text
-    }));
-
+    // 4. Mostrar el resultado final
+    if (lyricsText) lyricsText.value = fullText.trim();
+    
+    transcriptionSegments = fullSegments;
     renderKaraokeLyrics(transcriptionSegments);
 
-    if (status) status.textContent = "Estado: transcripción completada con sincronización";
+    if (status) status.textContent = "Estado: Transcripción completada con éxito ✅";
+
   } catch (error) {
     console.error(error);
-    alert("❌ Error de conexión al transcribir");
-    if (status) status.textContent = "Estado: error de conexión";
+    alert("❌ Error al transcribir el audio.");
+    if (status) status.textContent = "Estado: Error en la transcripción";
   }
 }
 
+// ==========================================
+// FUNCIONES MÁGICAS PARA CORTAR AUDIO
+// ==========================================
+function audioBufferToWav(buffer, startSample, endSample) {
+  const length = endSample - startSample;
+  const wavBuffer = new ArrayBuffer(44 + length * 2);
+  const view = new DataView(wavBuffer);
+  const sampleRate = buffer.sampleRate;
+
+  // Escribir cabecera WAV
+  const writeString = (view, offset, string) => {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i));
+    }
+  };
+  writeString(view, 0, 'RIFF');
+  view.setUint32(4, 36 + length * 2, true);
+  writeString(view, 8, 'WAVE');
+  writeString(view, 12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // 1 canal (Mono)
+  view.setUint16(22, 1, true); 
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeString(view, 36, 'data');
+  view.setUint32(40, length * 2, true);
+
+  // Extraer el sonido en Mono para que pese menos
+  const channelData = buffer.getChannelData(0);
+  let offset = 44;
+  for (let i = startSample; i < endSample; i++) {
+    let sample = Math.max(-1, Math.min(1, channelData[i]));
+    view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+    offset += 2;
+  }
+  return new Blob([view], { type: 'audio/wav' });
+}
+
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result.split(',')[1];
+      resolve(base64String);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
 function renderKaraokeLyrics(segments) {
   const container = $("karaokeLyrics");
   if (!container) return;
