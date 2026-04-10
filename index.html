@@ -200,12 +200,25 @@
 
     <!-- SPLITTER -->
     <section id="splitter" class="tab">
-      <h1>✂️ Splitter</h1>
+      <h1>✂️ Splitter IA</h1>
 
-      <input type="file" id="splitterFile" accept="audio/*">
-      <br><br>
+      <div class="card">
+        <h3>Separar Voz e Instrumental</h3>
+        <p style="color: var(--text-muted); margin-bottom: 20px;">
+          Sube una canción (MP3 de máximo 3.5 MB). La Inteligencia Artificial la separará y la guardará en tu Biblioteca.
+        </p>
 
-      <button id="splitBtn">Separar audio</button>
+        <input type="file" id="splitterFile" accept="audio/*">
+        
+        <div class="studio-controls">
+          <button id="splitBtn" type="button" style="background: #3b82f6; color: white;">✨ Separar Audio con IA</button>
+        </div>
+
+        <div id="splitterStatusBox" style="margin-top: 20px; padding: 15px; background: var(--bg-main); border-radius: 8px; border: 1px solid var(--border); display: none;">
+          <h4 id="splitterStatusText" style="color: var(--accent); margin: 0;">Iniciando IA...</h4>
+          <p id="splitterDetailText" style="color: var(--text-muted); font-size: 14px;">Esto puede tardar un poco.</p>
+        </div>
+      </div>
     </section>
 
     <!-- CONFIG -->
