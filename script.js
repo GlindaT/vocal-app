@@ -1202,9 +1202,18 @@ async function splitAudio() {
           statusText.textContent = "✅ ¡Separación completada!";
           detailText.textContent = "Descargando archivos y guardando en tu Biblioteca...";
 
-          // 4. ESCUDO INTELIGENTE: Buscar Voz y Pista sin importar cómo se llamen
+          // 4. ESCUDO INTELIGENTE: Buscar Voz y Pista completa
           const urls = statusData.output;
           let urlVoz, urlPista;
+
+          if (!Array.isArray(urls)) {
+            urlVoz = urls.vocals || urls.Vocals || urls.vocal;
+            // Agregamos accompaniment (que es como Spleeter llama a la pista completa)
+            urlPista = urls.accompaniment || urls.other || urls.Instrumental || urls.instrumental; 
+          } else {
+            urlVoz = urls.find(u => u.toLowerCase().includes('vocal')) || urls[0];
+            urlPista = urls.find(u => u.toLowerCase().includes('accompaniment') || !u.toLowerCase().includes('vocal')) || urls[1];
+          }
 
           // Si la IA devuelve un Objeto
           if (!Array.isArray(urls)) {
