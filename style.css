@@ -343,3 +343,30 @@ input[type="text"] {
   font-weight: bold;
   transform: scale(1.05);
 }
+
+/* ==========================================
+   MONITOR KARAOKE ULTRASTAR
+========================================== */
+.karaoke-live-line {
+  font-size: 26px;
+  color: #475569; /* Gris oscuro para las que no han sonado */
+  margin: 10px 0;
+  text-align: center;
+  transition: all 0.2s ease;
+  opacity: 0.5;
+}
+
+.karaoke-live-line.active {
+  color: #22c55e; /* Verde neón brillante */
+  font-size: 34px;
+  font-weight: 900;
+  opacity: 1;
+  text-shadow: 0 0 10px rgba(34, 197, 94, 0.6); /* Brillo neón */
+  transform: scale(1.1);
+}
+
+.karaoke-live-line.past {
+  color: #ffffff; /* Blanco para las que ya pasaron */
+  opacity: 0.8;
+  font-size: 26px;
+}
