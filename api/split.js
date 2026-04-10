@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     const { fileUrl } = req.body;
     
-    // Usamos Spleeter (Especializado en 2 Stems: Vocals + Accompaniment)
+    // Volvemos al modelo MDX23 que TÚ encontraste y que sabemos que funciona
     const response = await fetch("https://api.replicate.com/v1/predictions", {
       method: "POST",
       headers: {
@@ -21,11 +21,8 @@ export default async function handler(req, res) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        version: "b6aa902b467140e4f8d55d288d0ed76a5f700085baaf254b17b6a4149eeb4f94", 
-        input: { 
-          audio: fileUrl,
-          stems: "2stems" // Le obligamos a que no divida los instrumentos
-        }
+        version: "510b9b91aec1bfa7d634e6c06ee80c18492fb0fc06aa1474533fbda90dd3dba4", 
+        input: { audio: fileUrl }
       })
     });
     
