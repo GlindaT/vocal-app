@@ -652,17 +652,24 @@ async function transcribeSelectedVoice() {
 
       const result = await response.json();
       
-      // Unir los textos
-      fullText += (result.text || "") + " ";
-
-      // Unir los segmentos de Karaoke sumando el tiempo del pedazo anterior
+      // Filtro Anti-Fantasmas (Alucinaciones de Whisper)
+      const palabrasProhibidas = ["Amara", "Subtítulos", "subtítulos", "comunidad"];
+      
       const timeOffset = start / sampleRate;
+
       (result.segments || []).forEach(seg => {
-        fullSegments.push({
-          start: seg.start + timeOffset,
-          end: seg.end + timeOffset,
-          text: seg.text
-        });
+        // Revisamos si el texto tiene alguna palabra fantasma
+        const esFantasma = palabrasProhibidas.some(palabra => seg.text.includes(palabra));
+        
+        // Si no es un fantasma y no está vacío, lo agregamos
+        if (!esFantasma && seg.text.trim() !== "") {
+          fullSegments.push({
+            start: seg.start + timeOffset,
+            end: seg.end + timeOffset,
+            text: seg.text
+          });
+          fullText += seg.text + " "; // Lo sumamos al texto final
+        }
       });
     }
 
