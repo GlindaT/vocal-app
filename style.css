@@ -310,6 +310,34 @@ input[type="text"] {
   color: var(--text-muted);
 }
 
+/* ==========================================
+   CONFIGURACIÓN
+========================================== */
+.settings-group {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-group label {
+  font-weight: bold;
+  margin-bottom: 10px;
+  color: var(--text-main);
+  font-size: 16px;
+}
+
+.save-notification {
+  color: var(--accent);
+  font-weight: bold;
+  opacity: 0; /* Oculto por defecto */
+  transition: opacity 0.3s ease;
+  margin-top: 15px;
+  font-size: 14px;
+}
+
+.save-notification.show {
+  opacity: 1; /* Se hace visible cuando JS le pone esta clase */
+}
 .karaoke-line.active {
   color: #22c55e;
   font-weight: bold;
