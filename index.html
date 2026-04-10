@@ -154,10 +154,48 @@
     <section id="karaoke" class="tab">
       <h1>🎤 Karaoke</h1>
 
-      <input type="file" id="karaokeTrackFile" accept="audio/*">
-      <br><br>
+      <!-- Paso 1: Pista -->
+      <div class="card">
+        <h3>1. Cargar Pista (Instrumental)</h3>
+        <input type="file" id="karaokeTrackFile" accept="audio/*">
+        <audio id="karaokeTrack" controls style="margin-top: 10px;"></audio>
+      </div>
 
-      <audio id="karaokeTrack" controls></audio>
+      <!-- MONITOR ESTILO ULTRASTAR -->
+      <div class="card" style="background: black; border: 2px solid var(--border);">
+        <h3 style="color: var(--accent); text-align: center; margin-top: 0;">Monitor de Letras</h3>
+        <div id="karaokeLiveLyrics" class="karaoke-lyrics" style="height: 200px; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; background: transparent; border: none;">
+          <p class="karaoke-placeholder" style="font-size: 20px;">Las letras sincronizadas aparecerán aquí...</p>
+        </div>
+      </div>
+
+      <!-- Paso 2: Grabación -->
+      <div class="card">
+        <h3>2. Grabación Sincronizada</h3>
+        <p id="karaokeStatus" style="color: var(--text-muted); margin-bottom: 15px;">Estado: Esperando pista...</p>
+        
+        <div class="studio-controls">
+          <button id="karaokeStartBtn" class="btn-danger" type="button">🎙️ Iniciar Grabación</button>
+          <button id="karaokeStopBtn" type="button">⏹️ Detener</button>
+          <button id="karaokeRestartBtn" type="button">🔄 Volver a intentar</button>
+        </div>
+
+        <h4 style="margin-top: 20px;">Tu voz grabada:</h4>
+        <audio id="karaokeVoicePlayer" controls></audio>
+      </div>
+
+      <!-- Paso 3: Mezcla -->
+      <div class="card">
+        <h3>3. Mezcla Final</h3>
+        <p style="color: var(--text-muted); margin-bottom: 15px;">Une la pista instrumental con tu voz en un solo archivo de audio.</p>
+        
+        <div class="studio-controls">
+          <button id="karaokeMixBtn" type="button" style="background: #a855f7; color: white;">🎧 Mezclar Pista + Voz</button>
+        </div>
+        
+        <div id="karaokeMixResult" style="margin-top: 15px;"></div>
+      </div>
+
     </section>
 
     <!-- SPLITTER -->
