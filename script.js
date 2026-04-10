@@ -82,6 +82,48 @@ function getAllLibraryItems() {
   });
 }
 
+// Actualizar un archivo existente en la BD (para guardarle las letras)
+function updateLibraryItem(id, changes) {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(["library"], "readwrite");
+    const store = transaction.objectStore("library");
+    const getReq = store.get(id);
+
+    getReq.onsuccess = () => {
+      const item = getReq.result;
+      if (!item) return reject("Archivo no encontrado");
+      
+      const updatedItem = { ...item, ...changes }; // Mezclamos los datos viejos con los nuevos
+      const putReq = store.put(updatedItem);
+      
+      putReq.onsuccess = () => resolve();
+      putReq.onerror = () => reject("Error al actualizar la BD");
+    };
+    getReq.onerror = () => reject("Error al buscar en BD");
+  });
+}
+
+// Actualizar un archivo existente en la BD (para guardarle las letras)
+function updateLibraryItem(id, changes) {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(["library"], "readwrite");
+    const store = transaction.objectStore("library");
+    const getReq = store.get(id);
+
+    getReq.onsuccess = () => {
+      const item = getReq.result;
+      if (!item) return reject("Archivo no encontrado");
+      
+      const updatedItem = { ...item, ...changes }; // Mezclamos los datos viejos con los nuevos
+      const putReq = store.put(updatedItem);
+      
+      putReq.onsuccess = () => resolve();
+      putReq.onerror = () => reject("Error al actualizar la BD");
+    };
+    getReq.onerror = () => reject("Error al buscar en BD");
+  });
+}
+
 function deleteLibraryItemFromDB(id) {
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(["library"], "readwrite");
@@ -592,6 +634,23 @@ async function loadSelectedVoiceFromLibrary() {
     const audioURL = URL.createObjectURL(item.audioBlob);
     player.src = audioURL;
     status.textContent = `Estado: voz seleccionada -> ${item.name}`;
+    // NUEVO: Si este archivo ya tiene letras guardadas, las cargamos al instante
+    const lyricsText = $("lyricsText");
+    if (item.transcription) {
+      transcriptionSegments = item.transcription;
+      renderKaraokeLyrics(transcriptionSegments);
+      
+      // Armamos el texto completo para el recuadro
+      if (lyricsText) {
+        lyricsText.value = item.transcription.map(t => t.text).join(" ");
+      }
+      status.textContent = `Estado: Voz seleccionada (Letras cargadas de memoria ⚡)`;
+    } else {
+      // Si no tiene letras, limpiamos la pantalla
+      transcriptionSegments = [];
+      renderKaraokeLyrics([]);
+      if (lyricsText) lyricsText.value = "";
+    }
   } catch (error) {
     console.error(error);
     alert("❌ No se pudo cargar la voz seleccionada");
@@ -653,7 +712,7 @@ async function transcribeSelectedVoice() {
       const result = await response.json();
       
       // Filtro Anti-Fantasmas (Alucinaciones de Whisper)
-      const palabrasProhibidas = ["Amara", "Subtítulos", "subtítulos", "comunidad"];
+      const palabrasProhibidas = ["Amara", "Subtítulos", "subtítulos", "Almorzo", "Suscribete", "comunidad"];
       
       const timeOffset = start / sampleRate;
 
@@ -678,6 +737,11 @@ async function transcribeSelectedVoice() {
     
     transcriptionSegments = fullSegments;
     renderKaraokeLyrics(transcriptionSegments);
+    
+    // NUEVO: Guardar la transcripción en la Biblioteca permanentemente
+    if (selectedVoiceId) {
+      await updateLibraryItem(selectedVoiceId, { transcription: fullSegments });
+    }
 
     if (status) status.textContent = "Estado: Transcripción completada con éxito ✅";
 
@@ -998,14 +1062,31 @@ async function mixKaraoke() {
     const finalWavBlob = exportStereoWav(renderedBuffer);
     const finalUrl = URL.createObjectURL(finalWavBlob);
 
-    // Mostrar el reproductor final y el botón de descarga
+    // Mostrar el reproductor final y botones
     resultDiv.innerHTML = `
       <h4 style="color: #22c55e;">✅ ¡Mezcla completada!</h4>
       <audio controls src="${finalUrl}" style="width: 100%; margin-bottom: 15px; border-radius: 8px;"></audio>
-      <a href="${finalUrl}" download="Mi_Karaoke_VocalApp.wav">
-        <button type="button" style="background: #22c55e; color: black; font-size: 16px;">💾 Descargar Canción Terminada</button>
-      </a>
+      <div style="display: flex; gap: 10px;">
+        <a href="${finalUrl}" download="Mezcla_${trackFile.name || "Karaoke"}.wav" style="flex: 1;">
+          <button type="button" style="width: 100%; background: #22c55e; color: black;">💾 Descargar Archivo</button>
+        </a>
+        <button id="saveMixToLibBtn" type="button" style="flex: 1; background: #3b82f6; color: white;">📁 Guardar en Biblioteca</button>
+      </div>
     `;
+
+    // Hacer que el botón de guardar funcione
+    $("saveMixToLibBtn").onclick = async () => {
+      const btnSave = $("saveMixToLibBtn");
+      btnSave.textContent = "Guardando...";
+      btnSave.disabled = true;
+      
+      await saveToLibrary(finalWavBlob, {
+        name: `Mezcla - ${trackFile.name || "Canción"}`,
+        type: "grabacion" // Lo guardamos como grabación
+      });
+      
+      btnSave.textContent = "✅ ¡Guardado en Biblioteca!";
+    };
 
   } catch (err) {
     console.error("Error al mezclar:", err);
