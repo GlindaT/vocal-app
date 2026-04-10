@@ -1,6 +1,7 @@
 export default async function handler(req, res) {
   const token = process.env.REPLICATE_API_TOKEN;
 
+  // 1. Cuando el mesero pregunta cómo va la orden
   if (req.method === 'GET') {
     const { id } = req.query;
     const response = await fetch(`https://api.replicate.com/v1/predictions/${id}`, {
@@ -10,24 +11,26 @@ export default async function handler(req, res) {
     return res.status(200).json(data);
   }
 
+  // 2. Cuando el mesero manda la canción nueva
   if (req.method === 'POST') {
     const { fileUrl } = req.body;
     
-    const response = await fetch("https://api.replicate.com/v1/predictions", {
+    // CAMBIO MAGISTRAL AQUÍ: 
+    // Usamos la ruta directa del modelo (cjwbw/demucs) para que siempre use la versión más reciente automáticamente.
+    const response = await fetch("https://api.replicate.com/v1/models/cjwbw/demucs/predictions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${token}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        version: "25a173108cff36ef9f80f854c162d01df9e6528be175794b8115892d80d594b2", 
-        input: { audio: fileUrl } // ¡Ahora usamos un Link directo!
+        input: { audio: fileUrl } // Le pasamos el link directo
       })
     });
     
     const data = await response.json();
     
-    // Escudo: Si la llave de Replicate falla, nos avisa aquí
+    // Si Replicate nos rebota, avisamos en español
     if (!response.ok) {
        return res.status(response.status).json({ error: data.detail || "Error en la cuenta de Replicate" });
     }
