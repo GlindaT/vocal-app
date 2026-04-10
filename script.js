@@ -863,7 +863,43 @@ function showResult(url) {
 // ==========================================
 // CONFIG
 // ==========================================
+// ==========================================
+// CONFIGURACIÓN (AUTO-GUARDADO LOCAL)
+// ==========================================
+function initSettings() {
+  const micCount = $("micCount");
+  const karaokeStage = $("karaokeStage");
+  const difficultyLevel = $("difficultyLevel");
 
+  // 1. Cargar los valores guardados al abrir la app (o poner los por defecto)
+  if (micCount) micCount.value = localStorage.getItem("vocalApp_micCount") || "1";
+  if (karaokeStage) karaokeStage.value = localStorage.getItem("vocalApp_stage") || "clasico";
+  if (difficultyLevel) difficultyLevel.value = localStorage.getItem("vocalApp_difficulty") || "medio";
+
+  // 2. Función para guardar y mostrar el mensaje
+  const saveSetting = (key, element) => {
+    if (!element) return;
+    localStorage.setItem(key, element.value);
+    showSaveNotification();
+  };
+
+  // 3. Escuchar cuando el usuario cambie una opción
+  safeAdd("micCount", "change", (e) => saveSetting("vocalApp_micCount", e.target));
+  safeAdd("karaokeStage", "change", (e) => saveSetting("vocalApp_stage", e.target));
+  safeAdd("difficultyLevel", "change", (e) => saveSetting("vocalApp_difficulty", e.target));
+}
+
+function showSaveNotification() {
+  const notif = $("saveNotification");
+  if (!notif) return;
+  
+  notif.classList.add("show"); // Mostrar mensaje
+  
+  // Ocultar mensaje después de 2 segundos (2000 milisegundos)
+  setTimeout(() => {
+    notif.classList.remove("show");
+  }, 2000);
+}
 
 // ==========================================
 // INIT
