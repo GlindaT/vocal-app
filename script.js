@@ -619,7 +619,7 @@ async function transcribeSelectedVoice() {
     const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
 
     // 2. Configurar los cortes (Ej: 60 segundos por pedazo)
-    const CHUNK_SECONDS = 60; 
+    const CHUNK_SECONDS = 15; 
     const sampleRate = audioBuffer.sampleRate;
     const totalSamples = audioBuffer.length;
     const samplesPerChunk = CHUNK_SECONDS * sampleRate;
