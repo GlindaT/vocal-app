@@ -1139,7 +1139,7 @@ function exportStereoWav(buffer) {
 }
 
 // ==========================================
-// SPLITTER (CON REPLICATE IA Y POLLING)
+// SPLITTER IA (SIN LÍMITES - CASILLERO TEMPORAL)
 // ==========================================
 async function splitAudio() {
   const fileInput = $("splitterFile");
@@ -1150,13 +1150,6 @@ async function splitAudio() {
     return;
   }
 
-  // Bajamos el límite a 2.5MB por el "impuesto" del 33% al convertir a Base64
-  const fileSizeMB = file.size / (1024 * 1024);
-  if (fileSizeMB > 2.5) {
-    alert(`⚠️ El archivo pesa ${fileSizeMB.toFixed(2)} MB. Para esta versión web, sube un MP3 de máximo 2.5 MB.`);
-    return;
-  }
-
   const btn = $("splitBtn");
   const statusBox = $("splitterStatusBox");
   const statusText = $("splitterStatusText");
@@ -1164,35 +1157,43 @@ async function splitAudio() {
 
   btn.disabled = true;
   statusBox.style.display = "block";
-  statusText.textContent = "🚀 Subiendo canción a la IA...";
-  detailText.textContent = "Convirtiendo audio y enviando de forma segura.";
+  statusText.textContent = "1/3 📦 Subiendo canción...";
+  detailText.textContent = "Guardando en casillero temporal para evitar límites de tamaño.";
 
   try {
-    const base64Audio = await blobToBase64(file);
+    // 1. Subir al Casillero Temporal (tmpfiles.org)
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const tmpResponse = await fetch('https://tmpfiles.org/api/v1/upload', {
+      method: 'POST',
+      body: formData
+    });
+    
+    const tmpData = await tmpResponse.json();
+    if (!tmpData.data || !tmpData.data.url) throw new Error("Error al subir al casillero temporal.");
+    
+    // Convertir el link normal a un link de descarga directa para la IA
+    const directUrl = tmpData.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
 
-    statusText.textContent = "⏳ IA procesando...";
-    detailText.textContent = "La IA está separando los instrumentos. Esto suele tardar entre 30 y 60 segundos.";
+    // 2. Enviar el Link a nuestra "Cocina"
+    statusText.textContent = "2/3 🚀 Iniciando IA...";
+    detailText.textContent = "El archivo está seguro. Despertando a Replicate...";
     
     const startResponse = await fetch("/api/split", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ audioBase64: base64Audio })
+      body: JSON.stringify({ fileUrl: directUrl })
     });
-
-    // ESCUDO: Si Vercel rebota el archivo antes de procesarlo
-    if (!startResponse.ok) {
-      const errorHTML = await startResponse.text();
-      if (startResponse.status === 413) {
-        throw new Error("El archivo final sigue siendo muy pesado para Vercel. Intenta con uno más corto.");
-      }
-      throw new Error(`Error del servidor: ${errorHTML.substring(0, 50)}...`);
-    }
 
     const prediction = await startResponse.json();
 
-    if (prediction.error) throw new Error(prediction.error);
+    // Si Replicate nos devuelve error (Ej: Llave inválida)
+    if (!startResponse.ok) throw new Error(prediction.error || "Error al conectar con Replicate");
 
-    // El Polling: Preguntar cada 4 segundos
+    // 3. El Polling: Preguntar cada 4 segundos
+    statusText.textContent = "3/3 ⏳ IA separando instrumentos...";
+    
     const interval = setInterval(async () => {
       try {
         const checkResponse = await fetch(`/api/split?id=${prediction.id}`);
@@ -1219,12 +1220,13 @@ async function splitAudio() {
           statusText.textContent = "🎉 ¡Todo listo!";
           detailText.textContent = "Los archivos de Voz y Pista ya están guardados en tu Biblioteca.";
           btn.disabled = false;
-          btn.textContent = "✨ Separar Audio con IA";
+          btn.textContent = "✨ Separar Otra Canción";
           
         } else if (statusData.status === "failed" || statusData.status === "canceled") {
           clearInterval(interval);
           throw new Error("La IA falló al procesar el audio.");
         } else {
+          // Actualizamos el estado para que el usuario vea que está avanzando
           detailText.textContent = `Estado actual de la IA: ${statusData.status}... por favor espera.`;
         }
       } catch (pollError) {
