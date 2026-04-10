@@ -862,17 +862,61 @@ let karaokeMediaRecorder = null;
 let karaokeStream = null;
 let karaokeChunks = [];
 let karaokeRecordedBlob = null;
+let karaokeSelectedTrackBlob = null; // NUEVA
+let karaokeSelectedTrackName = "Pista"; // NUEVA
 
-// 1. Cargar Pista (Con volumen ajustado)
+// 1. Cargar Pista (Desde PC)
 function cargarPistaKaraoke(e) {
   const file = e.target.files[0];
   if (file) {
+    karaokeSelectedTrackBlob = file;
+    karaokeSelectedTrackName = file.name;
     const track = $("karaokeTrack");
     track.src = URL.createObjectURL(file);
-    track.volume = 0.4; // MAGIA: Bajamos el volumen de la música al 40% para que te escuches al cantar
-    
+    track.volume = 0.4;
     $("karaokeStatus").textContent = "Estado: Pista lista. ¡Presiona Iniciar Grabación!";
-    cargarLetrasEnMonitor(); // Trae las letras de Whisper
+    cargarLetrasEnMonitor(); 
+  }
+}
+
+// 1.2 Cargar lista de pistas desde Biblioteca
+async function loadTrackOptionsInKaraoke() {
+  const select = $("karaokeTrackSelect");
+  if (!select) return;
+  select.innerHTML = `<option value="">Selecciona una pista desde tu Biblioteca</option>`;
+  try {
+    const pistas = await getLibraryItemsByType("pista");
+    pistas.forEach((item) => {
+      const option = document.createElement("option");
+      option.value = item.id;
+      option.textContent = item.name;
+      select.appendChild(option);
+    });
+  } catch (error) { console.error(error); }
+}
+
+// 1.3 Cargar la pista seleccionada de la Biblioteca
+async function loadSelectedTrackFromLibraryKaraoke() {
+  const select = $("karaokeTrackSelect");
+  const id = Number(select.value);
+  if (!id) { alert("⚠️ Selecciona una pista de la lista."); return; }
+
+  try {
+    const item = await getLibraryItemById(id);
+    if (!item) return;
+    
+    karaokeSelectedTrackBlob = item.audioBlob;
+    karaokeSelectedTrackName = item.name;
+    
+    const track = $("karaokeTrack");
+    track.src = URL.createObjectURL(item.audioBlob);
+    track.volume = 0.4;
+    
+    $("karaokeStatus").textContent = `Estado: Pista cargada (${item.name}). ¡Inicia grabación!`;
+    cargarLetrasEnMonitor();
+  } catch (error) {
+    console.error(error);
+    alert("❌ Error al cargar la pista.");
   }
 }
 
@@ -1008,11 +1052,11 @@ async function mixKaraoke() {
   const fileInput = $("karaokeTrackFile");
   const trackFile = fileInput ? fileInput.files[0] : null;
 
-  if (!trackFile || !karaokeRecordedBlob) {
+  if (!karaokeSelectedTrackBlob || !karaokeRecordedBlob) {
     alert("⚠️ Faltan ingredientes: Asegúrate de cargar una pista instrumental y grabar tu voz primero.");
     return;
   }
-
+  const trackFile = karaokeSelectedTrackBlob;
   const btn = $("karaokeMixBtn");
   const resultDiv = $("karaokeMixResult");
   
@@ -1343,6 +1387,23 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     await initDB();
     initSettings(); // <--- AGREGAR ESTA LÍNEA AQUÍ
+    function applyKaraokeTheme() {
+      const theme = localStorage.getItem("vocalApp_stage") || "clasico";
+      const monitor = $("karaokeLiveLyrics");
+      if (monitor) {
+    // Le ponemos la clase de CSS correspondiente
+        monitor.className = "karaoke-lyrics theme-" + theme;
+      }
+    }
+
+// Llama a la función al iniciar para pintar el color guardado
+    applyKaraokeTheme(); 
+
+// Modifica la línea del escenario para que pinte en vivo cuando el usuario cambia la opción:
+    safeAdd("karaokeStage", "change", (e) => { 
+    saveSetting("vocalApp_stage", e.target);
+    applyKaraokeTheme(); // Actualiza el color al instante
+  });
 
     // navegación
     safeAdd("btnAfinador", "click", () => showTab("afinador"));
@@ -1377,6 +1438,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     safeAdd("karaokeStopBtn", "click", stopKaraokeRecording);
     safeAdd("karaokeRestartBtn", "click", restartKaraokeRecording);
     safeAdd("karaokeMixBtn", "click", mixKaraoke);
+    safeAdd("refreshKaraokeTrackBtn", "click", loadTrackOptionsInKaraoke);
+    safeAdd("loadKaraokeTrackBtn", "click", loadSelectedTrackFromLibraryKaraoke);
 
     // Hacer que el monitor de letras escuche la canción
     const kTrack = $("karaokeTrack");
@@ -1391,6 +1454,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // init
     await loadLibrary();
+    await loadTrackOptionsInKaraoke();
 
     const player = $("player");
     if (player) {
