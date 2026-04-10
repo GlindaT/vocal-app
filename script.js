@@ -1139,54 +1139,106 @@ function exportStereoWav(buffer) {
 }
 
 // ==========================================
-// SPLITTER (SIMPLIFICADO)
+// SPLITTER (CON REPLICATE IA Y POLLING)
 // ==========================================
 async function splitAudio() {
   const fileInput = $("splitterFile");
   const file = fileInput?.files[0];
 
   if (!file) {
-    alert("⚠️ Selecciona un archivo primero");
+    alert("⚠️ Selecciona una canción primero.");
+    return;
+  }
+
+  // Verificar el peso para que Vercel no nos bloquee
+  const fileSizeMB = file.size / (1024 * 1024);
+  if (fileSizeMB > 3.5) {
+    alert(`⚠️ El archivo pesa ${fileSizeMB.toFixed(2)} MB. Para esta versión web gratuita, sube un MP3 de máximo 3.5 MB.`);
     return;
   }
 
   const btn = $("splitBtn");
+  const statusBox = $("splitterStatusBox");
+  const statusText = $("splitterStatusText");
+  const detailText = $("splitterDetailText");
+
   btn.disabled = true;
-  btn.textContent = "Procesando...";
+  statusBox.style.display = "block";
+  statusText.textContent = "🚀 Subiendo canción a la IA...";
+  detailText.textContent = "Preparando el audio para Vercel.";
 
   try {
-    const formData = new FormData();
-    formData.append("inputFile", file);
+    // 1. Convertir a Base64
+    const base64Audio = await blobToBase64(file);
 
-    const response = await fetch("https://api.cloudmersive.com/video/convert/to/mp3", {
+    // 2. Enviar a nuestra cocina (Iniciar la tarea)
+    statusText.textContent = "⏳ IA procesando...";
+    detailText.textContent = "La IA está separando los instrumentos. Esto suele tardar entre 30 y 60 segundos.";
+    
+    const startResponse = await fetch("/api/split", {
       method: "POST",
-      headers: {
-        "Apikey": localStorage.getItem("cloudmersiveApiKey") || ""
-      },
-      body: formData
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ audioBase64: base64Audio })
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(errorText);
-      alert("❌ Error de API (revisa la clave o saldo)");
-      return;
-    }
+    const prediction = await startResponse.json();
 
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
+    if (prediction.error) throw new Error(prediction.error);
 
-    showResult(url);
+    // 3. El Polling: Preguntar cada 4 segundos si ya terminó
+    const interval = setInterval(async () => {
+      const checkResponse = await fetch(`/api/split?id=${prediction.id}`);
+      const statusData = await checkResponse.json();
+
+      if (statusData.status === "succeeded") {
+        clearInterval(interval);
+        statusText.textContent = "✅ ¡Separación completada!";
+        detailText.textContent = "Descargando archivos y guardando en tu Biblioteca...";
+
+        // 4. Descargar los audios generados por la IA
+        // Demucs devuelve: { vocals: "url", other: "url" }
+        const urls = statusData.output;
+        
+        try {
+          const [resVoz, resPista] = await Promise.all([
+            fetch(urls.vocals),
+            fetch(urls.other)
+          ]);
+
+          const blobVoz = await resVoz.blob();
+          const blobPista = await resPista.blob();
+
+          // 5. Guardar automáticamente en IndexedDB
+          await saveToLibrary(blobVoz, { name: `Voz - ${file.name}`, type: "voz" });
+          await saveToLibrary(blobPista, { name: `Pista - ${file.name}`, type: "pista" });
+
+          statusText.textContent = "🎉 ¡Todo listo!";
+          detailText.textContent = "Los archivos de Voz y Pista ya están guardados en tu Biblioteca.";
+        } catch (downloadError) {
+          console.error(downloadError);
+          detailText.textContent = "❌ Error al descargar el resultado a la biblioteca.";
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "✨ Separar Audio con IA";
+        }
+        
+      } else if (statusData.status === "failed" || statusData.status === "canceled") {
+        clearInterval(interval);
+        throw new Error("La IA falló al procesar el audio.");
+      } else {
+        // Sigue procesando (starting, processing...)
+        detailText.textContent = `Estado actual: ${statusData.status}... por favor espera.`;
+      }
+    }, 4000); // Preguntar cada 4000 milisegundos (4 segundos)
 
   } catch (err) {
     console.error(err);
-    alert("❌ Error de conexión");
-  } finally {
+    statusText.textContent = "❌ Error de conexión";
+    detailText.textContent = err.message || "Revisa la consola para más detalles.";
     btn.disabled = false;
-    btn.textContent = "Separar audio";
+    btn.textContent = "✨ Separar Audio con IA";
   }
 }
-
 function showResult(url) {
   let container = document.getElementById("splitResult");
 
