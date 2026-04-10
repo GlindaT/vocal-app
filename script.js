@@ -903,6 +903,10 @@ function restartKaraokeRecording() {
 }
 
 // 6. Sincronizar el monitor (UltraStar)
+// Variable para recordar qué línea estaba activa y no hacer scroll a lo loco
+let lastActiveLine = null;
+
+// 6. Sincronizar el monitor (UltraStar) Mejorado
 function syncKaraokeMonitor(currentTime) {
   const lines = document.querySelectorAll(".karaoke-live-line");
   if (!lines.length) return;
@@ -911,7 +915,8 @@ function syncKaraokeMonitor(currentTime) {
 
   lines.forEach(line => {
     const start = parseFloat(line.dataset.start);
-    const end = parseFloat(line.dataset.end);
+    // Le sumamos 1.5 segundos de "gracia" al final para que la letra no se apague tan rápido en las pausas
+    const end = parseFloat(line.dataset.end) + 1.5; 
 
     line.classList.remove("active", "past");
 
@@ -923,8 +928,11 @@ function syncKaraokeMonitor(currentTime) {
     }
   });
 
-  if (activeLine) {
+  // Solo hacemos scroll si hay una línea activa NUEVA (evita que el navegador se congele)
+  if (activeLine && activeLine !== lastActiveLine) {
+    // Calculamos para que quede justo en el centro
     activeLine.scrollIntoView({ behavior: "smooth", block: "center" });
+    lastActiveLine = activeLine;
   }
 }
 
