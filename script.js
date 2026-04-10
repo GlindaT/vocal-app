@@ -907,6 +907,7 @@ function showSaveNotification() {
 document.addEventListener("DOMContentLoaded", async () => {
   try {
     await initDB();
+    initSettings(); // <--- AGREGAR ESTA LÍNEA AQUÍ
 
     // navegación
     safeAdd("btnAfinador", "click", () => showTab("afinador"));
