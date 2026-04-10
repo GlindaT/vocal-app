@@ -1139,7 +1139,7 @@ function exportStereoWav(buffer) {
 }
 
 // ==========================================
-// SPLITTER IA (SIN LÍMITES - MODELO MDX23)
+// SPLITTER IA (MODELO MDX23 + AUTO-MEZCLADOR)
 // ==========================================
 async function splitAudio() {
   const fileInput = $("splitterFile");
@@ -1157,11 +1157,10 @@ async function splitAudio() {
 
   btn.disabled = true;
   statusBox.style.display = "block";
-  statusText.textContent = "1/3 📦 Subiendo canción...";
-  detailText.textContent = "Guardando en casillero temporal para evitar límites de tamaño.";
+  statusText.textContent = "1/4 📦 Subiendo canción...";
+  detailText.textContent = "Enviando al casillero temporal seguro...";
 
   try {
-    // 1. Subir al Casillero Temporal
     const formData = new FormData();
     formData.append('file', file);
     
@@ -1175,9 +1174,8 @@ async function splitAudio() {
     
     const directUrl = tmpData.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
 
-    // 2. Enviar a Replicate
-    statusText.textContent = "2/3 🚀 Iniciando IA...";
-    detailText.textContent = "Despertando al modelo avanzado MDX23...";
+    statusText.textContent = "2/4 🚀 Iniciando Inteligencia Artificial...";
+    detailText.textContent = "Despertando al modelo de alta calidad MDX23...";
     
     const startResponse = await fetch("/api/split", {
       method: "POST",
@@ -1186,11 +1184,9 @@ async function splitAudio() {
     });
 
     const prediction = await startResponse.json();
-
     if (!startResponse.ok) throw new Error(prediction.error || "Error al conectar con Replicate");
 
-    // 3. El Polling: Preguntar cada 4 segundos
-    statusText.textContent = "3/3 ⏳ IA separando instrumentos...";
+    statusText.textContent = "3/4 ⏳ IA separando pistas...";
     
     const interval = setInterval(async () => {
       try {
@@ -1199,45 +1195,57 @@ async function splitAudio() {
 
         if (statusData.status === "succeeded") {
           clearInterval(interval);
-          statusText.textContent = "✅ ¡Separación completada!";
-          detailText.textContent = "Descargando archivos y guardando en tu Biblioteca...";
+          statusText.textContent = "4/4 🎧 Armando la pista final...";
+          detailText.textContent = "Mezclando bajo, batería y melodía en una sola pista instrumental...";
 
-          // 4. ESCUDO INTELIGENTE: Buscar Voz y Pista completa
           const urls = statusData.output;
-          let urlVoz, urlPista;
+          let vocalUrl = null;
+          let instUrls = [];
 
-          if (!Array.isArray(urls)) {
-            urlVoz = urls.vocals || urls.Vocals || urls.vocal;
-            // Agregamos accompaniment (que es como Spleeter llama a la pista completa)
-            urlPista = urls.accompaniment || urls.other || urls.Instrumental || urls.instrumental; 
+          // Identificar cuál es la voz y cuáles son los instrumentos
+          if (Array.isArray(urls)) {
+            urls.forEach(u => u.toLowerCase().includes('vocal') ? vocalUrl = u : instUrls.push(u));
+            if(!vocalUrl) { vocalUrl = urls[0]; instUrls = urls.slice(1); }
           } else {
-            urlVoz = urls.find(u => u.toLowerCase().includes('vocal')) || urls[0];
-            urlPista = urls.find(u => u.toLowerCase().includes('accompaniment') || !u.toLowerCase().includes('vocal')) || urls[1];
+            for (const [key, value] of Object.entries(urls)) {
+              if (key.toLowerCase().includes('vocal')) vocalUrl = value;
+              else instUrls.push(value);
+            }
           }
 
-          // Si la IA devuelve un Objeto
-          if (!Array.isArray(urls)) {
-            urlVoz = urls.vocals || urls.Vocals || urls.vocal;
-            urlPista = urls.other || urls.Instrumental || urls.instrumental || urls.no_vocals;
-          } else {
-            // Si la IA devuelve una Lista
-            urlVoz = urls.find(u => u.toLowerCase().includes('vocal')) || urls[0];
-            urlPista = urls.find(u => !u.toLowerCase().includes('vocal')) || urls[1] || urls[0];
-          }
-
-          const [resVoz, resPista] = await Promise.all([
-            fetch(urlVoz),
-            fetch(urlPista)
-          ]);
-
+          // Descargar la voz
+          const resVoz = await fetch(vocalUrl);
           const blobVoz = await resVoz.blob();
-          const blobPista = await resPista.blob();
 
+          // Magia: Descargar y mezclar todos los instrumentos (Bajo + Batería + Otros) en uno solo
+          const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          const buffers = [];
+          
+          for (const url of instUrls) {
+            const res = await fetch(url);
+            const arrayBuffer = await res.arrayBuffer();
+            buffers.push(await audioCtx.decodeAudioData(arrayBuffer));
+          }
+
+          const maxLength = Math.max(...buffers.map(b => b.length));
+          const offlineCtx = new OfflineAudioContext(2, maxLength, buffers[0].sampleRate);
+
+          buffers.forEach(buffer => {
+            const source = offlineCtx.createBufferSource();
+            source.buffer = buffer;
+            source.connect(offlineCtx.destination);
+            source.start(0);
+          });
+
+          const renderedBuffer = await offlineCtx.startRendering();
+          const blobPista = exportStereoWav(renderedBuffer); // Usamos la función de mezcla del Karaoke
+
+          // Guardar resultados
           await saveToLibrary(blobVoz, { name: `Voz - ${file.name}`, type: "voz" });
           await saveToLibrary(blobPista, { name: `Pista - ${file.name}`, type: "pista" });
 
-          statusText.textContent = "🎉 ¡Todo listo!";
-          detailText.textContent = "Los archivos de Voz y Pista ya están guardados en tu Biblioteca.";
+          statusText.textContent = "🎉 ¡Separación perfecta!";
+          detailText.textContent = "Voz pura y Pista Instrumental guardadas en Biblioteca.";
           btn.disabled = false;
           btn.textContent = "✨ Separar Otra Canción";
           
@@ -1245,7 +1253,7 @@ async function splitAudio() {
           clearInterval(interval);
           throw new Error("La IA falló al procesar el audio.");
         } else {
-          detailText.textContent = `Estado actual de la IA: ${statusData.status}... por favor espera.`;
+          detailText.textContent = `Estado de la IA: ${statusData.status}... por favor espera.`;
         }
       } catch (pollError) {
         clearInterval(interval);
