@@ -792,11 +792,140 @@ function updateKaraokeHighlight(currentTime) {
 }
 
 // ==========================================
-// KARAOKE (BÁSICO LIMPIO)
+// KARAOKE AVANZADO (GRABACIÓN Y LETRAS)
 // ==========================================
+let karaokeMediaRecorder = null;
+let karaokeStream = null;
+let karaokeChunks = [];
+let karaokeRecordedBlob = null;
+
+// 1. Cargar Pista
 function cargarPistaKaraoke(e) {
   const file = e.target.files[0];
-  if (file) $("karaokeTrack").src = URL.createObjectURL(file);
+  if (file) {
+    $("karaokeTrack").src = URL.createObjectURL(file);
+    $("karaokeStatus").textContent = "Estado: Pista lista. ¡Presiona Iniciar Grabación!";
+    cargarLetrasEnMonitor(); // Trae las letras de Whisper
+  }
+}
+
+// 2. Traer las letras que Whisper guardó en la pestaña Estudio
+function cargarLetrasEnMonitor() {
+  const container = $("karaokeLiveLyrics");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  if (!transcriptionSegments || transcriptionSegments.length === 0) {
+    container.innerHTML = `<p class="karaoke-placeholder" style="font-size:18px;">⚠️ Ve a la pestaña 'Estudio', transcribe una voz y vuelve aquí para ver la letra.</p>`;
+    return;
+  }
+
+  // Crear cada línea de texto
+  transcriptionSegments.forEach((seg) => {
+    const p = document.createElement("p");
+    p.className = "karaoke-live-line";
+    p.dataset.start = seg.start;
+    p.dataset.end = seg.end;
+    p.textContent = seg.text.trim();
+    container.appendChild(p);
+  });
+}
+
+// 3. Iniciar grabación sincronizada
+async function startKaraokeRecording() {
+  const track = $("karaokeTrack");
+  if (!track || !track.src) {
+    alert("⚠️ Primero sube una pista instrumental en el Paso 1.");
+    return;
+  }
+
+  try {
+    // Preparar grabadora
+    karaokeChunks = [];
+    karaokeRecordedBlob = null;
+    $("karaokeVoicePlayer").src = "";
+    
+    karaokeStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    karaokeMediaRecorder = new MediaRecorder(karaokeStream);
+
+    karaokeMediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) karaokeChunks.push(e.data);
+    };
+
+    karaokeMediaRecorder.onstop = () => {
+      karaokeRecordedBlob = new Blob(karaokeChunks, { type: "audio/webm" });
+      $("karaokeVoicePlayer").src = URL.createObjectURL(karaokeRecordedBlob);
+      $("karaokeStatus").textContent = "Estado: Grabación finalizada ✅";
+    };
+
+    // ¡Arrancar todo al mismo tiempo!
+    karaokeMediaRecorder.start();
+    track.currentTime = 0;
+    track.play();
+
+    $("karaokeStatus").textContent = "Estado: 🔴 Grabando y reproduciendo pista...";
+    $("karaokeStartBtn").disabled = true;
+
+  } catch (err) {
+    console.error(err);
+    alert("❌ Error al acceder al micrófono.");
+  }
+}
+
+// 4. Detener todo
+function stopKaraokeRecording() {
+  if (karaokeMediaRecorder && karaokeMediaRecorder.state !== "inactive") {
+    karaokeMediaRecorder.stop();
+  }
+  if (karaokeStream) {
+    karaokeStream.getTracks().forEach(t => t.stop());
+  }
+  
+  const track = $("karaokeTrack");
+  if (track) track.pause();
+
+  $("karaokeStartBtn").disabled = false;
+}
+
+// 5. Volver a intentar
+function restartKaraokeRecording() {
+  const track = $("karaokeTrack");
+  if (track) {
+    track.pause();
+    track.currentTime = 0;
+  }
+  $("karaokeVoicePlayer").src = "";
+  karaokeChunks = [];
+  karaokeRecordedBlob = null;
+  $("karaokeStatus").textContent = "Estado: Esperando para grabar...";
+  $("karaokeStartBtn").disabled = false;
+}
+
+// 6. Sincronizar el monitor (UltraStar)
+function syncKaraokeMonitor(currentTime) {
+  const lines = document.querySelectorAll(".karaoke-live-line");
+  if (!lines.length) return;
+
+  let activeLine = null;
+
+  lines.forEach(line => {
+    const start = parseFloat(line.dataset.start);
+    const end = parseFloat(line.dataset.end);
+
+    line.classList.remove("active", "past");
+
+    if (currentTime >= start && currentTime <= end) {
+      line.classList.add("active");
+      activeLine = line;
+    } else if (currentTime > end) {
+      line.classList.add("past");
+    }
+  });
+
+  if (activeLine) {
+    activeLine.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
 }
 
 // ==========================================
@@ -945,6 +1074,17 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // karaoke
     safeAdd("karaokeTrackFile", "change", cargarPistaKaraoke);
+    safeAdd("karaokeStartBtn", "click", startKaraokeRecording);
+    safeAdd("karaokeStopBtn", "click", stopKaraokeRecording);
+    safeAdd("karaokeRestartBtn", "click", restartKaraokeRecording);
+
+    // Hacer que el monitor de letras escuche la canción
+    const kTrack = $("karaokeTrack");
+    if (kTrack) {
+      kTrack.addEventListener("timeupdate", () => {
+        syncKaraokeMonitor(kTrack.currentTime);
+      });
+    }
 
     // splitter
     safeAdd("splitBtn", "click", splitAudio);
