@@ -1049,9 +1049,6 @@ function syncKaraokeMonitor(currentTime) {
 
 // 7. Mezclador de Audio (Pista + Voz)
 async function mixKaraoke() {
-  const fileInput = $("karaokeTrackFile");
-  const trackFile = fileInput ? fileInput.files[0] : null;
-
   if (!karaokeSelectedTrackBlob || !karaokeRecordedBlob) {
     alert("⚠️ Faltan ingredientes: Asegúrate de cargar una pista instrumental y grabar tu voz primero.");
     return;
