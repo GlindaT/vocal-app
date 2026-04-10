@@ -863,11 +863,14 @@ let karaokeStream = null;
 let karaokeChunks = [];
 let karaokeRecordedBlob = null;
 
-// 1. Cargar Pista
+// 1. Cargar Pista (Con volumen ajustado)
 function cargarPistaKaraoke(e) {
   const file = e.target.files[0];
   if (file) {
-    $("karaokeTrack").src = URL.createObjectURL(file);
+    const track = $("karaokeTrack");
+    track.src = URL.createObjectURL(file);
+    track.volume = 0.4; // MAGIA: Bajamos el volumen de la música al 40% para que te escuches al cantar
+    
     $("karaokeStatus").textContent = "Estado: Pista lista. ¡Presiona Iniciar Grabación!";
     cargarLetrasEnMonitor(); // Trae las letras de Whisper
   }
@@ -1036,18 +1039,21 @@ async function mixKaraoke() {
       trackBuffer.sampleRate
     );
 
-    // Conectar Pista al estudio
+    // Conectar Pista al estudio (Bajamos su volumen al 40%)
+    const trackGain = offlineCtx.createGain();
+    trackGain.gain.value = 0.4; 
+    
     const trackSource = offlineCtx.createBufferSource();
     trackSource.buffer = trackBuffer;
-    trackSource.connect(offlineCtx.destination);
+    trackSource.connect(trackGain);
+    trackGain.connect(offlineCtx.destination);
     
-    // Conectar Voz al estudio
+    // Conectar Voz al estudio (Le damos un super Boost de 250%)
+    const voiceGain = offlineCtx.createGain();
+    voiceGain.gain.value = 2.5; 
+    
     const voiceSource = offlineCtx.createBufferSource();
     voiceSource.buffer = voiceBuffer;
-
-    // (Opcional) Subirle un poco el volumen a la voz para que resalte sobre la música
-    const voiceGain = offlineCtx.createGain();
-    voiceGain.gain.value = 1.3; // 30% más de volumen
     voiceSource.connect(voiceGain);
     voiceGain.connect(offlineCtx.destination);
 
