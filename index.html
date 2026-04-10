@@ -175,13 +175,40 @@
       <h1>⚙️ Configuración</h1>
       
       <div class="card">
-        <p>La clave de OpenAI ya no se guarda en el navegador por seguridad.</p>
-        <p>Más adelante aquí iremos agregando:</p>
-        <ul>
-          <li>Cantidad de micrófonos</li>
-          <li>Escenario para Karaoke</li>
-          <li>Nivel de dificultad</li>
-        </ul>
+        <h3>Preferencias de la App</h3>
+        <p style="color: var(--text-muted); margin-bottom: 20px;">Los cambios se guardan automáticamente.</p>
+
+        <div class="settings-group">
+          <label for="micCount">🔊 Cantidad de micrófonos (Karaoke Multijugador)</label>
+          <select id="micCount">
+            <option value="1">1 Micrófono (Solo)</option>
+            <option value="2">2 Micrófonos (Dúo)</option>
+            <option value="3">3 Micrófonos (Trío)</option>
+          </select>
+        </div>
+
+        <div class="settings-group">
+          <label for="karaokeStage">🎤 Escenario Visual de Karaoke</label>
+          <select id="karaokeStage">
+            <option value="clasico">Clásico (Letras limpias)</option>
+            <option value="moderno">Moderno (Neón)</option>
+            <option value="disco">Disco (Colores vivos)</option>
+            <option value="acustico">Acústico (Relajado)</option>
+            <option value="fiesta">Fiesta (Animado)</option>
+          </select>
+        </div>
+
+        <div class="settings-group">
+          <label for="difficultyLevel">📊 Nivel de dificultad (Afinador)</label>
+          <select id="difficultyLevel">
+            <option value="facil">Fácil (Alta tolerancia a fallos)</option>
+            <option value="medio" selected>Medio (Normal)</option>
+            <option value="dificil">Difícil (Afinación precisa)</option>
+            <option value="experto">Experto (Tono perfecto)</option>
+          </select>
+        </div>
+
+        <p id="saveNotification" class="save-notification">✅ Configuración guardada</p>
       </div>
     </section>
 
