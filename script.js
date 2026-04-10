@@ -1150,10 +1150,10 @@ async function splitAudio() {
     return;
   }
 
-  // Verificar el peso para que Vercel no nos bloquee
+  // Bajamos el límite a 2.5MB por el "impuesto" del 33% al convertir a Base64
   const fileSizeMB = file.size / (1024 * 1024);
-  if (fileSizeMB > 3.5) {
-    alert(`⚠️ El archivo pesa ${fileSizeMB.toFixed(2)} MB. Para esta versión web gratuita, sube un MP3 de máximo 3.5 MB.`);
+  if (fileSizeMB > 2.5) {
+    alert(`⚠️ El archivo pesa ${fileSizeMB.toFixed(2)} MB. Para esta versión web, sube un MP3 de máximo 2.5 MB.`);
     return;
   }
 
@@ -1165,13 +1165,11 @@ async function splitAudio() {
   btn.disabled = true;
   statusBox.style.display = "block";
   statusText.textContent = "🚀 Subiendo canción a la IA...";
-  detailText.textContent = "Preparando el audio para Vercel.";
+  detailText.textContent = "Convirtiendo audio y enviando de forma segura.";
 
   try {
-    // 1. Convertir a Base64
     const base64Audio = await blobToBase64(file);
 
-    // 2. Enviar a nuestra cocina (Iniciar la tarea)
     statusText.textContent = "⏳ IA procesando...";
     detailText.textContent = "La IA está separando los instrumentos. Esto suele tardar entre 30 y 60 segundos.";
     
@@ -1181,25 +1179,32 @@ async function splitAudio() {
       body: JSON.stringify({ audioBase64: base64Audio })
     });
 
+    // ESCUDO: Si Vercel rebota el archivo antes de procesarlo
+    if (!startResponse.ok) {
+      const errorHTML = await startResponse.text();
+      if (startResponse.status === 413) {
+        throw new Error("El archivo final sigue siendo muy pesado para Vercel. Intenta con uno más corto.");
+      }
+      throw new Error(`Error del servidor: ${errorHTML.substring(0, 50)}...`);
+    }
+
     const prediction = await startResponse.json();
 
     if (prediction.error) throw new Error(prediction.error);
 
-    // 3. El Polling: Preguntar cada 4 segundos si ya terminó
+    // El Polling: Preguntar cada 4 segundos
     const interval = setInterval(async () => {
-      const checkResponse = await fetch(`/api/split?id=${prediction.id}`);
-      const statusData = await checkResponse.json();
+      try {
+        const checkResponse = await fetch(`/api/split?id=${prediction.id}`);
+        const statusData = await checkResponse.json();
 
-      if (statusData.status === "succeeded") {
-        clearInterval(interval);
-        statusText.textContent = "✅ ¡Separación completada!";
-        detailText.textContent = "Descargando archivos y guardando en tu Biblioteca...";
+        if (statusData.status === "succeeded") {
+          clearInterval(interval);
+          statusText.textContent = "✅ ¡Separación completada!";
+          detailText.textContent = "Descargando archivos y guardando en tu Biblioteca...";
 
-        // 4. Descargar los audios generados por la IA
-        // Demucs devuelve: { vocals: "url", other: "url" }
-        const urls = statusData.output;
-        
-        try {
+          const urls = statusData.output;
+          
           const [resVoz, resPista] = await Promise.all([
             fetch(urls.vocals),
             fetch(urls.other)
@@ -1208,37 +1213,35 @@ async function splitAudio() {
           const blobVoz = await resVoz.blob();
           const blobPista = await resPista.blob();
 
-          // 5. Guardar automáticamente en IndexedDB
           await saveToLibrary(blobVoz, { name: `Voz - ${file.name}`, type: "voz" });
           await saveToLibrary(blobPista, { name: `Pista - ${file.name}`, type: "pista" });
 
           statusText.textContent = "🎉 ¡Todo listo!";
           detailText.textContent = "Los archivos de Voz y Pista ya están guardados en tu Biblioteca.";
-        } catch (downloadError) {
-          console.error(downloadError);
-          detailText.textContent = "❌ Error al descargar el resultado a la biblioteca.";
-        } finally {
           btn.disabled = false;
           btn.textContent = "✨ Separar Audio con IA";
+          
+        } else if (statusData.status === "failed" || statusData.status === "canceled") {
+          clearInterval(interval);
+          throw new Error("La IA falló al procesar el audio.");
+        } else {
+          detailText.textContent = `Estado actual de la IA: ${statusData.status}... por favor espera.`;
         }
-        
-      } else if (statusData.status === "failed" || statusData.status === "canceled") {
+      } catch (pollError) {
         clearInterval(interval);
-        throw new Error("La IA falló al procesar el audio.");
-      } else {
-        // Sigue procesando (starting, processing...)
-        detailText.textContent = `Estado actual: ${statusData.status}... por favor espera.`;
+        throw pollError;
       }
-    }, 4000); // Preguntar cada 4000 milisegundos (4 segundos)
+    }, 4000);
 
   } catch (err) {
     console.error(err);
-    statusText.textContent = "❌ Error de conexión";
+    statusText.textContent = "❌ Error detectado";
     detailText.textContent = err.message || "Revisa la consola para más detalles.";
     btn.disabled = false;
     btn.textContent = "✨ Separar Audio con IA";
   }
 }
+
 function showResult(url) {
   let container = document.getElementById("splitResult");
 
