@@ -15,22 +15,21 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     const { fileUrl } = req.body;
     
-    // CAMBIO MAGISTRAL AQUÍ: 
-    // Usamos la ruta directa del modelo (cjwbw/demucs) para que siempre use la versión más reciente automáticamente.
-    const response = await fetch("https://api.replicate.com/v1/models/cjwbw/demucs/predictions", {
+    // Le pasamos el ID exacto del modelo MDX23 que encontraste
+    const response = await fetch("https://api.replicate.com/v1/predictions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${token}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        input: { audio: fileUrl } // Le pasamos el link directo
+        version: "510b9b91aec1bfa7d634e6c06ee80c18492fb0fc06aa1474533fbda90dd3dba4", 
+        input: { audio: fileUrl }
       })
     });
     
     const data = await response.json();
     
-    // Si Replicate nos rebota, avisamos en español
     if (!response.ok) {
        return res.status(response.status).json({ error: data.detail || "Error en la cuenta de Replicate" });
     }
