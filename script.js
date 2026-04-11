@@ -857,7 +857,21 @@ function renderKaraokeLyrics(segments) {
     line.dataset.index = index;
     line.dataset.start = segment.start;
     line.dataset.end = segment.end;
-    line.textContent = segment.text.trim();
+
+    if (segment.words && segment.words.length) {
+      segment.words.forEach((wordObj, wordIndex) => {
+        const span = document.createElement("span");
+        span.className = "karaoke-word";
+        span.dataset.start = wordObj.start;
+        span.dataset.end = wordObj.end;
+        span.dataset.wordIndex = wordIndex;
+        span.textContent = (wordObj.word || "").trim() + " ";
+        line.appendChild(span);
+      });
+    } else {
+      line.textContent = segment.text.trim();
+    }
+
     container.appendChild(line);
   });
 }
@@ -881,6 +895,22 @@ function updateKaraokeHighlight(currentTime) {
       line.classList.add("past");
     } else {
       line.classList.add("upcoming");
+    }
+
+    const words = line.querySelectorAll(".karaoke-word");
+    if (words.length) {
+      words.forEach((word) => {
+        const wStart = parseFloat(word.dataset.start);
+        const wEnd = parseFloat(word.dataset.end);
+
+        word.classList.remove("active", "past");
+
+        if (currentTime >= wStart && currentTime <= wEnd) {
+          word.classList.add("active");
+        } else if (currentTime > wEnd) {
+          word.classList.add("past");
+        }
+      });
     }
   });
 
@@ -990,7 +1020,21 @@ function cargarLetrasEnMonitor() {
     p.className = "karaoke-live-line";
     p.dataset.start = seg.start;
     p.dataset.end = seg.end;
-    p.textContent = seg.text.trim();
+
+    if (seg.words && seg.words.length) {
+      seg.words.forEach((wordObj, index) => {
+        const span = document.createElement("span");
+        span.className = "karaoke-live-word";
+        span.dataset.start = wordObj.start;
+        span.dataset.end = wordObj.end;
+        span.dataset.wordIndex = index;
+        span.textContent = (wordObj.word || "").trim() + " ";
+        p.appendChild(span);
+      });
+    } else {
+      p.textContent = seg.text.trim();
+    }
+
     container.appendChild(p);
   });
 }
@@ -1080,6 +1124,22 @@ function syncKaraokeMonitor(currentTime) {
       activeLine = line;
     } else if (currentTime > end) {
       line.classList.add("past");
+    }
+
+    const words = line.querySelectorAll(".karaoke-live-word");
+    if (words.length) {
+      words.forEach(word => {
+        const wStart = parseFloat(word.dataset.start);
+        const wEnd = parseFloat(word.dataset.end);
+
+        word.classList.remove("active", "past");
+
+        if (currentTime >= wStart && currentTime <= wEnd) {
+          word.classList.add("active");
+        } else if (currentTime > wEnd) {
+          word.classList.add("past");
+        }
+      });
     }
   });
 
