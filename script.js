@@ -753,27 +753,28 @@ async function transcribeSelectedVoice() {
 
       const palabrasProhibidas = ["Amara", "Subtítulos", "subtítulos", "Almorzo", "Suscribete", "comunidad"];
       const timeOffset = start / sampleRate;
-
+      
       (result.segments || []).forEach(seg => {
         const esFantasma = palabrasProhibidas.some(palabra => seg.text.includes(palabra));
         
         if (!esFantasma && seg.text.trim() !== "") {
-          const words = (seg.words || []).map(word => ({
-            word: word.word,
-            start: word.start + timeOffset,
-            end: word.end + timeOffset
-          }));
+        const words = (seg.words || []).map(word => ({
+          word: word.word,
+          start: word.start + timeOffset,
+          end: word.end + timeOffset
+        }));
           
-          fullSegments.push({
-            start: seg.start + timeOffset,
-            end: seg.end + timeOffset,
-            text: seg.text,
-            words: words
-          });
+        fullSegments.push({
+          start: seg.start + timeOffset,
+          end: seg.end + timeOffset,
+          text: seg.text,
+          words: words
+        });
           
-          fullText += seg.text + " ";
-        }
-      });
+        fullText += seg.text + " ";
+      }
+      
+    });
       
       if (lyricsText) lyricsText.value = fullText.trim();
       
@@ -783,14 +784,11 @@ async function transcribeSelectedVoice() {
       if (selectedVoiceId) {
         await updateLibraryItem(selectedVoiceId, { transcription: fullSegments });
       }
-      
       if (status) status.textContent = "Estado: Transcripción completada con éxito ✅";
     } catch (error) {
-    
     console.error(error);
     
     alert("❌ Error al transcribir el audio.");
-    if (status) status.textContent = "Estado: Error en la transcripción";
   }
 }
 
