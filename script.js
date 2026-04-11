@@ -776,7 +776,7 @@ async function transcribeSelectedVoice() {
 
     transcriptionSegments = fullSegments;
     renderKaraokeLyrics(transcriptionSegments);
-
+    }
     if (selectedVoiceId) {
       await updateLibraryItem(selectedVoiceId, { transcription: fullSegments });
     }
