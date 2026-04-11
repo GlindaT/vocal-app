@@ -115,13 +115,23 @@ button {
 }
 
 /* Botón principal */
-button:not(.sidebar button) {
+button {
   background: var(--accent);
   color: black;
 }
 
-button:not(.sidebar button):hover {
+button:hover {
   background: var(--accent-hover);
+}
+
+.sidebar button {
+  background: none;
+  color: var(--text-muted);
+}
+
+.sidebar button:hover {
+  background: var(--border);
+  color: var(--text-main);
 }
 
 /* Botón peligro */
