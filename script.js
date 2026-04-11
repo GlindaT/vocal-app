@@ -941,7 +941,7 @@ function buildWordTimingFromSegment(segment) {
   };
 }
 
-function splitSegmentsIntoKaraokeLines(segments, maxWordsPerLine = 8) {
+function splitSegmentsIntoKaraokeLines(segments, maxWordsPerLine = 6) {
   const result = [];
 
   segments.forEach((segment) => {
