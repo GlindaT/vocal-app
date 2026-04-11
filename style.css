@@ -485,3 +485,17 @@ input[type="text"] {
     font-size: 80px; 
   }
 }
+
+.karaoke-word,
+.karaoke-live-word {
+  transition: all 0.12s ease;
+}
+
+.active-word {
+  color: #facc15;
+  font-weight: 700;
+}
+
+.past-word {
+  color: #22c55e;
+}
