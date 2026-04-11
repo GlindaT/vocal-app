@@ -398,3 +398,48 @@ input[type="text"] {
   50% { box-shadow: inset 0 0 40px #00f0ff; }
   100% { box-shadow: inset 0 0 40px #b700ff; }
 }
+
+/* ==========================================
+   MODO CELULAR (RESPONSIVE DESIGN)
+========================================== */
+@media (max-width: 768px) {
+  .app {
+    flex-direction: column-reverse; /* Pone el menú abajo y el contenido arriba */
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .sidebar {
+    width: 100%;
+    height: 70px;
+    padding: 5px 10px;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid var(--border);
+    overflow-x: auto; /* Permite deslizar si los botones no caben */
+    white-space: nowrap;
+  }
+
+  .sidebar h2 {
+    display: none; /* Ocultamos el título grande en el celular para ganar espacio */
+  }
+
+  .sidebar button {
+    text-align: center;
+    padding: 10px;
+    font-size: 14px;
+    flex: 1;
+    margin: 0 2px;
+  }
+
+  .content {
+    height: calc(100vh - 70px); /* El contenido toma el resto de la pantalla */
+    padding: 15px;
+  }
+
+  /* Ajustar textos muy grandes en el celular */
+  #noteDisplay {
+    font-size: 80px; 
+  }
+}
