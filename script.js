@@ -761,23 +761,17 @@ async function transcribeSelectedVoice() {
         const esFantasma = palabrasProhibidas.some(palabra => seg.text.includes(palabra));
 
         if (!esFantasma && seg.text.trim() !== "") {
-          const words = (seg.words || []).map(word => ({
-            word: word.word,
-            start: word.start + timeOffset,
-            end: word.end + timeOffset
-          }));
-
-          fullSegments.push({
+          const segmentWithOffset = {
             start: seg.start + timeOffset,
             end: seg.end + timeOffset,
-            text: seg.text,
-            words: words
-          });
+            text: seg.text
+         };
 
+          const segmentWithWords = buildWordTimingFromSegment(segmentWithOffset);
+          fullSegments.push(segmentWithWords);
           fullText += seg.text + " ";
-        }
-      });
-    }
+       }
+     });
 
     if (lyricsText) lyricsText.value = fullText.trim();
 
@@ -851,6 +845,57 @@ function blobToBase64(blob) {
   });
 }
 
+function buildWordTimingFromSegment(segment) {
+  const cleanText = (segment.text || "").trim();
+  if (!cleanText) {
+    return {
+      ...segment,
+      words: []
+    };
+  }
+
+  const rawWords = cleanText.split(/\s+/).filter(Boolean);
+  const segmentDuration = Math.max(0, (segment.end || 0) - (segment.start || 0));
+
+  if (!rawWords.length || segmentDuration <= 0) {
+    return {
+      ...segment,
+      words: rawWords.map(word => ({
+        word,
+        start: segment.start,
+        end: segment.end
+      }))
+    };
+  }
+
+  const totalChars = rawWords.reduce((sum, word) => sum + word.length, 0) || rawWords.length;
+  let cursor = segment.start;
+
+  const timedWords = rawWords.map((word, index) => {
+    const weight = word.length / totalChars;
+    let duration = segmentDuration * weight;
+
+    if (index === rawWords.length - 1) {
+      duration = segment.end - cursor;
+    }
+
+    const wordStart = cursor;
+    const wordEnd = cursor + duration;
+    cursor = wordEnd;
+
+    return {
+      word,
+      start: wordStart,
+      end: wordEnd
+    };
+  });
+
+  return {
+    ...segment,
+    words: timedWords
+  };
+}
+
 function renderKaraokeLyrics(segments) {
   const container = $("karaokeLyrics");
   if (!container) return;
@@ -869,14 +914,15 @@ function renderKaraokeLyrics(segments) {
     line.dataset.start = segment.start;
     line.dataset.end = segment.end;
 
-    if (segment.words && segment.words.length) {
-      segment.words.forEach((wordObj, wordIndex) => {
+    const words = segment.words || [];
+
+    if (words.length) {
+      words.forEach((wordObj, wordIndex) => {
         const span = document.createElement("span");
         span.className = "karaoke-word";
         span.dataset.start = wordObj.start;
         span.dataset.end = wordObj.end;
-        span.dataset.wordIndex = wordIndex;
-        span.textContent = (wordObj.word || "").trim() + " ";
+        span.textContent = wordObj.word + (wordIndex < words.length - 1 ? " " : "");
         line.appendChild(span);
       });
     } else {
@@ -886,6 +932,7 @@ function renderKaraokeLyrics(segments) {
     container.appendChild(line);
   });
 }
+
 
 function updateKaraokeHighlight(currentTime) {
   const lines = document.querySelectorAll(".karaoke-line");
@@ -909,20 +956,18 @@ function updateKaraokeHighlight(currentTime) {
     }
 
     const words = line.querySelectorAll(".karaoke-word");
-    if (words.length) {
-      words.forEach((word) => {
-        const wStart = parseFloat(word.dataset.start);
-        const wEnd = parseFloat(word.dataset.end);
+    words.forEach((word) => {
+      const wordStart = parseFloat(word.dataset.start);
+      const wordEnd = parseFloat(word.dataset.end);
 
-        word.classList.remove("active", "past");
+      word.classList.remove("active-word", "past-word");
 
-        if (currentTime >= wStart && currentTime <= wEnd) {
-          word.classList.add("active");
-        } else if (currentTime > wEnd) {
-          word.classList.add("past");
-        }
-      });
-    }
+      if (currentTime >= wordStart && currentTime <= wordEnd) {
+        word.classList.add("active-word");
+      } else if (currentTime > wordEnd) {
+        word.classList.add("past-word");
+      }
+    });
   });
 
   if (activeLine) {
@@ -1032,14 +1077,15 @@ function cargarLetrasEnMonitor() {
     p.dataset.start = seg.start;
     p.dataset.end = seg.end;
 
-    if (seg.words && seg.words.length) {
-      seg.words.forEach((wordObj, index) => {
+    const words = seg.words || [];
+
+    if (words.length) {
+      words.forEach((wordObj, index) => {
         const span = document.createElement("span");
         span.className = "karaoke-live-word";
         span.dataset.start = wordObj.start;
         span.dataset.end = wordObj.end;
-        span.dataset.wordIndex = index;
-        span.textContent = (wordObj.word || "").trim() + " ";
+        span.textContent = wordObj.word + (index < words.length - 1 ? " " : "");
         p.appendChild(span);
       });
     } else {
@@ -1138,20 +1184,18 @@ function syncKaraokeMonitor(currentTime) {
     }
 
     const words = line.querySelectorAll(".karaoke-live-word");
-    if (words.length) {
-      words.forEach(word => {
-        const wStart = parseFloat(word.dataset.start);
-        const wEnd = parseFloat(word.dataset.end);
+    words.forEach(word => {
+      const wordStart = parseFloat(word.dataset.start);
+      const wordEnd = parseFloat(word.dataset.end);
 
-        word.classList.remove("active", "past");
+      word.classList.remove("active-word", "past-word");
 
-        if (currentTime >= wStart && currentTime <= wEnd) {
-          word.classList.add("active");
-        } else if (currentTime > wEnd) {
-          word.classList.add("past");
-        }
-      });
-    }
+      if (currentTime >= wordStart && currentTime <= wordEnd) {
+        word.classList.add("active-word");
+      } else if (currentTime > wordEnd) {
+        word.classList.add("past-word");
+      }
+    });
   });
 
   if (activeLine && activeLine !== lastActiveLine) {
