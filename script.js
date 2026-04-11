@@ -438,7 +438,7 @@ function saveStudioRecording() {
 
   saveToLibrary(studioRecordedBlob, {
     name: baseName,
-    type: "grabacion"
+    type: "voz"
   });
 
   $("studioStatus").textContent = "Estado: grabación guardada en Biblioteca";
@@ -629,9 +629,12 @@ async function loadVoiceOptionsInStudio() {
   select.innerHTML = `<option value="">Selecciona una voz guardada</option>`;
 
   try {
-    const voices = await getLibraryItemsByType("voz");
+    const voces = await getLibraryItemsByType("voz");
+    const grabaciones = await getLibraryItemsByType("grabacion");
 
-    if (!voices.length) {
+    const merged = [...voces, ...grabaciones];
+
+    if (!merged.length) {
       const option = document.createElement("option");
       option.value = "";
       option.textContent = "No hay voces guardadas";
@@ -639,7 +642,7 @@ async function loadVoiceOptionsInStudio() {
       return;
     }
 
-    voices.forEach((item) => {
+    merged.forEach((item) => {
       const option = document.createElement("option");
       option.value = item.id;
       option.textContent = `${item.name} (${item.date || "sin fecha"})`;
@@ -681,19 +684,23 @@ async function loadSelectedVoiceFromLibrary() {
 
     const lyricsText = $("lyricsText");
 
-    if (item.transcription) {
+    if (Array.isArray(item.transcription) && item.transcription.length > 0) {
       transcriptionSegments = item.transcription.map(seg => buildWordTimingFromSegment(seg));
       renderKaraokeLyrics(transcriptionSegments);
+      cargarLetrasEnMonitor();
 
       if (lyricsText) {
-        lyricsText.value = transcriptionSegments.map(t => t.text).join(" ");
+        lyricsText.value = transcriptionSegments.map(t => t.text || "").join(" ").trim();
       }
 
       status.textContent = "Estado: Voz seleccionada (Letras cargadas de memoria ⚡)";
     } else {
       transcriptionSegments = [];
       renderKaraokeLyrics([]);
+      cargarLetrasEnMonitor();
+
       if (lyricsText) lyricsText.value = "";
+      status.textContent = `Estado: voz seleccionada -> ${item.name} (sin transcripción guardada)`;
     }
   } catch (error) {
     console.error(error);
@@ -794,6 +801,7 @@ async function transcribeSelectedVoice() {
 
     transcriptionSegments = fullSegments;
     renderKaraokeLyrics(transcriptionSegments);
+    cargarLetrasEnMonitor();
 
     if (selectedVoiceId) {
       await updateLibraryItem(selectedVoiceId, { transcription: fullSegments });
@@ -920,9 +928,11 @@ function renderKaraokeLyrics(segments) {
   const container = $("karaokeLyrics");
   if (!container) return;
 
+  console.log("renderKaraokeLyrics -> segmentos:", segments);
+
   container.innerHTML = "";
 
-  if (!segments.length) {
+  if (!Array.isArray(segments) || !segments.length) {
     container.innerHTML = `<p class="karaoke-placeholder">No hay segmentos para mostrar.</p>`;
     return;
   }
@@ -931,22 +941,22 @@ function renderKaraokeLyrics(segments) {
     const line = document.createElement("p");
     line.className = "karaoke-line";
     line.dataset.index = index;
-    line.dataset.start = segment.start;
-    line.dataset.end = segment.end;
+    line.dataset.start = Number(segment.start || 0);
+    line.dataset.end = Number(segment.end || 0);
 
-    const words = segment.words || [];
+    const words = Array.isArray(segment.words) ? segment.words : [];
 
     if (words.length) {
       words.forEach((wordObj, wordIndex) => {
         const span = document.createElement("span");
         span.className = "karaoke-word";
-        span.dataset.start = wordObj.start;
-        span.dataset.end = wordObj.end;
-        span.textContent = wordObj.word + (wordIndex < words.length - 1 ? " " : "");
+        span.dataset.start = Number(wordObj.start || 0);
+        span.dataset.end = Number(wordObj.end || 0);
+        span.textContent = (wordObj.word || "") + (wordIndex < words.length - 1 ? " " : "");
         line.appendChild(span);
       });
     } else {
-      line.textContent = segment.text.trim();
+      line.textContent = (segment.text || "").trim();
     }
 
     container.appendChild(line);
@@ -1083,9 +1093,11 @@ function cargarLetrasEnMonitor() {
   const container = $("karaokeLiveLyrics");
   if (!container) return;
 
+  console.log("cargarLetrasEnMonitor -> transcriptionSegments:", transcriptionSegments);
+
   container.innerHTML = "";
 
-  if (!transcriptionSegments || transcriptionSegments.length === 0) {
+  if (!Array.isArray(transcriptionSegments) || transcriptionSegments.length === 0) {
     container.innerHTML = `<p class="karaoke-placeholder" style="font-size:18px;">⚠️ Ve a la pestaña 'Estudio', transcribe una voz y vuelve aquí para ver la letra.</p>`;
     return;
   }
@@ -1093,22 +1105,22 @@ function cargarLetrasEnMonitor() {
   transcriptionSegments.forEach((seg) => {
     const p = document.createElement("p");
     p.className = "karaoke-live-line";
-    p.dataset.start = seg.start;
-    p.dataset.end = seg.end;
+    p.dataset.start = Number(seg.start || 0);
+    p.dataset.end = Number(seg.end || 0);
 
-    const words = seg.words || [];
+    const words = Array.isArray(seg.words) ? seg.words : [];
 
     if (words.length) {
       words.forEach((wordObj, index) => {
         const span = document.createElement("span");
         span.className = "karaoke-live-word";
-        span.dataset.start = wordObj.start;
-        span.dataset.end = wordObj.end;
-        span.textContent = wordObj.word + (index < words.length - 1 ? " " : "");
+        span.dataset.start = Number(wordObj.start || 0);
+        span.dataset.end = Number(wordObj.end || 0);
+        span.textContent = (wordObj.word || "") + (index < words.length - 1 ? " " : "");
         p.appendChild(span);
       });
     } else {
-      p.textContent = seg.text.trim();
+      p.textContent = (seg.text || "").trim();
     }
 
     container.appendChild(p);
