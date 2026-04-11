@@ -756,7 +756,8 @@ async function transcribeSelectedVoice() {
       });
 
       if (!response.ok) {
-        throw new Error("Error en la respuesta del servidor");
+        const errorText = await response.text();
+        throw new Error(`Error ${response.status}: ${errorText}`);
       }
 
       const result = await response.json();
