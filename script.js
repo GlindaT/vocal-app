@@ -374,8 +374,21 @@ async function startStudioRecording() {
 
     $("studioStatus").textContent = "Estado: preparando grabación...";
 
-    studioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    studioMediaRecorder = new MediaRecorder(studioStream);
+    studioStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+        channelCount: 1,
+        sampleRate: 48000
+      }
+    });
+
+    const options = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+      ? { mimeType: "audio/webm;codecs=opus" }
+      : {};
+    
+    studioMediaRecorder = new MediaRecorder(studioStream, options);
 
     studioMediaRecorder.ondataavailable = (event) => {
       if (event.data.size > 0) {
@@ -1168,9 +1181,22 @@ async function startKaraokeRecording() {
     karaokeRecordedBlob = null;
     $("karaokeVoicePlayer").src = "";
 
-    karaokeStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    karaokeMediaRecorder = new MediaRecorder(karaokeStream);
+    karaokeStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+        channelCount: 1,
+        sampleRate: 48000
+      }
+    });
 
+    const options = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+      ? { mimeType: "audio/webm;codecs=opus" }
+      : {};
+    
+    karaokeMediaRecorder = new MediaRecorder(karaokeStream, options);
+    
     karaokeMediaRecorder.ondataavailable = (e) => {
       if (e.data.size > 0) karaokeChunks.push(e.data);
     };
