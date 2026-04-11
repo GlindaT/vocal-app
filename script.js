@@ -699,12 +699,12 @@ async function loadSelectedVoiceFromLibrary() {
 
     if (Array.isArray(item.transcription) && item.transcription.length > 0) {
       const rebuiltSegments = item.transcription.map(seg => buildWordTimingFromSegment(seg));
-      transcriptionSegments = splitSegmentsIntoKaraokeLines(rebuiltSegments, 8);
+      transcriptionSegments = splitSegmentsIntoKaraokeLines(rebuiltSegments, 6);
       renderKaraokeLyrics(transcriptionSegments);
       cargarLetrasEnMonitor();
 
       if (lyricsText) {
-        lyricsText.value = transcriptionSegments.map(t => t.text || "").join(" ").trim();
+        lyricsText.value = transcriptionSegments.map(t => t.text || "").join("\n").trim();
       }
 
       status.textContent = "Estado: Voz seleccionada (Letras cargadas de memoria ⚡)";
@@ -743,7 +743,7 @@ async function transcribeSelectedVoice() {
     const arrayBuffer = await selectedVoiceBlob.arrayBuffer();
     const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
 
-    const CHUNK_SECONDS = 15;
+    const CHUNK_SECONDS = 25;
     const sampleRate = audioBuffer.sampleRate;
     const totalSamples = audioBuffer.length;
     const samplesPerChunk = CHUNK_SECONDS * sampleRate;
@@ -811,10 +811,12 @@ async function transcribeSelectedVoice() {
     }
 
     if (lyricsText) {
-      lyricsText.value = fullText.trim();
+      lyricsText.value = splitSegmentsIntoKaraokeLines(fullSegments, 6)
+        .map(line => line.text)
+        .join("\n");
     }
 
-    transcriptionSegments = splitSegmentsIntoKaraokeLines(fullSegments, 8);
+    transcriptionSegments = splitSegmentsIntoKaraokeLines(fullSegments, 6);
     renderKaraokeLyrics(transcriptionSegments);
     cargarLetrasEnMonitor();
 
