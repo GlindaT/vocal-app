@@ -345,6 +345,48 @@ input[type="text"] {
 }
 
 /* ==========================================
+   RESALTADO POR PALABRA - ESTUDIO
+========================================== */
+.karaoke-word {
+  display: inline-block;
+  color: inherit;
+  transition: color 0.15s ease, transform 0.15s ease, text-shadow 0.15s ease;
+  white-space: pre-wrap;
+}
+
+.karaoke-word.active {
+  color: #22c55e;
+  font-weight: bold;
+  text-shadow: 0 0 8px rgba(34, 197, 94, 0.45);
+  transform: scale(1.06);
+}
+
+.karaoke-word.past {
+  color: #cbd5e1;
+}
+
+/* ==========================================
+   RESALTADO POR PALABRA - KARAOKE
+========================================== */
+.karaoke-live-word {
+  display: inline-block;
+  color: inherit;
+  transition: color 0.12s ease, transform 0.12s ease, text-shadow 0.12s ease;
+  white-space: pre-wrap;
+}
+
+.karaoke-live-word.active {
+  color: #facc15;
+  font-weight: 900;
+  text-shadow: 0 0 12px rgba(250, 204, 21, 0.85);
+  transform: scale(1.08);
+}
+
+.karaoke-live-word.past {
+  color: #ffffff;
+}
+
+/* ==========================================
    MONITOR KARAOKE ULTRASTAR
 ========================================== */
 .karaoke-live-line {
