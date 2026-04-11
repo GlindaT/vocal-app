@@ -11,12 +11,14 @@ export default async function handler(req, res) {
     }
 
     if (!process.env.OPENAI_API_KEY) {
-      return res.status(500).json({ error: "Falta configurar OPENAI_API_KEY en Vercel" });
+      return res.status(500).json({ error: "Falta configurar OPENAI_API_KEY en el servidor" });
     }
 
+    // Convertir base64 a binario
     const audioBuffer = Buffer.from(audioBase64, "base64");
-    const audioBlob = new Blob([audioBuffer], { type: "audio/wav" });
 
+    // Crear archivo compatible para enviar a OpenAI
+    const audioBlob = new Blob([audioBuffer], { type: "audio/wav" });
     const formData = new FormData();
     formData.append("file", audioBlob, "chunk.wav");
     formData.append("model", "whisper-1");
@@ -32,20 +34,19 @@ export default async function handler(req, res) {
       body: formData
     });
 
-    const rawText = await openAIResponse.text();
+    const responseText = await openAIResponse.text();
 
     if (!openAIResponse.ok) {
-      console.error("OpenAI status:", openAIResponse.status);
-      console.error("OpenAI body:", rawText);
-
+      console.error("Error de OpenAI:", responseText);
       return res.status(openAIResponse.status).json({
         error: "Error al transcribir en OpenAI",
-        detail: rawText
+        detail: responseText
       });
     }
 
-    const data = JSON.parse(rawText);
+    const data = JSON.parse(responseText);
     return res.status(200).json(data);
+
   } catch (error) {
     console.error("Error del servidor:", error);
     return res.status(500).json({
