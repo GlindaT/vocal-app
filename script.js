@@ -103,27 +103,6 @@ function updateLibraryItem(id, changes) {
   });
 }
 
-// Actualizar un archivo existente en la BD (para guardarle las letras)
-function updateLibraryItem(id, changes) {
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(["library"], "readwrite");
-    const store = transaction.objectStore("library");
-    const getReq = store.get(id);
-
-    getReq.onsuccess = () => {
-      const item = getReq.result;
-      if (!item) return reject("Archivo no encontrado");
-      
-      const updatedItem = { ...item, ...changes }; // Mezclamos los datos viejos con los nuevos
-      const putReq = store.put(updatedItem);
-      
-      putReq.onsuccess = () => resolve();
-      putReq.onerror = () => reject("Error al actualizar la BD");
-    };
-    getReq.onerror = () => reject("Error al buscar en BD");
-  });
-}
-
 function deleteLibraryItemFromDB(id) {
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(["library"], "readwrite");
@@ -1348,24 +1327,23 @@ function showResult(url) {
 // ==========================================
 // CONFIGURACIÓN (AUTO-GUARDADO LOCAL)
 // ==========================================
+function saveSetting(key, element) {
+  if (!element) return;
+  localStorage.setItem(key, element.value);
+  showSaveNotification();
+}
+
 function initSettings() {
   const micCount = $("micCount");
   const karaokeStage = $("karaokeStage");
   const difficultyLevel = $("difficultyLevel");
 
-  // 1. Cargar los valores guardados al abrir la app (o poner los por defecto)
+  // Cargar valores guardados al abrir la app
   if (micCount) micCount.value = localStorage.getItem("vocalApp_micCount") || "1";
   if (karaokeStage) karaokeStage.value = localStorage.getItem("vocalApp_stage") || "clasico";
   if (difficultyLevel) difficultyLevel.value = localStorage.getItem("vocalApp_difficulty") || "medio";
 
-  // 2. Función para guardar y mostrar el mensaje
-  const saveSetting = (key, element) => {
-    if (!element) return;
-    localStorage.setItem(key, element.value);
-    showSaveNotification();
-  };
-
-  // 3. Escuchar cuando el usuario cambie una opción
+  // Escuchar cambios
   safeAdd("micCount", "change", (e) => saveSetting("vocalApp_micCount", e.target));
   safeAdd("karaokeStage", "change", (e) => saveSetting("vocalApp_stage", e.target));
   safeAdd("difficultyLevel", "change", (e) => saveSetting("vocalApp_difficulty", e.target));
