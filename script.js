@@ -246,8 +246,14 @@ function detectPitch() {
 
       display.textContent = noteFull;
       
-      // Margen de tolerancia (30 cents es cómodo)
-      const maxDesviation = 30;
+      // --- INICIO MAGIA DE DIFICULTAD ---
+      const dificultad = localStorage.getItem("vocalApp_difficulty") || "medio";
+      let maxDesviation = 30; // Nivel Medio por defecto
+
+      if (dificultad === "facil") maxDesviation = 50;      // Muy permisivo
+      else if (dificultad === "dificil") maxDesviation = 15; // Exigente
+      else if (dificultad === "experto") maxDesviation = 5;  // Tono perfecto (¡Casi imposible!)
+      // --- FIN MAGIA DE DIFICULTAD ---
 
       // 5. Lógica de mensajes visuales
       if (noteName === targetNote) {
