@@ -682,11 +682,11 @@ async function loadSelectedVoiceFromLibrary() {
     const lyricsText = $("lyricsText");
 
     if (item.transcription) {
-      transcriptionSegments = item.transcription;
+      transcriptionSegments = item.transcription.map(seg => buildWordTimingFromSegment(seg));
       renderKaraokeLyrics(transcriptionSegments);
 
       if (lyricsText) {
-        lyricsText.value = item.transcription.map(t => t.text).join(" ");
+        lyricsText.value = transcriptionSegments.map(t => t.text).join(" ");
       }
 
       status.textContent = "Estado: Voz seleccionada (Letras cargadas de memoria ⚡)";
@@ -714,7 +714,9 @@ async function transcribeSelectedVoice() {
   const lyricsText = $("lyricsText");
 
   try {
-    if (status) status.textContent = "Estado: Preparando audio (cortando en porciones)...";
+    if (status) {
+      status.textContent = "Estado: Preparando audio (cortando en porciones)...";
+    }
 
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const arrayBuffer = await selectedVoiceBlob.arrayBuffer();
@@ -751,39 +753,55 @@ async function transcribeSelectedVoice() {
       }
 
       const result = await response.json();
-      console.log("Resultado Whisper:", result);
-      console.log("Palabras del primer segmento:", result.segments?.[0]?.words);
 
-      const palabrasProhibidas = ["Amara", "Subtítulos", "subtítulos", "Almorzo", "Suscribete", "comunidad"];
+      const palabrasProhibidas = [
+        "Amara",
+        "Subtítulos",
+        "subtítulos",
+        "Almorzo",
+        "Suscribete",
+        "comunidad"
+      ];
+
       const timeOffset = start / sampleRate;
 
-      (result.segments || []).forEach(seg => {
-        const esFantasma = palabrasProhibidas.some(palabra => seg.text.includes(palabra));
-        
-        if (!esFantasma && seg.text.trim() !== "") {
-          const segmentWithOffset = {
-            start: seg.start + timeOffset,
-            end: seg.end + timeOffset,
-            text: seg.text
-          };
-          const segmentWithWords = buildWordTimingFromSegment(segmentWithOffset);
-          fullSegments.push(segmentWithWords);
-          fullText += seg.text + " ";
-        }
-      });
+      (result.segments || []).forEach((seg) => {
+        const segText = (seg?.text || "").trim();
 
-    if (lyricsText) lyricsText.value = fullText.trim();
+        if (!segText) return;
+
+        const esFantasma = palabrasProhibidas.some((palabra) =>
+          segText.toLowerCase().includes(palabra.toLowerCase())
+        );
+
+        if (esFantasma) return;
+
+        const segmentWithOffset = {
+          start: Number(seg.start || 0) + timeOffset,
+          end: Number(seg.end || 0) + timeOffset,
+          text: segText
+        };
+
+        const segmentWithWords = buildWordTimingFromSegment(segmentWithOffset);
+        fullSegments.push(segmentWithWords);
+        fullText += segText + " ";
+      });
+    }
+
+    if (lyricsText) {
+      lyricsText.value = fullText.trim();
+    }
 
     transcriptionSegments = fullSegments;
-    console.log("fullSegments final:", fullSegments);
-    console.log("Cantidad de segmentos:", fullSegments.length);
     renderKaraokeLyrics(transcriptionSegments);
-    }
+
     if (selectedVoiceId) {
       await updateLibraryItem(selectedVoiceId, { transcription: fullSegments });
     }
 
-    if (status) status.textContent = "Estado: Transcripción completada con éxito ✅";
+    if (status) {
+      status.textContent = "Estado: Transcripción completada con éxito ✅";
+    }
   } catch (error) {
     console.error(error);
     alert("❌ Error al transcribir el audio.");
@@ -848,6 +866,7 @@ function blobToBase64(blob) {
 
 function buildWordTimingFromSegment(segment) {
   const cleanText = (segment.text || "").trim();
+
   if (!cleanText) {
     return {
       ...segment,
@@ -901,8 +920,6 @@ function renderKaraokeLyrics(segments) {
   const container = $("karaokeLyrics");
   if (!container) return;
 
-  console.log("Render karaoke lyrics:", segments);
-  
   container.innerHTML = "";
 
   if (!segments.length) {
