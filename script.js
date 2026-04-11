@@ -685,7 +685,8 @@ async function loadSelectedVoiceFromLibrary() {
     const lyricsText = $("lyricsText");
 
     if (Array.isArray(item.transcription) && item.transcription.length > 0) {
-      transcriptionSegments = item.transcription.map(seg => buildWordTimingFromSegment(seg));
+      const rebuiltSegments = item.transcription.map(seg => buildWordTimingFromSegment(seg));
+      transcriptionSegments = splitSegmentsIntoKaraokeLines(rebuiltSegments, 8);
       renderKaraokeLyrics(transcriptionSegments);
       cargarLetrasEnMonitor();
 
@@ -800,7 +801,7 @@ async function transcribeSelectedVoice() {
       lyricsText.value = fullText.trim();
     }
 
-    transcriptionSegments = fullSegments;
+    transcriptionSegments = splitSegmentsIntoKaraokeLines(fullSegments, 8);
     renderKaraokeLyrics(transcriptionSegments);
     cargarLetrasEnMonitor();
 
@@ -923,6 +924,32 @@ function buildWordTimingFromSegment(segment) {
     ...segment,
     words: timedWords
   };
+}
+
+function splitSegmentsIntoKaraokeLines(segments, maxWordsPerLine = 8) {
+  const result = [];
+
+  segments.forEach((segment) => {
+    const words = Array.isArray(segment.words) && segment.words.length
+      ? segment.words
+      : buildWordTimingFromSegment(segment).words;
+
+    if (!words.length) return;
+
+    for (let i = 0; i < words.length; i += maxWordsPerLine) {
+      const chunk = words.slice(i, i + maxWordsPerLine);
+      if (!chunk.length) continue;
+
+      result.push({
+        start: chunk[0].start,
+        end: chunk[chunk.length - 1].end,
+        text: chunk.map(w => w.word).join(" "),
+        words: chunk
+      });
+    }
+  });
+
+  return result;
 }
 
 function renderKaraokeLyrics(segments) {
