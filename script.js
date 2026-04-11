@@ -932,7 +932,6 @@ function renderKaraokeLyrics(segments) {
   });
 }
 
-
 function updateKaraokeHighlight(currentTime) {
   const lines = document.querySelectorAll(".karaoke-line");
   if (!lines.length) return;
