@@ -775,6 +775,8 @@ async function transcribeSelectedVoice() {
     if (lyricsText) lyricsText.value = fullText.trim();
 
     transcriptionSegments = fullSegments;
+    console.log("fullSegments final:", fullSegments);
+    console.log("Cantidad de segmentos:", fullSegments.length);
     renderKaraokeLyrics(transcriptionSegments);
     }
     if (selectedVoiceId) {
@@ -899,6 +901,8 @@ function renderKaraokeLyrics(segments) {
   const container = $("karaokeLyrics");
   if (!container) return;
 
+  console.log("Render karaoke lyrics:", segments);
+  
   container.innerHTML = "";
 
   if (!segments.length) {
