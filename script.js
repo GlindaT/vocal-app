@@ -770,7 +770,12 @@ async function transcribeSelectedVoice() {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
+        let errorText = "";
+        try {
+          errorText = await response.text();
+        } catch (_) {
+          errorText = "Sin detalle del servidor";
+        }
         throw new Error(`Error ${response.status}: ${errorText}`);
       }
 
