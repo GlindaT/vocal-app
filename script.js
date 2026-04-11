@@ -758,20 +758,19 @@ async function transcribeSelectedVoice() {
       const timeOffset = start / sampleRate;
 
       (result.segments || []).forEach(seg => {
-  const esFantasma = palabrasProhibidas.some(palabra => seg.text.includes(palabra));
-
-  if (!esFantasma && seg.text.trim() !== "") {
-    const segmentWithOffset = {
-      start: seg.start + timeOffset,
-      end: seg.end + timeOffset,
-      text: seg.text
-    };
-
-    const segmentWithWords = buildWordTimingFromSegment(segmentWithOffset);
-    fullSegments.push(segmentWithWords);
-    fullText += seg.text + " ";
-  }
-});
+        const esFantasma = palabrasProhibidas.some(palabra => seg.text.includes(palabra));
+        
+        if (!esFantasma && seg.text.trim() !== "") {
+          const segmentWithOffset = {
+            start: seg.start + timeOffset,
+            end: seg.end + timeOffset,
+            text: seg.text
+          };
+          const segmentWithWords = buildWordTimingFromSegment(segmentWithOffset);
+          fullSegments.push(segmentWithWords);
+          fullText += seg.text + " ";
+        }
+      });
 
     if (lyricsText) lyricsText.value = fullText.trim();
 
