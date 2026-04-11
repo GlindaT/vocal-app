@@ -476,6 +476,8 @@ async function loadLibrary() {
     });
 
     await loadVoiceOptionsInStudio();
+    await loadTrackOptionsInStudio();
+    await loadTrackOptionsInKaraoke();
 
   } catch (error) {
     console.error(error);
@@ -591,17 +593,45 @@ async function getLibraryItemById(id) {
   });
 }
 
-async function loadSelectedVoiceFromLibrary() {
-  const select = $("voiceLibrarySelect");
-  const player = $("selectedVoicePlayer");
-  const status = $("selectedVoiceStatus");
+async function loadTrackOptionsInStudio() {
+  const select = $("studioTrackSelect");
+  if (!select) return;
+
+  select.innerHTML = `<option value="">Selecciona una pista desde Biblioteca</option>`;
+
+  try {
+    const tracks = await getLibraryItemsByType("pista");
+
+    if (!tracks.length) {
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "No hay pistas guardadas";
+      select.appendChild(option);
+      return;
+    }
+
+    tracks.forEach((item) => {
+      const option = document.createElement("option");
+      option.value = item.id;
+      option.textContent = `${item.name} (${item.date || "sin fecha"})`;
+      select.appendChild(option);
+    });
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function loadSelectedTrackFromLibraryStudio() {
+  const select = $("studioTrackSelect");
+  const player = $("player");
+  const status = $("studioStatus");
 
   if (!select || !player || !status) return;
 
   const selectedId = Number(select.value);
 
   if (!selectedId) {
-    alert("⚠️ Selecciona una voz");
+    alert("⚠️ Selecciona una pista");
     return;
   }
 
@@ -609,16 +639,19 @@ async function loadSelectedVoiceFromLibrary() {
     const item = await getLibraryItemById(selectedId);
 
     if (!item) {
-      alert("⚠️ No se encontró el archivo");
+      alert("⚠️ No se encontró la pista");
       return;
     }
 
-    selectedVoiceBlob = item.audioBlob;
-    selectedVoiceId = item.id;
-
-    const audioURL = URL.createObjectURL(item.audioBlob);
-    player.src = audioURL;
-    status.textContent = `Estado: voz seleccionada -> ${item.name}`;
+    studioTrackFileName = item.name;
+    player.src = URL.createObjectURL(item.audioBlob);
+    status.textContent = `Estado: pista cargada desde Biblioteca (${item.name})`;
+  } catch (error) {
+    console.error(error);
+    alert("❌ No se pudo cargar la pista seleccionada");
+  }
+}
+    
     // NUEVO: Si este archivo ya tiene letras guardadas, las cargamos al instante
     const lyricsText = $("lyricsText");
     if (item.transcription) {
@@ -1399,6 +1432,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // estudio
     safeAdd("audioFile", "change", cargarAudioEstudio);
+    safeAdd("refreshStudioTrackListBtn", "click", loadTrackOptionsInStudio);
+    safeAdd("loadStudioTrackBtn", "click", loadSelectedTrackFromLibraryStudio);
     safeAdd("playTrackBtn", "click", playTrack);
     safeAdd("pauseTrackBtn", "click", pauseTrack);
     safeAdd("stopTrackBtn", "click", stopTrack);
@@ -1435,6 +1470,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // init
     await loadLibrary();
+    await loadTrackOptionsInStudio();
     await loadTrackOptionsInKaraoke();
 
     const player = $("player");
