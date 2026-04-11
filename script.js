@@ -756,17 +756,24 @@ async function transcribeSelectedVoice() {
 
       (result.segments || []).forEach(seg => {
         const esFantasma = palabrasProhibidas.some(palabra => seg.text.includes(palabra));
-
+        
         if (!esFantasma && seg.text.trim() !== "") {
+          const words = (seg.words || []).map(word => ({
+            word: word.word,
+            start: word.start + timeOffset,
+            end: word.end + timeOffset
+          }));
+          
           fullSegments.push({
             start: seg.start + timeOffset,
             end: seg.end + timeOffset,
-            text: seg.text
+            text: seg.text,
+            words: words
           });
+
           fullText += seg.text + " ";
         }
       });
-    }
 
     if (lyricsText) lyricsText.value = fullText.trim();
 
