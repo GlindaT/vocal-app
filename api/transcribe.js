@@ -21,6 +21,7 @@ export default async function handler(req, res) {
     formData.append("model", "whisper-1");
     formData.append("language", "es");
     formData.append("response_format", "verbose_json"); // Necesario para los tiempos del Karaoke
+    formData.append("timestamp_granularities[]", "word");
 
     // 3. Llamar a OpenAI usando nuestra clave secreta
     const openAIResponse = await fetch("https://api.openai.com/v1/audio/transcriptions", {
