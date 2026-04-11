@@ -770,23 +770,25 @@ async function transcribeSelectedVoice() {
             text: seg.text,
             words: words
           });
-
+          
           fullText += seg.text + " ";
         }
       });
-
-    if (lyricsText) lyricsText.value = fullText.trim();
-
-    transcriptionSegments = fullSegments;
-    renderKaraokeLyrics(transcriptionSegments);
-
-    if (selectedVoiceId) {
-      await updateLibraryItem(selectedVoiceId, { transcription: fullSegments });
-    }
-
-    if (status) status.textContent = "Estado: Transcripción completada con éxito ✅";
-  } catch (error) {
+      
+      if (lyricsText) lyricsText.value = fullText.trim();
+      
+      transcriptionSegments = fullSegments;
+      renderKaraokeLyrics(transcriptionSegments);
+      
+      if (selectedVoiceId) {
+        await updateLibraryItem(selectedVoiceId, { transcription: fullSegments });
+      }
+      
+      if (status) status.textContent = "Estado: Transcripción completada con éxito ✅";
+    } catch (error) {
+    
     console.error(error);
+    
     alert("❌ Error al transcribir el audio.");
     if (status) status.textContent = "Estado: Error en la transcripción";
   }
