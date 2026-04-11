@@ -733,7 +733,9 @@ async function transcribeSelectedVoice() {
       const chunkNumber = Math.floor(start / samplesPerChunk) + 1;
       const totalChunks = Math.ceil(totalSamples / samplesPerChunk);
 
-      if (status) status.textContent = `Estado: Transcribiendo parte ${chunkNumber} de ${totalChunks}...`;
+      if (status) {
+        status.textContent = `Estado: Transcribiendo parte ${chunkNumber} de ${totalChunks}...`;
+      }
 
       const wavBlob = audioBufferToWav(audioBuffer, start, end);
       const base64Audio = await blobToBase64(wavBlob);
@@ -754,39 +756,42 @@ async function transcribeSelectedVoice() {
       const palabrasProhibidas = ["Amara", "Subtítulos", "subtítulos", "Almorzo", "Suscribete", "comunidad"];
       const timeOffset = start / sampleRate;
 
-    (result.segments || []).forEach(seg => {
-      const esFantasma = palabrasProhibidas.some(palabra => seg.text.includes(palabra));
-      
-      if (!esFantasma && seg.text.trim() !== "") {
-        const words = (seg.words || []).map(word => ({
-          word: word.word,
-          start: word.start + timeOffset,
-          end: word.end + timeOffset
-        }));
-        
-        fullSegments.push({
-          start: seg.start + timeOffset,
-          end: seg.end + timeOffset,
-          text: seg.text,
-          words: words
-        });
-        
-        fullText += seg.text + " ";
-      }
-    });
-      
-      if (lyricsText) lyricsText.value = fullText.trim();
-      transcriptionSegments = fullSegments;
-      renderKaraokeLyrics(transcriptionSegments);
-    
-      if (selectedVoiceId) {
-        await updateLibraryItem(selectedVoiceId, { transcription: fullSegments });
-      }
-      
-      if (status) status.textContent = "Estado: Transcripción completada con éxito ✅";
-    } catch (error) {
-      console.error(error);
-      alert("❌ Error al transcribir el audio.");
+      (result.segments || []).forEach(seg => {
+        const esFantasma = palabrasProhibidas.some(palabra => seg.text.includes(palabra));
+
+        if (!esFantasma && seg.text.trim() !== "") {
+          const words = (seg.words || []).map(word => ({
+            word: word.word,
+            start: word.start + timeOffset,
+            end: word.end + timeOffset
+          }));
+
+          fullSegments.push({
+            start: seg.start + timeOffset,
+            end: seg.end + timeOffset,
+            text: seg.text,
+            words: words
+          });
+
+          fullText += seg.text + " ";
+        }
+      });
+    }
+
+    if (lyricsText) lyricsText.value = fullText.trim();
+
+    transcriptionSegments = fullSegments;
+    renderKaraokeLyrics(transcriptionSegments);
+
+    if (selectedVoiceId) {
+      await updateLibraryItem(selectedVoiceId, { transcription: fullSegments });
+    }
+
+    if (status) status.textContent = "Estado: Transcripción completada con éxito ✅";
+  } catch (error) {
+    console.error(error);
+    alert("❌ Error al transcribir el audio.");
+    if (status) status.textContent = "Estado: Error en la transcripción";
   }
 }
 
