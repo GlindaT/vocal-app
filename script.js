@@ -749,6 +749,7 @@ async function transcribeSelectedVoice() {
       }
 
       const result = await response.json();
+      console.log("Resultado Whisper:", result);
 
       const palabrasProhibidas = ["Amara", "Subtítulos", "subtítulos", "Almorzo", "Suscribete", "comunidad"];
       const timeOffset = start / sampleRate;
