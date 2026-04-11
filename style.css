@@ -345,29 +345,9 @@ input[type="text"] {
 }
 
 /* ==========================================
-   RESALTADO POR PALABRA - ESTUDIO
+   RESALTADO POR PALABRA
 ========================================== */
-.karaoke-word {
-  display: inline-block;
-  color: inherit;
-  transition: color 0.15s ease, transform 0.15s ease, text-shadow 0.15s ease;
-  white-space: pre-wrap;
-}
-
-.karaoke-word.active {
-  color: #22c55e;
-  font-weight: bold;
-  text-shadow: 0 0 8px rgba(34, 197, 94, 0.45);
-  transform: scale(1.06);
-}
-
-.karaoke-word.past {
-  color: #cbd5e1;
-}
-
-/* ==========================================
-   RESALTADO POR PALABRA - KARAOKE
-========================================== */
+.karaoke-word,
 .karaoke-live-word {
   display: inline-block;
   color: inherit;
@@ -375,15 +355,17 @@ input[type="text"] {
   white-space: pre-wrap;
 }
 
-.karaoke-live-word.active {
+.karaoke-word.active-word,
+.karaoke-live-word.active-word {
   color: #facc15;
-  font-weight: 900;
-  text-shadow: 0 0 12px rgba(250, 204, 21, 0.85);
+  font-weight: 800;
+  text-shadow: 0 0 10px rgba(250, 204, 21, 0.7);
   transform: scale(1.08);
 }
 
-.karaoke-live-word.past {
-  color: #ffffff;
+.karaoke-word.past-word,
+.karaoke-live-word.past-word {
+  color: #22c55e;
 }
 
 /* ==========================================
@@ -484,18 +466,4 @@ input[type="text"] {
   #noteDisplay {
     font-size: 80px; 
   }
-}
-
-.karaoke-word,
-.karaoke-live-word {
-  transition: all 0.12s ease;
-}
-
-.active-word {
-  color: #facc15;
-  font-weight: 700;
-}
-
-.past-word {
-  color: #22c55e;
 }
