@@ -1901,6 +1901,23 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     if (pitchHistory.length > canvas.width / 5) pitchHistory.shift();
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // --- NUEVO: Dibujar Barras Objetivo ---
+    if (typeof transcriptionSegments !== 'undefined') {
+      const track = $("karaokeTrack");
+      const duration = track.duration || 60; // Duración total de la pista
+
+      transcriptionSegments.forEach(seg => {
+        // Calculamos posición X basada en el tiempo actual de la pista
+        // Movemos las barras hacia la izquierda a medida que avanza la canción
+        const x = (seg.start - currentTime) * 50 + (canvas.width / 4);
+        const width = (seg.end - seg.start) * 50;
+
+        if (x > -width && x < canvas.width) {
+          ctx.fillStyle = "#3b82f644"; // Azul suave
+          ctx.fillRect(x, 100, width, 20);
+        }
+      });
+    }
     ctx.strokeStyle = "#333";
     
     // Dibujar líneas guía (Pentagrama)
