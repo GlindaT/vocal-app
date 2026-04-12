@@ -1915,6 +1915,11 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
         if (x > -width && x < canvas.width) {
           ctx.fillStyle = "#3b82f644"; // Azul suave
           ctx.fillRect(x, 100, width, 20);
+          // DIBUJAR LETRA SOBRE LA BARRA
+          ctx.fillStyle = "white";
+          ctx.font = "14px Arial";
+          ctx.textAlign = "center";
+          ctx.fillText(seg.text, x + width / 2, 115); // Escribe la palabra en el centro de la barra
         }
       });
     }
