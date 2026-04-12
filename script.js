@@ -671,6 +671,7 @@ async function loadSelectedVoiceFromLibrary() {
   const select = $("voiceLibrarySelect");
   const player = $("selectedVoicePlayer");
   const status = $("selectedVoiceStatus");
+  const lyricsText = $("lyricsText");
 
   if (!select || !player || !status) return;
 
@@ -696,23 +697,30 @@ async function loadSelectedVoiceFromLibrary() {
     player.src = audioURL;
     status.textContent = `Estado: voz seleccionada -> ${item.name}`;
 
-    const lyricsText = $("lyricsText");
-
     if (Array.isArray(item.transcription) && item.transcription.length > 0) {
-      baseTranscriptionSegments = item.transcription.map(seg => buildWordTimingFromSegment(seg));
-      transcriptionSegments = splitSegmentsIntoKaraokeLines(baseTranscriptionSegments, 6);
+      baseTranscriptionSegments = item.transcription.map(seg =>
+        buildWordTimingFromSegment(seg)
+      );
+
+      // IMPORTANTE:
+      // aquí respetamos exactamente las líneas guardadas
+      transcriptionSegments = baseTranscriptionSegments;
 
       renderKaraokeLyrics(transcriptionSegments);
       cargarLetrasEnMonitor();
 
       if (lyricsText) {
-        lyricsText.value = transcriptionSegments.map(t => t.text || "").join("\n").trim();
+        lyricsText.value = transcriptionSegments
+          .map(seg => seg.text || "")
+          .join("\n")
+          .trim();
       }
 
       status.textContent = "Estado: Voz seleccionada (Letras cargadas de memoria ⚡)";
     } else {
       baseTranscriptionSegments = [];
       transcriptionSegments = [];
+
       renderKaraokeLyrics([]);
       cargarLetrasEnMonitor();
 
@@ -967,6 +975,49 @@ function splitSegmentsIntoKaraokeLines(segments, maxWordsPerLine = 6) {
   });
 
   return result;
+}
+
+function buildSegmentsFromMultilineLyrics(text, baseSegments) {
+  const lines = text
+    .split("\n")
+    .map(line => line.trim())
+    .filter(Boolean);
+
+  if (!lines.length || !Array.isArray(baseSegments) || !baseSegments.length) {
+    return [];
+  }
+
+  const totalStart = baseSegments[0].start;
+  const totalEnd = baseSegments[baseSegments.length - 1].end;
+  const totalDuration = Math.max(0, totalEnd - totalStart);
+
+  if (totalDuration <= 0) return [];
+
+  const lineWeights = lines.map(line => {
+    const words = line.split(/\s+/).filter(Boolean);
+    return words.reduce((sum, w) => sum + w.length, 0) || words.length || 1;
+  });
+
+  const totalWeight = lineWeights.reduce((a, b) => a + b, 0) || 1;
+
+  let cursor = totalStart;
+
+  return lines.map((line, index) => {
+    let duration = totalDuration * (lineWeights[index] / totalWeight);
+
+    if (index === lines.length - 1) {
+      duration = totalEnd - cursor;
+    }
+
+    const segment = {
+      start: cursor,
+      end: cursor + duration,
+      text: line
+    };
+
+    cursor += duration;
+    return buildWordTimingFromSegment(segment);
+  });
 }
 
 function renderKaraokeLyrics(segments) {
@@ -1632,75 +1683,51 @@ async function applyCorrectedLyrics() {
     return;
   }
 
-  const correctedWords = correctedText
-    .replace(/\n+/g, " ")
-    .split(/\s+/)
-    .filter(Boolean);
-
-  if (!correctedWords.length) {
-    alert("⚠️ No se encontraron palabras válidas en la letra corregida.");
-    return;
-  }
-
-  const originalSegments = baseTranscriptionSegments;
-  const rebuiltSegments = [];
-  let cursor = 0;
-
-  originalSegments.forEach((seg, index) => {
-    const originalWords = Array.isArray(seg.words) ? seg.words : [];
-    let takeCount = originalWords.length;
-
-    if (!takeCount) return;
-
-    const remainingCorrectedWords = correctedWords.length - cursor;
-    if (remainingCorrectedWords <= 0) return;
-
-    if (index === originalSegments.length - 1) {
-      takeCount = remainingCorrectedWords;
-    } else {
-      takeCount = Math.min(takeCount, remainingCorrectedWords);
-    }
-
-    const chunkWords = correctedWords.slice(cursor, cursor + takeCount);
-    cursor += takeCount;
-
-    if (!chunkWords.length) return;
-
-    rebuiltSegments.push(buildWordTimingFromSegment({
-      start: seg.start,
-      end: seg.end,
-      text: chunkWords.join(" ")
-    }));
-  });
+  const rebuiltSegments = buildSegmentsFromMultilineLyrics(
+    correctedText,
+    baseTranscriptionSegments
+  );
 
   if (!rebuiltSegments.length) {
     alert("⚠️ No se pudo reconstruir la letra corregida.");
     return;
   }
 
+  // Guardamos como nueva base la versión corregida
   baseTranscriptionSegments = rebuiltSegments;
-  transcriptionSegments = splitSegmentsIntoKaraokeLines(baseTranscriptionSegments, 6);
+
+  // Mostramos exactamente las líneas escritas por el usuario
+  transcriptionSegments = rebuiltSegments;
 
   renderKaraokeLyrics(transcriptionSegments);
   cargarLetrasEnMonitor();
 
-  lyricsText.value = transcriptionSegments.map(line => line.text).join("\n");
+  lyricsText.value = transcriptionSegments
+    .map(seg => seg.text || "")
+    .join("\n")
+    .trim();
 
   if (selectedVoiceId) {
     try {
       await updateLibraryItem(selectedVoiceId, {
         transcription: baseTranscriptionSegments
       });
-      if (status) status.textContent = "Estado: letra corregida aplicada y guardada ✅";
+
+      if (status) {
+        status.textContent = "Estado: letra corregida aplicada y guardada ✅";
+      }
     } catch (error) {
       console.error(error);
-      if (status) status.textContent = "Estado: letra corregida aplicada, pero no se pudo guardar en BD";
+      if (status) {
+        status.textContent = "Estado: letra corregida aplicada, pero no se pudo guardar en BD";
+      }
     }
   } else {
-    if (status) status.textContent = "Estado: letra corregida aplicada ✅";
+    if (status) {
+      status.textContent = "Estado: letra corregida aplicada ✅";
+    }
   }
 }
-
 // ==========================================
 // INIT
 // ==========================================
