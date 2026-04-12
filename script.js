@@ -699,8 +699,9 @@ async function loadSelectedVoiceFromLibrary() {
     const lyricsText = $("lyricsText");
 
     if (Array.isArray(item.transcription) && item.transcription.length > 0) {
-      const rebuiltSegments = item.transcription.map(seg => buildWordTimingFromSegment(seg));
-      transcriptionSegments = splitSegmentsIntoKaraokeLines(rebuiltSegments, 6);
+      baseTranscriptionSegments = item.transcription.map(seg => buildWordTimingFromSegment(seg));
+      transcriptionSegments = splitSegmentsIntoKaraokeLines(baseTranscriptionSegments, 6);
+
       renderKaraokeLyrics(transcriptionSegments);
       cargarLetrasEnMonitor();
 
@@ -710,6 +711,7 @@ async function loadSelectedVoiceFromLibrary() {
 
       status.textContent = "Estado: Voz seleccionada (Letras cargadas de memoria ⚡)";
     } else {
+      baseTranscriptionSegments = [];
       transcriptionSegments = [];
       renderKaraokeLyrics([]);
       cargarLetrasEnMonitor();
@@ -749,7 +751,6 @@ async function transcribeSelectedVoice() {
     const totalSamples = audioBuffer.length;
     const samplesPerChunk = CHUNK_SECONDS * sampleRate;
 
-    let fullText = "";
     let fullSegments = [];
 
     for (let start = 0; start < totalSamples; start += samplesPerChunk) {
@@ -771,12 +772,7 @@ async function transcribeSelectedVoice() {
       });
 
       if (!response.ok) {
-        let errorText = "";
-        try {
-          errorText = await response.text();
-        } catch (_) {
-          errorText = "Sin detalle del servidor";
-        }
+        const errorText = await response.text();
         throw new Error(`Error ${response.status}: ${errorText}`);
       }
 
@@ -810,24 +806,24 @@ async function transcribeSelectedVoice() {
           text: segText
         };
 
-        const segmentWithWords = buildWordTimingFromSegment(segmentWithOffset);
-        fullSegments.push(segmentWithWords);
-        fullText += segText + " ";
+        fullSegments.push(buildWordTimingFromSegment(segmentWithOffset));
       });
     }
 
-    if (lyricsText) {
-      lyricsText.value = splitSegmentsIntoKaraokeLines(fullSegments, 6)
-        .map(line => line.text)
-        .join("\n");
-    }
+    baseTranscriptionSegments = fullSegments;
+    transcriptionSegments = splitSegmentsIntoKaraokeLines(baseTranscriptionSegments, 6);
 
-    transcriptionSegments = splitSegmentsIntoKaraokeLines(fullSegments, 6);
     renderKaraokeLyrics(transcriptionSegments);
     cargarLetrasEnMonitor();
 
+    if (lyricsText) {
+      lyricsText.value = transcriptionSegments.map(line => line.text).join("\n");
+    }
+
     if (selectedVoiceId) {
-      await updateLibraryItem(selectedVoiceId, { transcription: fullSegments });
+      await updateLibraryItem(selectedVoiceId, {
+        transcription: baseTranscriptionSegments
+      });
     }
 
     if (status) {
@@ -1618,6 +1614,93 @@ function showSaveNotification() {
   }, 2000);
 }
 
+async function applyCorrectedLyrics() {
+  const lyricsText = $("lyricsText");
+  const status = $("selectedVoiceStatus");
+
+  if (!lyricsText) return;
+
+  const correctedText = lyricsText.value.trim();
+
+  if (!correctedText) {
+    alert("⚠️ No hay texto corregido para aplicar.");
+    return;
+  }
+
+  if (!Array.isArray(baseTranscriptionSegments) || !baseTranscriptionSegments.length) {
+    alert("⚠️ Primero transcribe una voz antes de corregir la letra.");
+    return;
+  }
+
+  const correctedWords = correctedText
+    .replace(/\n+/g, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (!correctedWords.length) {
+    alert("⚠️ No se encontraron palabras válidas en la letra corregida.");
+    return;
+  }
+
+  const originalSegments = baseTranscriptionSegments;
+  const rebuiltSegments = [];
+  let cursor = 0;
+
+  originalSegments.forEach((seg, index) => {
+    const originalWords = Array.isArray(seg.words) ? seg.words : [];
+    let takeCount = originalWords.length;
+
+    if (!takeCount) return;
+
+    const remainingCorrectedWords = correctedWords.length - cursor;
+    if (remainingCorrectedWords <= 0) return;
+
+    if (index === originalSegments.length - 1) {
+      takeCount = remainingCorrectedWords;
+    } else {
+      takeCount = Math.min(takeCount, remainingCorrectedWords);
+    }
+
+    const chunkWords = correctedWords.slice(cursor, cursor + takeCount);
+    cursor += takeCount;
+
+    if (!chunkWords.length) return;
+
+    rebuiltSegments.push(buildWordTimingFromSegment({
+      start: seg.start,
+      end: seg.end,
+      text: chunkWords.join(" ")
+    }));
+  });
+
+  if (!rebuiltSegments.length) {
+    alert("⚠️ No se pudo reconstruir la letra corregida.");
+    return;
+  }
+
+  baseTranscriptionSegments = rebuiltSegments;
+  transcriptionSegments = splitSegmentsIntoKaraokeLines(baseTranscriptionSegments, 6);
+
+  renderKaraokeLyrics(transcriptionSegments);
+  cargarLetrasEnMonitor();
+
+  lyricsText.value = transcriptionSegments.map(line => line.text).join("\n");
+
+  if (selectedVoiceId) {
+    try {
+      await updateLibraryItem(selectedVoiceId, {
+        transcription: baseTranscriptionSegments
+      });
+      if (status) status.textContent = "Estado: letra corregida aplicada y guardada ✅";
+    } catch (error) {
+      console.error(error);
+      if (status) status.textContent = "Estado: letra corregida aplicada, pero no se pudo guardar en BD";
+    }
+  } else {
+    if (status) status.textContent = "Estado: letra corregida aplicada ✅";
+  }
+}
+
 // ==========================================
 // INIT
 // ==========================================
@@ -1666,6 +1749,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     safeAdd("refreshVoiceListBtn", "click", loadVoiceOptionsInStudio);
     safeAdd("loadSelectedVoiceBtn", "click", loadSelectedVoiceFromLibrary);
     safeAdd("transcribeVoiceBtn", "click", transcribeSelectedVoice);
+    safeAdd("applyCorrectedLyricsBtn", "click", applyCorrectedLyrics);
 
     // biblioteca
     safeAdd("saveLibraryFileBtn", "click", saveManualFileToLibrary);
