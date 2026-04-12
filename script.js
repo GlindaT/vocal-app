@@ -1976,23 +1976,28 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
         ctx.stroke();
     }
 
-    // --- DIBUJAR RASTRO DE LA VOZ (LÍNEA VERDE) ---
+    // DIBUJAR EL RASTRO DE LA VOZ (LÍNEA VERDE)
     ctx.beginPath();
-    ctx.strokeStyle = "#22c55e";
-    ctx.lineWidth = 4;
+    // Hacemos la línea verde un poco más llamativa
+    ctx.strokeStyle = "#22c55e"; 
+    ctx.lineWidth = 6; 
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = "#22c55e";
 
     pitchHistory.forEach((f, i) => {
         if (f) {
             const rawY = canvas.height - (Math.log2(f / 110) * 35);
             const y = Math.max(10, Math.min(canvas.height - 10, rawY));
-
+            
             if (i === 0) ctx.moveTo(i * 5, y);
             else ctx.lineTo(i * 5, y);
         }
     });
     ctx.stroke();
-}
-
+    
+    // Limpiamos la sombra para que no afecte a otros elementos
+    ctx.shadowBlur = 0;
+    
 // ==========================================
 // DETECCIÓN DE PITCH PARA KARAOKE
 // ==========================================
