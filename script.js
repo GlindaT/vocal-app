@@ -236,6 +236,12 @@ function detectPitch() {
   const buffer = new Float32Array(analyser.fftSize);
   analyser.getFloatTimeDomainData(buffer);
   const pitch = autoCorrelate(buffer, audioContext.sampleRate);
+  
+  // ¡AQUÍ ESTÁ EL AJUSTE!
+  // Llamamos a la función de dibujo enviándole la frecuencia actual
+  if (document.getElementById("karaokeCanvas")) {
+    drawKaraokeMonitor(0, pitch); 
+  }
 
   const display = $("noteDisplay");
   const guide = $("guideText");
@@ -1881,30 +1887,40 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 });
 
+let pitchHistory = []; // Variable global para guardar el rastro de la voz
+
 function drawKaraokeMonitor(currentTime, currentFreq) {
     const canvas = $("karaokeCanvas");
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
 
-    // Limpiamos el monitor
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Guardamos la frecuencia actual en el historial
+    pitchHistory.push(currentFreq > 0 ? currentFreq : null);
+    if (pitchHistory.length > canvas.width / 5) pitchHistory.shift();
 
-    // Dibujamos las líneas del pentagrama (opcional, para dar estilo)
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.strokeStyle = "#333";
+    
+    // Dibujar líneas guía (Pentagrama)
     for(let i=1; i<5; i++) {
         ctx.beginPath();
-        ctx.moveTo(0, (canvas.height/5) * i);
-        ctx.lineTo(canvas.width, (canvas.height/5) * i);
+        ctx.moveTo(0, (canvas.height/4) * i);
+        ctx.lineTo(canvas.width, (canvas.height/4) * i);
         ctx.stroke();
     }
 
-    // Si hay una nota detectada, dibujamos la "barra" de la voz
-    if (currentFreq && currentFreq > 0) {
-        // Convertimos frecuencia a posición Y (simplificado)
-        // Nota: 440Hz es A4. Ajustaremos esto para que suba/baje
-        const y = canvas.height - (Math.log2(currentFreq / 110) * 50); 
-        
-        ctx.fillStyle = "#22c55e"; // Color de la voz
-        ctx.fillRect(canvas.width / 2, y, 20, 10); // Barra de posición
-    }
+    // Dibujar el rastro de la voz
+    ctx.beginPath();
+    ctx.strokeStyle = "#22c55e";
+    ctx.lineWidth = 4;
+    
+    pitchHistory.forEach((f, i) => {
+        if (f) {
+            // Conversión de frecuencia a altura Y
+            const y = canvas.height - (Math.log2(f / 110) * 30);
+            if (i === 0) ctx.moveTo(i * 5, y);
+            else ctx.lineTo(i * 5, y);
+        }
+    });
+    ctx.stroke();
 }
