@@ -1937,7 +1937,7 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
                 ctx.fillStyle = "orange";
                 ctx.fillText("SUBE ⬆️", x + width / 2, targetY + 40);
               }
-        }
+        });
             // Texto de la letra
                 ctx.fillStyle = "white";
                 ctx.font = "bold 14px Arial";
