@@ -1,3 +1,18 @@
+// Añadir al inicio del archivo para asegurar que la DB cargue
+window.addEventListener('DOMContentLoaded', async () => {
+    try {
+        await initDB();
+        console.log("Database Ready");
+        // Cargar vistas iniciales
+        renderLibrary();
+    } catch (err) {
+        console.error(err);
+    }
+});
+
+// Reutilizar el buffer para el afinador
+const pitchBuffer = new Float32Array(2048);
+
 // ==========================================
 // CONFIG GLOBAL
 // ==========================================
@@ -234,16 +249,15 @@ function stopAfinador() {
 }
 
 function detectPitch() {
-  if (!state.isRecording) return;
+  if (!state.isRecording || !analyser) return;
 
-  const buffer = new Float32Array(analyser.fftSize);
-  analyser.getFloatTimeDomainData(buffer);
-  const pitch = autoCorrelate(buffer, audioContext.sampleRate);
+  // Usamos el buffer global en lugar de crear uno nuevo cada 16ms
+  analyser.getFloatTimeDomainData(pitchBuffer);
+  const pitch = autoCorrelate(pitchBuffer, audioContext.sampleRate);
   
-  // ¡AQUÍ ESTÁ EL AJUSTE!
-  // Llamamos a la función de dibujo enviándole la frecuencia actual
   if (document.getElementById("karaokeCanvas")) {
-    drawKaraokeMonitor(0, pitch); 
+    // Asegúrate de que esta función esté definida o comentada para evitar errores
+    if (typeof drawKaraokeMonitor === 'function') drawKaraokeMonitor(0, pitch); 
   }
 
   const display = $("noteDisplay");
@@ -255,30 +269,25 @@ function detectPitch() {
     if (pitch !== -1) {
       const noteFull = getNoteFromFrequency(pitch);
       const targetFreq = getNoteFrequency(targetNote);
+      // Evitar logaritmo de 0 o infinito
       const cents = 1200 * Math.log2(pitch / targetFreq);
 
       display.textContent = noteFull;
 
-      // LEEMOS LA CLAVE CORRECTA
       const dificultad = localStorage.getItem("vocalApp_difficulty") || "medio";
-      
       let maxDesviation = 30;
       if (dificultad === "facil") maxDesviation = 50;
       else if (dificultad === "dificil") maxDesviation = 15;
       else if (dificultad === "experto") maxDesviation = 5;
 
-      // Lógica de colores y texto de la foto
-      if (Math.abs(cents) <= maxDesviation) {
-        display.style.color = "#22c55e"; // Verde
+      const isCorrect = Math.abs(cents) <= maxDesviation;
+      display.style.color = isCorrect ? "#22c55e" : "#f59e0b";
+      
+      if (isCorrect) {
         guide.textContent = `🎯 ¡En la nota! (${targetNote})`;
         guide.style.color = "#22c55e";
-      } else if (cents < 0) {
-        display.style.color = "#f59e0b"; // Naranja
-        guide.textContent = `⬆️ Estás grave. Sube a ${targetNote}`;
-        guide.style.color = "#f59e0b";
       } else {
-        display.style.color = "#f59e0b"; // Naranja
-        guide.textContent = `⬇️ Estás agudo. Baja a ${targetNote}`;
+        guide.textContent = cents < 0 ? `⬆️ Sube a ${targetNote}` : `⬇️ Baja a ${targetNote}`;
         guide.style.color = "#f59e0b";
       }
     } else {
@@ -515,10 +524,11 @@ async function saveToLibrary(blob, options = {}) {
       name: options.name || "Audio",
       type: options.type || "audio",
       audioBlob: blob,
-      date: new Date().toLocaleString("es-ES")
+      date: new Date().toLocaleString("es-ES"),
+      transcription: options.transcription || [] // Añadir campo para evitar errores
     });
 
-    await loadLibrary();
+    await renderLibrary(); // Antes decía loadLibrary (error)
   } catch (error) {
     console.error(error);
     alert("❌ No se pudo guardar en Biblioteca");
