@@ -1958,7 +1958,7 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
                 }
             }
         });
-    }
+    
     } else {
         // Si no hay segmentos, mostramos un mensaje
         ctx.fillStyle = "#666";
