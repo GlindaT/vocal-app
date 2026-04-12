@@ -8,6 +8,9 @@ const state = {
 };
 
 let db = null;
+let pitchHistory = [];
+let transcriptionSegments = [];
+let baseTranscriptionSegments = [];
 
 function $(id) {
   return document.getElementById(id);
@@ -1280,56 +1283,58 @@ function cargarLetrasEnMonitor() {
 }
 
 async function startKaraokeRecording() {
-  const track = $("karaokeTrack");
+    const track = $("karaokeTrack");
 
-  if (!track || !track.src) {
-    alert("⚠️ Primero sube una pista instrumental en el Paso 1.");
-    return;
-  }
+    if (!track || !track.src) {
+        alert("⚠️ Primero sube una pista instrumental en el Paso 1.");
+        return;
+    }
 
-  try {
-    karaokeChunks = [];
-    karaokeRecordedBlob = null;
-    $("karaokeVoicePlayer").src = "";
+    try {
+        karaokeChunks = [];
+        karaokeRecordedBlob = null;
+        $("karaokeVoicePlayer").src = "";
 
-    karaokeStream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false,
-        channelCount: 1,
-        sampleRate: 48000
-      }
-    });
+        karaokeStream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+                echoCancellation: false,
+                noiseSuppression: false,
+                autoGainControl: false,
+                channelCount: 1,
+                sampleRate: 48000
+            }
+        });
 
-    const options = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-      ? { mimeType: "audio/webm;codecs=opus" }
-      : {};
-    
-    karaokeMediaRecorder = new MediaRecorder(karaokeStream, options);
-    
-    karaokeMediaRecorder.ondataavailable = (e) => {
-      if (e.data.size > 0) karaokeChunks.push(e.data);
-    };
+        const options = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+            ? { mimeType: "audio/webm;codecs=opus" }
+            : {};
 
-    karaokeMediaRecorder.onstop = () => {
-      karaokeRecordedBlob = new Blob(karaokeChunks, { type: "audio/webm" });
-      $("karaokeVoicePlayer").src = URL.createObjectURL(karaokeRecordedBlob);
-      $("karaokeStatus").textContent = "Estado: Grabación finalizada ✅";
-    };
+        karaokeMediaRecorder = new MediaRecorder(karaokeStream, options);
 
-    startKaraokePitchDetection();
+        karaokeMediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) karaokeChunks.push(e.data);
+        };
 
-    karaokeMediaRecorder.start();
-    track.currentTime = 0;
-    track.play();
+        karaokeMediaRecorder.onstop = () => {
+            karaokeRecordedBlob = new Blob(karaokeChunks, { type: "audio/webm" });
+            $("karaokeVoicePlayer").src = URL.createObjectURL(karaokeRecordedBlob);
+            $("karaokeStatus").textContent = "Estado: Grabación finalizada ✅";
+        };
 
-    $("karaokeStatus").textContent = "Estado: 🔴 Grabando y reproduciendo pista...";
-    $("karaokeStartBtn").disabled = true;
-  } catch (err) {
-    console.error(err);
-    alert("❌ Error al acceder al micrófono.");
-  }
+        karaokeMediaRecorder.start();
+        track.currentTime = 0;
+        track.play();
+
+        // ¡AQUÍ ACTIVAMOS EL MONITOR!
+        startKaraokePitchDetection();
+
+        $("karaokeStatus").textContent = "Estado: 🔴 Grabando y reproduciendo pista...";
+        $("karaokeStartBtn").disabled = true;
+
+    } catch (err) {
+        console.error(err);
+        alert("❌ Error al acceder al micrófono.");
+    }
 }
 
 function stopKaraokeRecording() {
@@ -1889,8 +1894,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 });
 
-let pitchHistory = []; // Variable global para guardar el rastro de la voz
-
+/ ==========================================
+// MONITOR DE KARAOKE (CANVAS)
+// ==========================================
 function drawKaraokeMonitor(currentTime, currentFreq) {
     const canvas = $("karaokeCanvas");
     if (!canvas) return;
@@ -1900,93 +1906,100 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     pitchHistory.push(currentFreq > 0 ? currentFreq : null);
     if (pitchHistory.length > canvas.width / 5) pitchHistory.shift();
 
+    // Limpiamos el canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    // --- NUEVO: Dibujar Barras Objetivo ---
-    if (typeof transcriptionSegments !== 'undefined') {
-      const track = $("karaokeTrack");
-      const duration = track.duration || 60; // Duración total de la pista
 
-      transcriptionSegments.forEach(seg => {
-        // Calculamos posición X basada en el tiempo actual de la pista
-        // Movemos las barras hacia la izquierda a medida que avanza la canción
-        const x = (seg.start - currentTime) * 30 + (canvas.width / 4);
-        const width = (seg.end - seg.start) * 30;
+    // --- DIBUJAR BARRAS OBJETIVO (LETRAS) ---
+    if (transcriptionSegments && transcriptionSegments.length > 0) {
+        transcriptionSegments.forEach(seg => {
+            // Calculamos posición X basada en el tiempo actual
+            const x = (seg.start - currentTime) * 15 + (canvas.width / 3);
+            const width = Math.max((seg.end - seg.start) * 15, 50); // Mínimo 50px de ancho
 
-        if (x > -width && x < canvas.width) {
-          ctx.fillStyle = "#3b82f644"; // Azul suave
-          ctx.fillRect(x, 100, width, 20);
-          // DIBUJAR LETRA SOBRE LA BARRA
-          ctx.fillStyle = "white";
-          ctx.font = "14px Arial";
-          ctx.textAlign = "center";
-          const maxWidth = width - 10; // Dejamos 5px de margen a cada lado
-          ctx.font = "bold 14px Arial";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          
-          // Esta función corta el texto si es más largo que la barra
-          let textToDraw = seg.text;
-          if (ctx.measureText(textToDraw).width > maxWidth) {
-            textToDraw = textToDraw.substring(0, 15) + "..."; 
-          }
-          ctx.fillText(textToDraw, x + width / 2, 115);
-        }
-      });
+            // Solo dibujamos si está visible en el canvas
+            if (x > -width && x < canvas.width) {
+                // Barra azul de fondo
+                ctx.fillStyle = "#3b82f6";
+                ctx.fillRect(x, 90, width, 30);
+
+                // Texto de la letra
+                ctx.fillStyle = "white";
+                ctx.font = "bold 12px Arial";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+
+                // Cortamos el texto si es muy largo
+                let textToDraw = seg.text || "";
+                if (ctx.measureText(textToDraw).width > width - 10) {
+                    textToDraw = textToDraw.substring(0, 12) + "...";
+                }
+                ctx.fillText(textToDraw, x + width / 2, 105);
+            }
+        });
+    } else {
+        // Si no hay segmentos, mostramos un mensaje
+        ctx.fillStyle = "#666";
+        ctx.font = "16px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("Carga una voz transcrita en 'Estudio' primero", canvas.width / 2, 100);
     }
+
+    // --- DIBUJAR LÍNEAS DEL PENTAGRAMA ---
     ctx.strokeStyle = "#333";
-    
-    // Dibujar líneas guía (Pentagrama)
-    for(let i=1; i<5; i++) {
+    ctx.lineWidth = 1;
+    for (let i = 1; i < 5; i++) {
         ctx.beginPath();
-        ctx.moveTo(0, (canvas.height/4) * i);
-        ctx.lineTo(canvas.width, (canvas.height/4) * i);
+        ctx.moveTo(0, (canvas.height / 4) * i);
+        ctx.lineTo(canvas.width, (canvas.height / 4) * i);
         ctx.stroke();
     }
 
-    // Dibujar el rastro de la voz
+    // --- DIBUJAR RASTRO DE LA VOZ (LÍNEA VERDE) ---
     ctx.beginPath();
     ctx.strokeStyle = "#22c55e";
     ctx.lineWidth = 4;
-    
+
     pitchHistory.forEach((f, i) => {
         if (f) {
-            // Conversión de frecuencia a altura Y
-          const rawY = canvas.height - (Math.log2(f / 110) * 35);
-          
-          // Aseguramos que 'y' esté siempre dentro del canvas
-          const y = Math.max(10, Math.min(canvas.height - 10, rawY));
-          
-          if (i === 0) ctx.moveTo(i * 5, y);
-          else ctx.lineTo(i * 5, y);
+            const rawY = canvas.height - (Math.log2(f / 110) * 35);
+            const y = Math.max(10, Math.min(canvas.height - 10, rawY));
+
+            if (i === 0) ctx.moveTo(i * 5, y);
+            else ctx.lineTo(i * 5, y);
         }
     });
     ctx.stroke();
 }
 
+// ==========================================
+// DETECCIÓN DE PITCH PARA KARAOKE
+// ==========================================
 async function startKaraokePitchDetection() {
-  // Usamos el mismo motor del afinador pero dirigido al canvas de karaoke
-  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  const mic = audioCtx.createMediaStreamSource(stream);
-  const analyser = audioCtx.createAnalyser();
-  analyser.fftSize = 2048;
-  mic.connect(analyser);
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mic = audioCtx.createMediaStreamSource(stream);
+    const analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 2048;
+    mic.connect(analyser);
 
-function loop() {
-    const track = $("karaokeTrack");
-    // Esto es vital: debe ser el tiempo real del audio que suena
-    const currentTime = track ? track.currentTime : 0; 
-    
-    // ... tu lógica de pitch ...
-    
-    drawKaraokeMonitor(currentTime, pitch);
-    
-    // Si la pista terminó, paramos el loop
-    if (track && track.ended) return; 
+    function loop() {
+        const track = $("karaokeTrack");
+        const currentTime = track ? track.currentTime : 0;
 
-    if (karaokeMediaRecorder && karaokeMediaRecorder.state === "recording") {
-      requestAnimationFrame(loop);
+        const buffer = new Float32Array(analyser.fftSize);
+        analyser.getFloatTimeDomainData(buffer);
+        const pitch = autoCorrelate(buffer, audioCtx.sampleRate);
+
+        drawKaraokeMonitor(currentTime, pitch);
+
+        // Si la pista terminó, paramos
+        if (track && track.ended) return;
+
+        // Seguimos el loop mientras se graba
+        if (karaokeMediaRecorder && karaokeMediaRecorder.state === "recording") {
+            requestAnimationFrame(loop);
+        }
     }
-}
-  loop();
+
+    loop();
 }
