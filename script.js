@@ -1893,7 +1893,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 });
 
-/ ==========================================
+// ==========================================
 // MONITOR DE KARAOKE (CANVAS)
 // ==========================================
 function drawKaraokeMonitor(currentTime, currentFreq) {
