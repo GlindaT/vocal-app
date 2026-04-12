@@ -1916,10 +1916,7 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
             const width = Math.max((seg.end - seg.start) * 30, 50); // Mínimo 50px de ancho
             const nivel = index % 4;
             const targetY = 50 + (nivel * 40);
-
-            // Solo dibujamos si está visible en el canvas
-            if (x > -width && x < canvas.width) {
-                // Barra azul de fondo
+          
             ctx.fillStyle = "#3b82f6";
             ctx.fillRect(x, targetY, width, 30);
 
@@ -1932,7 +1929,7 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
                 ctx.fillRect(x, targetY, progressX - x, 30);
               }
             }
-
+              
               if (vozY < targetY - 20) {
                 ctx.fillStyle = "orange";
                 ctx.fillText("BAJA ⬇️", x + width / 2, targetY - 10);
