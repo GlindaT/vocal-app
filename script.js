@@ -1936,6 +1936,18 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
                 // 1. Dibujar Barra Azul
                 ctx.fillStyle = "#3b82f6";
                 ctx.fillRect(x, y, width, 30);
+
+                // Dibujamos progreso si estás pasando por encima
+                if (currentFreq > 0) {
+                    const vozY = canvas.height - (Math.log2(currentFreq / 110) * 35);
+                    // Si estás a la altura correcta (con un margen de error)
+                    if (Math.abs(vozY - targetY) < 15) {
+                        ctx.fillStyle = "#22c55e"; // Verde éxito
+                        // Solo dibujamos progreso si tu voz está dentro del ancho de la barra
+                        const progressX = Math.max(x, Math.min(x + width, canvas.width / 4));
+                        ctx.fillRect(x, targetY, progressX - x, 30);
+                    }
+                }
                 
                 // 2. Dibujar Letra Centrada
                 ctx.fillStyle = "white";
