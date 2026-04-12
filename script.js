@@ -250,13 +250,20 @@ function detectPitch() {
 
       display.textContent = noteFull;
 
-      const dificultad = localStorage.getItem("vocalApp_difficulty") || "medio";
+      // Dentro de detectPitch()
+      let dificultad = localStorage.getItem("vocalApp_difficulty");
+      
+      // Si no encuentra nada en localStorage, pone "medio" por defecto
+      if (!dificultad) {
+        dificultad = "medio";
+        localStorage.setItem("vocalApp_difficulty", "medio");
+      }
+      
       let maxDesviation = 30;
-
       if (dificultad === "facil") maxDesviation = 50;
       else if (dificultad === "dificil") maxDesviation = 15;
       else if (dificultad === "experto") maxDesviation = 5;
-
+      
       if (Math.abs(cents) <= maxDesviation) {
         display.style.color = "#22c55e";
         guide.textContent = `🎯 ¡En la nota! (${targetNote})`;
