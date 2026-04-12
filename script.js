@@ -872,14 +872,20 @@ async function transcribeSelectedVoice() {
       lyricsText.value = transcriptionSegments.map(line => line.text).join("\n");
     }
 
+     // --- AQUÍ ESTÁ EL GUARDADO AUTOMÁTICO EN BIBLIOTECA ---
     if (selectedVoiceId) {
-      await updateLibraryItem(selectedVoiceId, {
-        transcription: baseTranscriptionSegments
-      });
+      try {
+        await updateLibraryItem(selectedVoiceId, {
+          transcription: baseTranscriptionSegments // Guardamos los tiempos y textos
+        });
+        console.log("✅ Transcripción guardada en Biblioteca");
+      } catch (err) {
+        console.error("❌ Error guardando transcripción en BD:", err);
+      }
     }
 
     if (status) {
-      status.textContent = "Estado: Transcripción completada con éxito ✅";
+      status.textContent = "Estado: Transcripción completada y guardada ✅";
     }
   } catch (error) {
     console.error(error);
