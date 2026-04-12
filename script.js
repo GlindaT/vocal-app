@@ -1941,15 +1941,14 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
                 ctx.fillText("SUBE ⬆️", x + width / 2, targetY + 40);
               }
             }
-
-               // Texto de la letra
+            // Texto de la letra
                 ctx.fillStyle = "white";
                 ctx.font = "bold 14px Arial";
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
                 ctx.fillText(seg.text, x + width / 2, y + 15);
-            }
-        });
+        }
+              
     } else {
         // Si no hay segmentos, mostramos un mensaje
         ctx.fillStyle = "#666";
