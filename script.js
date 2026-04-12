@@ -1681,17 +1681,27 @@ function saveSetting(key, element) {
 }
 
 function initSettings() {
-  const micCount = $("micCount");
-  const karaokeStage = $("karaokeStage");
-  const difficultyLevel = $("difficultyLevel");
+  const settings = {
+    micCount: "vocalApp_micCount",
+    karaokeStage: "vocalApp_stage",
+    difficultyLevel: "vocalApp_difficulty",
+    userVoiceType: "vocalApp_voiceType" // Nueva clave
+  };
 
-  if (micCount) micCount.value = localStorage.getItem("vocalApp_micCount") || "1";
-  if (karaokeStage) karaokeStage.value = localStorage.getItem("vocalApp_stage") || "clasico";
-  if (difficultyLevel) difficultyLevel.value = localStorage.getItem("vocalApp_difficulty") || "medio";
-
-  safeAdd("micCount", "change", (e) => saveSetting("vocalApp_micCount", e.target));
-  safeAdd("karaokeStage", "change", (e) => saveSetting("vocalApp_stage", e.target));
-  safeAdd("difficultyLevel", "change", (e) => saveSetting("vocalApp_difficulty", e.target));
+  Object.entries(settings).forEach(([id, storageKey]) => {
+    const el = $(id);
+    if (el) {
+      // Cargar valor guardado
+      const saved = localStorage.getItem(storageKey);
+      if (saved) el.value = saved;
+      
+      // Escuchar cambios
+      el.addEventListener("change", (e) => {
+        localStorage.setItem(storageKey, e.target.value);
+        showSaveNotification();
+      });
+    }
+  });
 }
 
 function showSaveNotification() {
