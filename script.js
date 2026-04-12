@@ -206,12 +206,23 @@ async function toggleRecording() {
 
 async function startAfinador() {
   audioContext = new AudioContext();
-  stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+  stream = await navigator.mediaDevices.getUserMedia({
+    audio: {
+      echoCancellation: false,
+      noiseSuppression: false,
+      autoGainControl: false
+    }
+  });
+
   const mic = audioContext.createMediaStreamSource(stream);
   analyser = audioContext.createAnalyser();
   analyser.fftSize = 2048;
   mic.connect(analyser);
-  detectPitch();
+
+  setTimeout(() => {
+    detectPitch();
+  }, 300);
 }
 
 function stopAfinador() {
