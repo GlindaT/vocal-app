@@ -1910,29 +1910,25 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
 
     // --- DIBUJAR BARRAS OBJETIVO (LETRAS) ---
     if (transcriptionSegments && transcriptionSegments.length > 0) {
-        transcriptionSegments.forEach(seg => {
+        transcriptionSegments.forEach((seg, index) => {
             // Calculamos posición X basada en el tiempo actual
-            const x = (seg.start - currentTime) * 15 + (canvas.width / 3);
-            const width = Math.max((seg.end - seg.start) * 15, 50); // Mínimo 50px de ancho
+            const x = (seg.start - currentTime) * 30 + (canvas.width / 4);
+            const width = Math.max((seg.end - seg.start) * 30, 50); // Mínimo 50px de ancho
+            const nivel = index % 4;
+            const y = 50 + (nivel * 40);
 
             // Solo dibujamos si está visible en el canvas
             if (x > -width && x < canvas.width) {
                 // Barra azul de fondo
                 ctx.fillStyle = "#3b82f6";
-                ctx.fillRect(x, 90, width, 30);
+                ctx.fillRect(x, y, width, 30);
 
                 // Texto de la letra
                 ctx.fillStyle = "white";
-                ctx.font = "bold 12px Arial";
+                ctx.font = "bold 14px Arial";
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
-
-                // Cortamos el texto si es muy largo
-                let textToDraw = seg.text || "";
-                if (ctx.measureText(textToDraw).width > width - 10) {
-                    textToDraw = textToDraw.substring(0, 12) + "...";
-                }
-                ctx.fillText(textToDraw, x + width / 2, 105);
+                ctx.fillText(seg.text, x + width / 2, y + 15);
             }
         });
     } else {
