@@ -1951,9 +1951,13 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     pitchHistory.forEach((f, i) => {
         if (f) {
             // Conversión de frecuencia a altura Y
-            const y = canvas.height - (Math.log2(f / 110) * 30);
-            if (i === 0) ctx.moveTo(i * 5, y);
-            else ctx.lineTo(i * 5, y);
+          const rawY = canvas.height - (Math.log2(f / 110) * 35);
+          
+          // Aseguramos que 'y' esté siempre dentro del canvas
+          const y = Math.max(10, Math.min(canvas.height - 10, rawY));
+          
+          if (i === 0) ctx.moveTo(i * 5, y);
+          else ctx.lineTo(i * 5, y);
         }
     });
     ctx.stroke();
