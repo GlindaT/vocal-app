@@ -1880,3 +1880,31 @@ document.addEventListener("DOMContentLoaded", async () => {
     alert("❌ Error inicializando la app");
   }
 });
+
+function drawKaraokeMonitor(currentTime, currentFreq) {
+    const canvas = $("karaokeCanvas");
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+
+    // Limpiamos el monitor
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Dibujamos las líneas del pentagrama (opcional, para dar estilo)
+    ctx.strokeStyle = "#333";
+    for(let i=1; i<5; i++) {
+        ctx.beginPath();
+        ctx.moveTo(0, (canvas.height/5) * i);
+        ctx.lineTo(canvas.width, (canvas.height/5) * i);
+        ctx.stroke();
+    }
+
+    // Si hay una nota detectada, dibujamos la "barra" de la voz
+    if (currentFreq && currentFreq > 0) {
+        // Convertimos frecuencia a posición Y (simplificado)
+        // Nota: 440Hz es A4. Ajustaremos esto para que suba/baje
+        const y = canvas.height - (Math.log2(currentFreq / 110) * 50); 
+        
+        ctx.fillStyle = "#22c55e"; // Color de la voz
+        ctx.fillRect(canvas.width / 2, y, 20, 10); // Barra de posición
+    }
+}
