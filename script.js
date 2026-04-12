@@ -306,15 +306,26 @@ function getNoteFrequency(note) {
 }
 
 function autoCorrelate(buf, sampleRate) {
+  let rms = 0;
+  for (let i = 0; i < buf.length; i++) {
+    rms += buf[i] * buf[i];
+  }
+  rms = Math.sqrt(rms / buf.length);
+
+  // Si el volumen es muy bajo, ignoramos la detección
+  if (rms < 0.01) return -1;
+
   let bestOffset = -1;
   let bestCorrelation = 0;
 
   for (let offset = 8; offset < 1000; offset++) {
     let correlation = 0;
+
     for (let i = 0; i < buf.length - offset; i++) {
       correlation += Math.abs(buf[i] - buf[i + offset]);
     }
-    correlation = 1 - (correlation / buf.length);
+
+    correlation = 1 - (correlation / (buf.length - offset));
 
     if (correlation > bestCorrelation) {
       bestCorrelation = correlation;
@@ -322,9 +333,15 @@ function autoCorrelate(buf, sampleRate) {
     }
   }
 
-  return bestCorrelation > 0.05 ? sampleRate / bestOffset : -1;
-}
+  if (bestCorrelation < 0.85 || bestOffset === -1) return -1;
 
+  const frequency = sampleRate / bestOffset;
+
+  // Ignorar frecuencias absurdas para voz humana cantada
+  if (frequency < 60 || frequency > 1200) return -1;
+
+  return frequency;
+}
 // ==========================================
 // ESTADO ESTUDIO / BIBLIOTECA
 // ==========================================
