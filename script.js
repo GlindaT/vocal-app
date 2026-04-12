@@ -250,30 +250,25 @@ function detectPitch() {
 
       display.textContent = noteFull;
 
-      // Dentro de detectPitch()
-      let dificultad = localStorage.getItem("vocalApp_difficulty");
-      
-      // Si no encuentra nada en localStorage, pone "medio" por defecto
-      if (!dificultad) {
-        dificultad = "medio";
-        localStorage.setItem("vocalApp_difficulty", "medio");
-      }
+      // LEEMOS LA CLAVE CORRECTA
+      const dificultad = localStorage.getItem("vocalApp_difficulty") || "medio";
       
       let maxDesviation = 30;
       if (dificultad === "facil") maxDesviation = 50;
       else if (dificultad === "dificil") maxDesviation = 15;
       else if (dificultad === "experto") maxDesviation = 5;
-      
+
+      // Lógica de colores y texto de la foto
       if (Math.abs(cents) <= maxDesviation) {
-        display.style.color = "#22c55e";
+        display.style.color = "#22c55e"; // Verde
         guide.textContent = `🎯 ¡En la nota! (${targetNote})`;
         guide.style.color = "#22c55e";
       } else if (cents < 0) {
-        display.style.color = "#f59e0b";
+        display.style.color = "#f59e0b"; // Naranja
         guide.textContent = `⬆️ Estás grave. Sube a ${targetNote}`;
         guide.style.color = "#f59e0b";
       } else {
-        display.style.color = "#f59e0b";
+        display.style.color = "#f59e0b"; // Naranja
         guide.textContent = `⬇️ Estás agudo. Baja a ${targetNote}`;
         guide.style.color = "#f59e0b";
       }
@@ -281,10 +276,8 @@ function detectPitch() {
       display.textContent = "--";
       display.style.color = "white";
       guide.textContent = "🎤 Esperando voz...";
-      guide.style.color = "white";
     }
   }
-
   requestAnimationFrame(detectPitch);
 }
 
