@@ -182,9 +182,10 @@ audio {
 }
 
 #guideText {
-  font-size: 32px; /* Tamaño grande y legible */
+  font-size: 32px;
   margin: 20px 0;
   font-weight: bold;
+  text-align: center;
 }
 
 /* Botón de grabar "Inactivo" (Verde) */
