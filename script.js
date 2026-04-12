@@ -1933,15 +1933,19 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
                 const nivel = index % 4; 
                 const targetY = 50 + (nivel * 40); 
 
-                // 1. Dibujar Barra Azul
+                // 1. Dibujar la barra azul (el "carril" de la nota)
                 ctx.fillStyle = "#3b82f6";
-                ctx.fillRect(x, targetY, width, 30);
-
-                // 2. DIBUJAR LETRA
-                ctx.fillStyle = "white";
-                ctx.font = "bold 14px Arial";
+                ctx.fillRect(x, y, width, 30);
+                
+                // 2. DIBUJAR LA LETRA CENTRADA Y GRANDE (¡Aquí está la magia!)
+                ctx.fillStyle = "white"; 
+                ctx.font = "bold 18px 'Arial Black', Arial"; // Fuente más gruesa y grande
                 ctx.textAlign = "center";
-                ctx.fillText(seg.text || "", x + width / 2, targetY + 20);
+                ctx.textBaseline = "middle";
+                
+                // Si el texto es muy largo, lo reducimos
+                let textToDraw = seg.text || "";
+                ctx.fillText(textToDraw, x + width / 2, y + 15); // y + 15 es el centro exacto de la barra
 
                 // 3. LÓGICA DE AFINACIÓN (SUBE/BAJA)
                 if (currentFreq > 0) {
