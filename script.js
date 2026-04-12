@@ -229,16 +229,13 @@ function detectPitch() {
   const display = $("noteDisplay");
   const guide = $("guideText");
   const targetNoteEl = $("targetNote");
-  const targetNote = targetNoteEl ? targetNoteEl.value : "C";
+  const targetNote = targetNoteEl ? targetNoteEl.value : "E2";
 
   if (display && guide) {
     if (pitch !== -1) {
       const noteFull = getNoteFromFrequency(pitch);
-      const noteName = noteFull.replace(/[0-9]/g, "");
-      const currentOctave = parseInt(noteFull.replace(/[^0-9]/g, ""));
-      const targetFreqBase = getNoteFrequency(targetNote);
-      const targetFreqInCurrentOctave = targetFreqBase * Math.pow(2, currentOctave - 4);
-      const cents = 1200 * Math.log2(pitch / targetFreqInCurrentOctave);
+      const targetFreq = getNoteFrequency(targetNote);
+      const cents = 1200 * Math.log2(pitch / targetFreq);
 
       display.textContent = noteFull;
 
@@ -249,27 +246,24 @@ function detectPitch() {
       else if (dificultad === "dificil") maxDesviation = 15;
       else if (dificultad === "experto") maxDesviation = 5;
 
-      if (noteName === targetNote) {
-        if (Math.abs(cents) < maxDesviation) {
-          display.style.color = "#22c55e";
-          guide.textContent = "¡Perfecto! ✅";
-          guide.style.color = "#22c55e";
-        } else if (cents > maxDesviation) {
-          display.style.color = "#f59e0b";
-          guide.textContent = "⬇️ Baja un poco";
-          guide.style.color = "#f59e0b";
-        } else {
-          display.style.color = "#f59e0b";
-          guide.textContent = "⬆️ Sube un poco";
-          guide.style.color = "#f59e0b";
-        }
+      if (Math.abs(cents) <= maxDesviation) {
+        display.style.color = "#22c55e";
+        guide.textContent = `🎯 ¡En la nota! (${targetNote})`;
+        guide.style.color = "#22c55e";
+      } else if (cents < 0) {
+        display.style.color = "#f59e0b";
+        guide.textContent = `⬆️ Estás grave. Sube a ${targetNote}`;
+        guide.style.color = "#f59e0b";
       } else {
-        display.style.color = "white";
-        guide.textContent = `Buscando ${targetNote}...`;
-        guide.style.color = "white";
+        display.style.color = "#f59e0b";
+        guide.textContent = `⬇️ Estás agudo. Baja a ${targetNote}`;
+        guide.style.color = "#f59e0b";
       }
     } else {
-      guide.textContent = "Cantando...";
+      display.textContent = "--";
+      display.style.color = "white";
+      guide.textContent = "🎤 Esperando voz...";
+      guide.style.color = "white";
     }
   }
 
@@ -286,11 +280,29 @@ function getNoteFromFrequency(freq) {
 }
 
 function getNoteFrequency(note) {
-  const notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
-  const A4 = 440;
-  const index = notes.indexOf(note);
-  const n = index - 9;
-  return A4 * Math.pow(2, n / 12);
+  const notes = {
+    "C": -9,
+    "C#": -8,
+    "D": -7,
+    "D#": -6,
+    "E": -5,
+    "F": -4,
+    "F#": -3,
+    "G": -2,
+    "G#": -1,
+    "A": 0,
+    "A#": 1,
+    "B": 2
+  };
+
+  const match = note.match(/^([A-G]#?)(\d)$/);
+  if (!match) return 440;
+
+  const [, noteName, octaveStr] = match;
+  const octave = parseInt(octaveStr, 10);
+
+  const semitoneOffset = notes[noteName] + (octave - 4) * 12;
+  return 440 * Math.pow(2, semitoneOffset / 12);
 }
 
 function autoCorrelate(buf, sampleRate) {
