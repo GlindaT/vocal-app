@@ -276,20 +276,24 @@ function detectPitch() {
 
       const dificultad = localStorage.getItem("vocalApp_difficulty") || "medio";
       let maxDesviation = 30;
-      if (dificultad === "facil") maxDesviation = 50;
-      else if (dificultad === "dificil") maxDesviation = 15;
-      else if (dificultad === "experto") maxDesviation = 5;
-
-      const isCorrect = Math.abs(cents) <= maxDesviation;
-      display.style.color = isCorrect ? "#22c55e" : "#f59e0b";
-      
-      if (isCorrect) {
-        guide.textContent = `🎯 ¡En la nota! (${targetNote})`;
-        guide.style.color = "#22c55e";
-      } else {
-        guide.textContent = cents < 0 ? `⬆️ Sube a ${targetNote}` : `⬇️ Baja a ${targetNote}`;
-        guide.style.color = "#f59e0b";
-      }
+        if (dificultad === "facil") maxDesviation = 50;
+        else if (dificultad === "dificil") maxDesviation = 15;
+        else if (dificultad === "experto") maxDesviation = 5;
+        
+        // Asegúrate de que las llaves envuelven correctamente cada bloque
+        if (Math.abs(cents) <= maxDesviation) {
+            display.style.color = "#22c55e"; 
+            guide.textContent = `🎯 ¡En la nota! (${targetNote})`;
+            guide.style.color = "#22c55e";
+        } else if (cents < 0) {
+            display.style.color = "#f59e0b";
+            guide.textContent = `⬆️ Estás grave. Sube a ${targetNote}`;
+            guide.style.color = "#f59e0b";
+        } else {
+            display.style.color = "#f59e0b";
+            guide.textContent = `⬇️ Estás agudo. Baja a ${targetNote}`;
+            guide.style.color = "#f59e0b";
+        }
     } else {
       display.textContent = "--";
       display.style.color = "white";
