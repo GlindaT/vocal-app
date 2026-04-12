@@ -1909,8 +1909,8 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
       transcriptionSegments.forEach(seg => {
         // Calculamos posición X basada en el tiempo actual de la pista
         // Movemos las barras hacia la izquierda a medida que avanza la canción
-        const x = (seg.start - currentTime) * 50 + (canvas.width / 4);
-        const width = (seg.end - seg.start) * 50;
+        const x = (seg.start - currentTime) * 80 + (canvas.width / 4);
+        const width = (seg.end - seg.start) * 80;
 
         if (x > -width && x < canvas.width) {
           ctx.fillStyle = "#3b82f644"; // Azul suave
@@ -1919,7 +1919,17 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
           ctx.fillStyle = "white";
           ctx.font = "14px Arial";
           ctx.textAlign = "center";
-          ctx.fillText(seg.text, x + width / 2, 115); // Escribe la palabra en el centro de la barra
+          const maxWidth = width - 10; // Dejamos 5px de margen a cada lado
+          ctx.font = "bold 14px Arial";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          
+          // Esta función corta el texto si es más largo que la barra
+          let textToDraw = seg.text;
+          if (ctx.measureText(textToDraw).width > maxWidth) {
+            textToDraw = textToDraw.substring(0, 15) + "..."; 
+          }
+          ctx.fillText(textToDraw, x + width / 2, 115);
         }
       });
     }
