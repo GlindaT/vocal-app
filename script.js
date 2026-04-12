@@ -1923,40 +1923,28 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // --- NUEVO: Dibujar Barras Objetivo (Sustituye tu bucle anterior) ---
-    if (typeof transcriptionSegments !== 'undefined') {
+    if (typeof transcriptionSegments !== 'undefined' && Array.isArray(transcriptionSegments)) {
         transcriptionSegments.forEach((seg, index) => {
             const x = (seg.start - currentTime) * 30 + (canvas.width / 4);
             const width = Math.max((seg.end - seg.start) * 30, 50);
-            
-            // --- AQUÍ DECLARAMOS LA 'y' PARA TODO EL BLOQUE ---
-            const nivel = index % 4;
-            const y = 80 + (nivel * 60); 
-            
+
+            // Ajuste de altura para que no se amontonen tanto
+            const nivel = index % 4; 
+            const y = 80 + (nivel * 60);
+
             if (x > -width && x < canvas.width) {
                 // 1. Dibujar Barra Azul
                 ctx.fillStyle = "#3b82f6";
                 ctx.fillRect(x, y, width, 30);
 
-                // Dibujamos progreso si estás pasando por encima
-                if (currentFreq > 0) {
-                    const vozY = canvas.height - (Math.log2(currentFreq / 110) * 35);
-                    // Si estás a la altura correcta (con un margen de error)
-                    if (Math.abs(vozY - targetY) < 15) {
-                        ctx.fillStyle = "#22c55e"; // Verde éxito
-                        // Solo dibujamos progreso si tu voz está dentro del ancho de la barra
-                        const progressX = Math.max(x, Math.min(x + width, canvas.width / 4));
-                        ctx.fillRect(x, targetY, progressX - x, 30);
-                    }
-                }
-                
-                // 2. Dibujar Letra Centrada
+                // 2. Dibujar Letra (SIEMPRE)
                 ctx.fillStyle = "white";
-                ctx.font = "bold 16px Arial";
+                ctx.font = "bold 14px Arial";
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
                 ctx.fillText(seg.text || "", x + width / 2, y + 15);
-                
-                // 3. Lógica de "SUBE" o "BAJA"
+
+                // 3. Lógica de "SUBE" o "BAJA" (SOLO SI CANTAS)
                 if (currentFreq > 0) {
                     const vozY = canvas.height - (Math.log2(currentFreq / 110) * 35);
                     if (vozY < y - 20) {
@@ -1969,7 +1957,7 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
                 }
             }
         });
-    
+    }
     } else {
         // Si no hay segmentos, mostramos un mensaje
         ctx.fillStyle = "#666";
