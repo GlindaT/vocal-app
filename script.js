@@ -1997,6 +1997,7 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     
     // Limpiamos la sombra para que no afecte a otros elementos
     ctx.shadowBlur = 0;
+}
     
 // ==========================================
 // DETECCIÓN DE PITCH PARA KARAOKE
