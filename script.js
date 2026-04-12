@@ -517,53 +517,52 @@ async function saveToLibrary(blob, options = {}) {
   }
 }
 
-async function loadLibrary() {
+async function renderLibrary(filter = 'todos') {
   const container = $("libraryList");
   if (!container) return;
 
   container.innerHTML = "<p>Cargando biblioteca...</p>";
 
   try {
-    const library = await getAllLibraryItems();
+    let library = await getAllLibraryItems();
+
+    // Lógica de filtrado de carpetas
+    if (filter !== 'todos') {
+      library = library.filter(item => item.type === filter);
+    }
 
     container.innerHTML = "";
 
     if (!library.length) {
-      container.innerHTML = "<p>No hay archivos guardados todavía.</p>";
-      await loadVoiceOptionsInStudio();
-      await loadTrackOptionsInStudio();
-      await loadTrackOptionsInKaraoke();
+      container.innerHTML = `<p>No hay archivos en la carpeta '${filter}'.</p>`;
       return;
     }
 
     library.forEach((item) => {
       const div = document.createElement("div");
       div.className = "library-item";
-
       const audioURL = URL.createObjectURL(item.audioBlob);
 
       div.innerHTML = `
-        <p><strong>${item.name}</strong></p>
-        <p>Tipo: ${item.type || "audio"}</p>
-        <p>Fecha: ${item.date || "-"}</p>
-        <audio controls src="${audioURL}"></audio>
-        <br><br>
-        <button type="button" data-id="${item.id}" class="delete-library-btn">🗑️ Eliminar</button>
+        <div style="border-bottom: 1px solid #444; padding: 10px 0;">
+          <p><strong>${item.name}</strong></p>
+          <small>Tipo: ${item.type} | Fecha: ${item.date || "-"}</small>
+          <audio controls src="${audioURL}" style="display:block; width:100%; margin: 10px 0;"></audio>
+          <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#ef4444;">🗑️ Eliminar</button>
+        </div>
       `;
-
       container.appendChild(div);
     });
 
+    // Eventos de borrado
     document.querySelectorAll(".delete-library-btn").forEach((btn) => {
       btn.addEventListener("click", async () => {
         const id = Number(btn.dataset.id);
         await deleteLibraryItem(id);
+        renderLibrary(filter); // Recargar la carpeta actual tras borrar
       });
     });
 
-    await loadVoiceOptionsInStudio();
-    await loadTrackOptionsInStudio();
-    await loadTrackOptionsInKaraoke();
   } catch (error) {
     console.error(error);
     container.innerHTML = "<p>❌ Error al cargar la biblioteca.</p>";
@@ -1851,7 +1850,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     safeAdd("splitBtn", "click", splitAudio);
 
     // init
-    await loadLibrary();
+    await renderLibrary('todos');
     await loadTrackOptionsInStudio();
     await loadTrackOptionsInKaraoke();
 
