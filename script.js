@@ -521,47 +521,52 @@ async function renderLibrary(filter = 'todos') {
   const container = $("libraryList");
   if (!container) return;
 
-  container.innerHTML = "<p>Cargando biblioteca...</p>";
+  container.innerHTML = "<p>Cargando archivos...</p>";
 
   try {
     let library = await getAllLibraryItems();
 
-    // Lógica de filtrado de carpetas
+    // Filtramos según la carpeta seleccionada
+    let filteredItems = library;
     if (filter !== 'todos') {
-      library = library.filter(item => item.type === filter);
+      filteredItems = library.filter(item => item.type === filter);
     }
 
     container.innerHTML = "";
 
-    if (!library.length) {
-      container.innerHTML = `<p>No hay archivos en la carpeta '${filter}'.</p>`;
-      return;
+    if (filteredItems.length === 0) {
+      container.innerHTML = `<p>La carpeta '${filter}' está vacía.</p>`;
+    } else {
+      filteredItems.forEach((item) => {
+        const div = document.createElement("div");
+        div.className = "library-item card"; // Usamos la clase card para que se vea bien
+        div.style.marginBottom = "10px";
+
+        const audioURL = URL.createObjectURL(item.audioBlob);
+
+        div.innerHTML = `
+          <p><strong>${item.name}</strong></p>
+          <small>Tipo: ${item.type.toUpperCase()} | ${item.date}</small>
+          <audio controls src="${audioURL}" style="width:100%; margin: 10px 0;"></audio>
+          <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#e11d48;">🗑️ Eliminar</button>
+        `;
+        container.appendChild(div);
+      });
     }
 
-    library.forEach((item) => {
-      const div = document.createElement("div");
-      div.className = "library-item";
-      const audioURL = URL.createObjectURL(item.audioBlob);
-
-      div.innerHTML = `
-        <div style="border-bottom: 1px solid #444; padding: 10px 0;">
-          <p><strong>${item.name}</strong></p>
-          <small>Tipo: ${item.type} | Fecha: ${item.date || "-"}</small>
-          <audio controls src="${audioURL}" style="display:block; width:100%; margin: 10px 0;"></audio>
-          <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#ef4444;">🗑️ Eliminar</button>
-        </div>
-      `;
-      container.appendChild(div);
-    });
-
-    // Eventos de borrado
+    // Reactivar botones de borrar
     document.querySelectorAll(".delete-library-btn").forEach((btn) => {
       btn.addEventListener("click", async () => {
         const id = Number(btn.dataset.id);
         await deleteLibraryItem(id);
-        renderLibrary(filter); // Recargar la carpeta actual tras borrar
+        renderLibrary(filter); // Recargamos la misma vista
       });
     });
+
+    // Actualizamos los selectores del Estudio y Karaoke para que vean los cambios
+    await loadVoiceOptionsInStudio();
+    await loadTrackOptionsInStudio();
+    await loadTrackOptionsInKaraoke();
 
   } catch (error) {
     console.error(error);
