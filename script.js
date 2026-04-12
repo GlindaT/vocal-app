@@ -1924,40 +1924,31 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
 
     // --- DIBUJAR BARRAS OBJETIVO (LETRAS) ---
     if (transcriptionSegments && transcriptionSegments.length > 0) {
-        transcriptionSegments.forEach((seg, index) => {
+        transcriptionSegments.forEach(seg => {
             // Calculamos posición X basada en el tiempo actual
-            const x = (seg.start - currentTime) * 30 + (canvas.width / 4);
-            const width = Math.max((seg.end - seg.start) * 30, 50); // Mínimo 50px de ancho
-            const nivel = index % 4;
-            const targetY = 50 + (nivel * 40);
-          
-            ctx.fillStyle = "#3b82f6";
-            ctx.fillRect(x, targetY, width, 30);
+            const x = (seg.start - currentTime) * 15 + (canvas.width / 3);
+            const width = Math.max((seg.end - seg.start) * 15, 50); // Mínimo 50px de ancho
 
-            if (currentFreq > 0) {
-              const vozY = canvas.height - (Math.log2(currentFreq / 110) * 35);
-              if (Math.abs(vozY - targetY) < 15) {
-                ctx.fillStyle = "#22c55e";
+            // Solo dibujamos si está visible en el canvas
+            if (x > -width && x < canvas.width) {
+                // Barra azul de fondo
+                ctx.fillStyle = "#3b82f6";
+                ctx.fillRect(x, 90, width, 30);
 
-                const progressX = Math.max(x, Math.min(x + width, canvas.width / 4));
-                ctx.fillRect(x, targetY, progressX - x, 30);
-              }
-            }
-              
-              if (vozY < targetY - 20) {
-                ctx.fillStyle = "orange";
-                ctx.fillText("BAJA ⬇️", x + width / 2, targetY - 10);
-              } else if (vozY > targetY + 20) {
-                ctx.fillStyle = "orange";
-                ctx.fillText("SUBE ⬆️", x + width / 2, targetY + 40);
-              }
-        });
-            // Texto de la letra
+                // Texto de la letra
                 ctx.fillStyle = "white";
-                ctx.font = "bold 14px Arial";
+                ctx.font = "bold 12px Arial";
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
-                ctx.fillText(seg.text, x + width / 2, y + 15);
+
+                // Cortamos el texto si es muy largo
+                let textToDraw = seg.text || "";
+                if (ctx.measureText(textToDraw).width > width - 10) {
+                    textToDraw = textToDraw.substring(0, 12) + "...";
+                }
+                ctx.fillText(textToDraw, x + width / 2, 105);
+            }
+        });
     } else {
         // Si no hay segmentos, mostramos un mensaje
         ctx.fillStyle = "#666";
