@@ -372,7 +372,7 @@ let studioRecordedBlob = null;
 let studioTrackFileName = "";
 let selectedVoiceBlob = null;
 let selectedVoiceId = null;
-let baseTranscriptionSegments = [];
+
 
 // ==========================================
 // ESTUDIO
