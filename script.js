@@ -1915,15 +1915,34 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
             const x = (seg.start - currentTime) * 30 + (canvas.width / 4);
             const width = Math.max((seg.end - seg.start) * 30, 50); // Mínimo 50px de ancho
             const nivel = index % 4;
-            const y = 50 + (nivel * 40);
+            const targetY = 50 + (nivel * 40);
 
             // Solo dibujamos si está visible en el canvas
             if (x > -width && x < canvas.width) {
                 // Barra azul de fondo
-                ctx.fillStyle = "#3b82f6";
-                ctx.fillRect(x, y, width, 30);
+            ctx.fillStyle = "#3b82f6";
+            ctx.fillRect(x, targetY, width, 30);
 
-                // Texto de la letra
+            if (currentFreq > 0) {
+              const vozY = canvas.height - (Math.log2(currentFreq / 110) * 35);
+              if (Math.abs(vozY - targetY) < 15) {
+                ctx.fillStyle = "#22c55e";
+
+                const progressX = Math.max(x, Math.min(x + width, canvas.width / 4));
+                ctx.fillRect(x, targetY, progressX - x, 30);
+              }
+            }
+
+              if (vozY < targetY - 20) {
+                ctx.fillStyle = "orange";
+                ctx.fillText("BAJA ⬇️", x + width / 2, targetY - 10);
+              } else if (vozY > targetY + 20) {
+                ctx.fillStyle = "orange";
+                ctx.fillText("SUBE ⬆️", x + width / 2, targetY + 40);
+              }
+            }
+
+               // Texto de la letra
                 ctx.fillStyle = "white";
                 ctx.font = "bold 14px Arial";
                 ctx.textAlign = "center";
