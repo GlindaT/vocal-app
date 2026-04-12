@@ -1909,8 +1909,8 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
       transcriptionSegments.forEach(seg => {
         // Calculamos posición X basada en el tiempo actual de la pista
         // Movemos las barras hacia la izquierda a medida que avanza la canción
-        const x = (seg.start - currentTime) * 80 + (canvas.width / 4);
-        const width = (seg.end - seg.start) * 80;
+        const x = (seg.start - currentTime) * 30 + (canvas.width / 4);
+        const width = (seg.end - seg.start) * 30;
 
         if (x > -width && x < canvas.width) {
           ctx.fillStyle = "#3b82f644"; // Azul suave
@@ -1972,17 +1972,21 @@ async function startKaraokePitchDetection() {
   analyser.fftSize = 2048;
   mic.connect(analyser);
 
-  function loop() {
-    const buffer = new Float32Array(analyser.fftSize);
-    analyser.getFloatTimeDomainData(buffer);
-    const pitch = autoCorrelate(buffer, audioCtx.sampleRate);
+function loop() {
+    const track = $("karaokeTrack");
+    // Esto es vital: debe ser el tiempo real del audio que suena
+    const currentTime = track ? track.currentTime : 0; 
     
-    // Dibujamos en el canvas de Karaoke
-    drawKaraokeMonitor(0, pitch);
+    // ... tu lógica de pitch ...
     
+    drawKaraokeMonitor(currentTime, pitch);
+    
+    // Si la pista terminó, paramos el loop
+    if (track && track.ended) return; 
+
     if (karaokeMediaRecorder && karaokeMediaRecorder.state === "recording") {
       requestAnimationFrame(loop);
     }
-  }
+}
   loop();
 }
