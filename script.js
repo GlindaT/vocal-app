@@ -1947,7 +1947,7 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
                 ctx.fillText(seg.text, x + width / 2, y + 15);
-        }
+        });                               
               
     } else {
         // Si no hay segmentos, mostramos un mensaje
