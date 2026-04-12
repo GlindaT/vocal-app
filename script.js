@@ -1922,7 +1922,7 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     // Limpiamos el canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    / --- NUEVO: Dibujar Barras Objetivo (Sustituye tu bucle anterior) ---
+    // --- NUEVO: Dibujar Barras Objetivo (Sustituye tu bucle anterior) ---
     if (typeof transcriptionSegments !== 'undefined') {
         transcriptionSegments.forEach((seg, index) => {
             const x = (seg.start - currentTime) * 30 + (canvas.width / 4);
