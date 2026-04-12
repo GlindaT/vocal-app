@@ -536,3 +536,9 @@ input[type="text"] {
 .delete-library-btn:hover {
     background: #ef4444;
 }
+
+#karaokeCanvas {
+    background: #000; /* Fondo negro para que se vean las líneas verdes */
+    display: block;
+    width: 100%;
+}
