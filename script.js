@@ -1927,37 +1927,32 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
         transcriptionSegments.forEach((seg, index) => {
             const x = (seg.start - currentTime) * 30 + (canvas.width / 4);
             const width = Math.max((seg.end - seg.start) * 30, 50);
-
+            
+            // --- AQUÍ DECLARAMOS LA 'y' PARA TODO EL BLOQUE ---
+            const nivel = index % 4;
+            const y = 80 + (nivel * 60); 
+            
             if (x > -width && x < canvas.width) {
-                // Posición vertical según el nivel
-                const nivel = index % 4; 
-                const targetY = 50 + (nivel * 40); 
-
-                // 1. Dibujar la barra azul (el "carril" de la nota)
+                // 1. Dibujar Barra Azul
                 ctx.fillStyle = "#3b82f6";
                 ctx.fillRect(x, y, width, 30);
                 
-                // 2. DIBUJAR LA LETRA CENTRADA Y GRANDE (¡Aquí está la magia!)
-                ctx.fillStyle = "white"; 
-                ctx.font = "bold 18px 'Arial Black', Arial"; // Fuente más gruesa y grande
+                // 2. Dibujar Letra Centrada
+                ctx.fillStyle = "white";
+                ctx.font = "bold 16px Arial";
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
+                ctx.fillText(seg.text || "", x + width / 2, y + 15);
                 
-                // Si el texto es muy largo, lo reducimos
-                let textToDraw = seg.text || "";
-                ctx.fillText(textToDraw, x + width / 2, y + 15); // y + 15 es el centro exacto de la barra
-
-                // 3. LÓGICA DE AFINACIÓN (SUBE/BAJA)
+                // 3. Lógica de "SUBE" o "BAJA"
                 if (currentFreq > 0) {
                     const vozY = canvas.height - (Math.log2(currentFreq / 110) * 35);
-                    
-                    // Si la voz está muy lejos de la barra azul
-                    if (vozY < targetY - 20) {
+                    if (vozY < y - 20) {
                         ctx.fillStyle = "orange";
-                        ctx.fillText("BAJA ⬇️", x + width / 2, targetY - 10);
-                    } else if (vozY > targetY + 50) {
+                        ctx.fillText("BAJA ⬇️", x + width / 2, y - 10);
+                    } else if (vozY > y + 50) {
                         ctx.fillStyle = "orange";
-                        ctx.fillText("SUBE ⬆️", x + width / 2, targetY + 50);
+                        ctx.fillText("SUBE ⬆️", x + width / 2, y + 40);
                     }
                 }
             }
