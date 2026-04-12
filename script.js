@@ -1318,6 +1318,8 @@ async function startKaraokeRecording() {
       $("karaokeStatus").textContent = "Estado: Grabación finalizada ✅";
     };
 
+    startKaraokePitchDetection();
+
     karaokeMediaRecorder.start();
     track.currentTime = 0;
     track.play();
@@ -1923,4 +1925,28 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
         }
     });
     ctx.stroke();
+}
+
+async function startKaraokePitchDetection() {
+  // Usamos el mismo motor del afinador pero dirigido al canvas de karaoke
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  const mic = audioCtx.createMediaStreamSource(stream);
+  const analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 2048;
+  mic.connect(analyser);
+
+  function loop() {
+    const buffer = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(buffer);
+    const pitch = autoCorrelate(buffer, audioCtx.sampleRate);
+    
+    // Dibujamos en el canvas de Karaoke
+    drawKaraokeMonitor(0, pitch);
+    
+    if (karaokeMediaRecorder && karaokeMediaRecorder.state === "recording") {
+      requestAnimationFrame(loop);
+    }
+  }
+  loop();
 }
