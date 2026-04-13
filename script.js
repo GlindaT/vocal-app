@@ -26,6 +26,7 @@ let db = null;
 let pitchHistory = [];
 let transcriptionSegments = [];
 let baseTranscriptionSegments = [];
+let syncOffset = 0; // Desfase de sincronización en segundos
 
 function $(id) {
   return document.getElementById(id);
@@ -1289,6 +1290,9 @@ function updateKaraokeHighlight(currentTime) {
   const lines = document.querySelectorAll(".karaoke-line");
   if (!lines.length) return;
 
+  // Aplicar desfase de sincronización
+  const adjustedTime = currentTime + syncOffset;
+
   let activeLine = null;
 
   lines.forEach((line) => {
@@ -1297,10 +1301,10 @@ function updateKaraokeHighlight(currentTime) {
 
     line.classList.remove("active", "past", "upcoming");
 
-    if (currentTime >= start && currentTime <= end) {
+    if (adjustedTime >= start && adjustedTime <= end) {
       line.classList.add("active");
       activeLine = line;
-    } else if (currentTime > end) {
+    } else if (adjustedTime > end) {
       line.classList.add("past");
     } else {
       line.classList.add("upcoming");
@@ -1313,9 +1317,9 @@ function updateKaraokeHighlight(currentTime) {
 
       word.classList.remove("active-word", "past-word");
 
-      if (currentTime >= wordStart && currentTime <= wordEnd) {
+      if (adjustedTime >= wordStart && adjustedTime <= wordEnd) {
         word.classList.add("active-word");
-      } else if (currentTime > wordEnd) {
+      } else if (adjustedTime > wordEnd) {
         word.classList.add("past-word");
       }
     });
@@ -1328,6 +1332,7 @@ function updateKaraokeHighlight(currentTime) {
     });
   }
 }
+
 
 // ==========================================
 // KARAOKE
@@ -1692,6 +1697,9 @@ function syncKaraokeMonitor(currentTime) {
   const lines = document.querySelectorAll(".karaoke-live-line");
   if (!lines.length) return;
 
+  // Aplicar desfase de sincronización
+  const adjustedTime = currentTime + syncOffset;
+
   let activeLine = null;
 
   lines.forEach(line => {
@@ -1700,10 +1708,10 @@ function syncKaraokeMonitor(currentTime) {
 
     line.classList.remove("active", "past");
 
-    if (currentTime >= start && currentTime <= end) {
+    if (adjustedTime >= start && adjustedTime <= end) {
       line.classList.add("active");
       activeLine = line;
-    } else if (currentTime > end) {
+    } else if (adjustedTime > end) {
       line.classList.add("past");
     }
 
@@ -1714,9 +1722,9 @@ function syncKaraokeMonitor(currentTime) {
 
       word.classList.remove("active-word", "past-word");
 
-      if (currentTime >= wordStart && currentTime <= wordEnd) {
+      if (adjustedTime >= wordStart && adjustedTime <= wordEnd) {
         word.classList.add("active-word");
-      } else if (currentTime > wordEnd) {
+      } else if (adjustedTime > wordEnd) {
         word.classList.add("past-word");
       }
     });
@@ -2385,6 +2393,49 @@ document.addEventListener("DOMContentLoaded", async () => {
     safeAdd("transcribeVoiceBtn", "click", transcribeSelectedVoice);
     safeAdd("applyCorrectedLyricsBtn", "click", applyCorrectedLyrics);
 
+    // Controles de sincronización
+    safeAdd("syncOffset", "input", (e) => {
+        syncOffset = parseFloat(e.target.value);
+        const display = $("syncValue");
+        if (display) {
+            const sign = syncOffset >= 0 ? "+" : "";
+            display.textContent = `Desfase: ${sign}${syncOffset.toFixed(1)} segundos`;
+        }
+        // Guardar preferencia
+        localStorage.setItem("vocalApp_syncOffset", syncOffset);
+    });
+      
+      safeAdd("syncMinus", "click", () => {
+          const slider = $("syncOffset");
+          if (slider) {
+              syncOffset = Math.max(-3, syncOffset - 0.5);
+              slider.value = syncOffset;
+              slider.dispatchEvent(new Event("input"));
+          }
+      });
+      
+      safeAdd("syncPlus", "click", () => {
+          const slider = $("syncOffset");
+          if (slider) {
+              syncOffset = Math.min(3, syncOffset + 0.5);
+              slider.value = syncOffset;
+              slider.dispatchEvent(new Event("input"));
+          }
+      });
+      
+      // Cargar desfase guardado
+      const savedOffset = localStorage.getItem("vocalApp_syncOffset");
+      if (savedOffset) {
+          syncOffset = parseFloat(savedOffset);
+          const slider = $("syncOffset");
+          const display = $("syncValue");
+          if (slider) slider.value = syncOffset;
+          if (display) {
+              const sign = syncOffset >= 0 ? "+" : "";
+              display.textContent = `Desfase: ${sign}${syncOffset.toFixed(1)} segundos`;
+          }
+      }
+
     // biblioteca
     safeAdd("saveLibraryFileBtn", "click", saveManualFileToLibrary);
 
@@ -2444,92 +2495,137 @@ document.addEventListener("DOMContentLoaded", async () => {
 // MONITOR DE KARAOKE (CANVAS)
 // ==========================================
 function drawKaraokeMonitor(currentTime, currentFreq) {
-    const canvas = $("karaokeCanvas");
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+  const canvas = $("karaokeCanvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
 
-    // Guardamos la frecuencia actual en el historial
-    pitchHistory.push(currentFreq > 0 ? currentFreq : null);
-    if (pitchHistory.length > canvas.width / 5) pitchHistory.shift();
+  // Aplicar desfase de sincronización
+  const adjustedTime = currentTime + syncOffset;
 
-    // Limpiamos el canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // Guardamos la frecuencia actual en el historial
+  pitchHistory.push(currentFreq > 0 ? currentFreq : null);
+  if (pitchHistory.length > canvas.width / 5) pitchHistory.shift();
 
-    // --- NUEVO: Dibujar Barras Objetivo (Sustituye tu bucle anterior) ---
-    if (typeof transcriptionSegments !== 'undefined' && Array.isArray(transcriptionSegments)) {
-        transcriptionSegments.forEach((seg, index) => {
-            const x = (seg.start - currentTime) * 30 + (canvas.width / 4);
-            const width = Math.max((seg.end - seg.start) * 30, 50);
+  // Limpiamos el canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Ajuste de altura para que no se amontonen tanto
-            const nivel = index % 4; 
-            const y = 80 + (nivel * 60);
-
-            if (x > -width && x < canvas.width) {
-                // 1. Dibujar Barra Azul
-                ctx.fillStyle = "#3b82f6";
-                ctx.fillRect(x, y, width, 30);
-
-                // 2. Dibujar Letra (SIEMPRE)
-                ctx.fillStyle = "white";
-                ctx.font = "bold 14px Arial";
-                ctx.textAlign = "center";
-                ctx.textBaseline = "middle";
-                ctx.fillText(seg.text || "", x + width / 2, y + 15);
-
-                // 3. Lógica de "SUBE" o "BAJA" (SOLO SI CANTAS)
-                if (currentFreq > 0) {
-                    const vozY = canvas.height - (Math.log2(currentFreq / 110) * 35);
-                    if (vozY < y - 20) {
-                        ctx.fillStyle = "orange";
-                        ctx.fillText("BAJA ⬇️", x + width / 2, y - 10);
-                    } else if (vozY > y + 50) {
-                        ctx.fillStyle = "orange";
-                        ctx.fillText("SUBE ⬆️", x + width / 2, y + 40);
-                    }
-                }
-            }
-        });
-
-    } else {
-        // Si no hay segmentos, mostramos un mensaje
-        ctx.fillStyle = "#666";
-        ctx.font = "16px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText("Carga una voz transcrita en 'Estudio' primero", canvas.width / 2, 100);
-    }
-
-    // --- DIBUJAR LÍNEAS DEL PENTAGRAMA ---
-    ctx.strokeStyle = "#333";
-    ctx.lineWidth = 1;
-    for (let i = 1; i < 5; i++) {
-        ctx.beginPath();
-        ctx.moveTo(0, (canvas.height / 4) * i);
-        ctx.lineTo(canvas.width, (canvas.height / 4) * i);
-        ctx.stroke();
-    }
-
-    // DIBUJAR EL RASTRO DE LA VOZ (LÍNEA VERDE)
+  // --- DIBUJAR LÍNEAS DEL PENTAGRAMA (FONDO) ---
+  ctx.strokeStyle = "#333";
+  ctx.lineWidth = 1;
+  for (let i = 1; i < 5; i++) {
     ctx.beginPath();
-    // Hacemos la línea verde un poco más llamativa
-    ctx.strokeStyle = "#22c55e"; 
-    ctx.lineWidth = 6; 
-    ctx.shadowBlur = 10;
+    ctx.moveTo(0, (canvas.height / 5) * i);
+    ctx.lineTo(canvas.width, (canvas.height / 5) * i);
+    ctx.stroke();
+  }
+
+  // --- DIBUJAR BARRAS DE LETRAS ---
+  if (Array.isArray(transcriptionSegments) && transcriptionSegments.length > 0) {
+    
+    // Encontrar el índice de la línea actual
+    let currentIndex = -1;
+    for (let i = 0; i < transcriptionSegments.length; i++) {
+      if (adjustedTime >= transcriptionSegments[i].start && adjustedTime <= transcriptionSegments[i].end + 1) {
+        currentIndex = i;
+        break;
+      }
+    }
+
+    // Si no encontramos línea actual, buscar la siguiente
+    if (currentIndex === -1) {
+      for (let i = 0; i < transcriptionSegments.length; i++) {
+        if (transcriptionSegments[i].start > adjustedTime) {
+          currentIndex = i;
+          break;
+        }
+      }
+    }
+
+    // Mostrar líneas alrededor de la actual (2 antes, actual, 2 después)
+    const startIdx = Math.max(0, currentIndex - 2);
+    const endIdx = Math.min(transcriptionSegments.length, currentIndex + 3);
+
+    for (let i = startIdx; i < endIdx; i++) {
+      const seg = transcriptionSegments[i];
+      const relativeIndex = i - currentIndex;
+
+      // Calcular posición Y basada en la posición relativa
+      const baseY = canvas.height / 2;
+      const y = baseY + (relativeIndex * 60);
+
+      // Calcular posición X (progreso de la línea)
+      const segDuration = seg.end - seg.start;
+      const progress = Math.max(0, Math.min(1, (adjustedTime - seg.start) / segDuration));
+      
+      const barWidth = canvas.width * 0.7;
+      const barX = (canvas.width - barWidth) / 2;
+
+      // Determinar si es la línea activa
+      const isActive = (adjustedTime >= seg.start && adjustedTime <= seg.end + 0.5);
+
+      // Dibujar barra de fondo
+      ctx.fillStyle = isActive ? "#1e40af" : "#1e3a5f";
+      ctx.fillRect(barX, y - 15, barWidth, 30);
+
+      // Dibujar progreso (parte cantada)
+      if (isActive && progress > 0) {
+        ctx.fillStyle = "#3b82f6";
+        ctx.fillRect(barX, y - 15, barWidth * progress, 30);
+      }
+
+      // Dibujar borde
+      ctx.strokeStyle = isActive ? "#60a5fa" : "#334155";
+      ctx.lineWidth = isActive ? 2 : 1;
+      ctx.strokeRect(barX, y - 15, barWidth, 30);
+
+      // Dibujar texto
+      ctx.fillStyle = isActive ? "#ffffff" : "#94a3b8";
+      ctx.font = isActive ? "bold 16px Arial" : "14px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      
+      // Truncar texto si es muy largo
+      let displayText = seg.text || "";
+      if (displayText.length > 50) {
+        displayText = displayText.substring(0, 47) + "...";
+      }
+      ctx.fillText(displayText, canvas.width / 2, y);
+    }
+
+  } else {
+    // Si no hay segmentos, mostrar mensaje
+    ctx.fillStyle = "#666";
+    ctx.font = "16px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("Carga una voz transcrita en 'Estudio' primero", canvas.width / 2, canvas.height / 2);
+  }
+
+  // --- DIBUJAR EL RASTRO DE LA VOZ (LÍNEA VERDE) ---
+  if (currentFreq > 0) {
+    ctx.beginPath();
+    ctx.strokeStyle = "#22c55e";
+    ctx.lineWidth = 4;
+    ctx.shadowBlur = 8;
     ctx.shadowColor = "#22c55e";
 
+    let started = false;
     pitchHistory.forEach((f, i) => {
-        if (f) {
-            const rawY = canvas.height - (Math.log2(f / 110) * 35);
-            const y = Math.max(10, Math.min(canvas.height - 10, rawY));
-            
-            if (i === 0) ctx.moveTo(i * 5, y);
-            else ctx.lineTo(i * 5, y);
+      if (f) {
+        const x = (i / pitchHistory.length) * canvas.width;
+        const rawY = canvas.height - (Math.log2(f / 110) * 30);
+        const y = Math.max(10, Math.min(canvas.height - 10, rawY));
+
+        if (!started) {
+          ctx.moveTo(x, y);
+          started = true;
+        } else {
+          ctx.lineTo(x, y);
         }
+      }
     });
     ctx.stroke();
-    
-    // Limpiamos la sombra para que no afecte a otros elementos
     ctx.shadowBlur = 0;
+  }
 }
     
 // ==========================================
