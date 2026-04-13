@@ -1334,11 +1334,16 @@ function updateKaraokeHighlight(currentTime) {
 // ==========================================
 let karaokeMediaRecorder = null;
 let karaokeStream = null;
+let karaokeStream2 = null;
 let karaokeChunks = [];
 let karaokeRecordedBlob = null;
 let karaokeSelectedTrackBlob = null;
 let karaokeSelectedTrackName = "Pista";
 let lastActiveLine = null;
+let karaokeDuoAudioContext = null;
+let karaokeDuoAnalyser1 = null;
+let karaokeDuoAnalyser2 = null;
+let karaokeDuoAnimationId = null;
 
 function cargarPistaKaraoke(e) {
   const file = e.target.files[0];
@@ -1450,71 +1455,183 @@ function cargarLetrasEnMonitor() {
 }
 
 async function startKaraokeRecording() {
-    const track = $("karaokeTrack");
+  const track = $("karaokeTrack");
 
-    if (!track || !track.src) {
-        alert("⚠️ Primero sube una pista instrumental en el Paso 1.");
-        return;
+  if (!track || !track.src) {
+    alert("⚠️ Primero sube una pista instrumental en el Paso 1.");
+    return;
+  }
+
+  try {
+    const micCount = $("micCount");
+    const isDuo = micCount && micCount.value === "2";
+
+    karaokeChunks = [];
+    karaokeRecordedBlob = null;
+    $("karaokeVoicePlayer").src = "";
+
+    // Obtener micrófonos seleccionados
+    const mic1Id = getSelectedMicId(1);
+    const mic2Id = getSelectedMicId(2);
+
+    const audioConstraints1 = {
+      echoCancellation: false,
+      noiseSuppression: false,
+      autoGainControl: false,
+      channelCount: 1,
+      sampleRate: 48000
+    };
+
+    if (mic1Id) {
+      audioConstraints1.deviceId = { exact: mic1Id };
     }
 
-    try {
-        karaokeChunks = [];
-        karaokeRecordedBlob = null;
-        $("karaokeVoicePlayer").src = "";
+    // Obtener stream del Mic 1
+    karaokeStream = await navigator.mediaDevices.getUserMedia({
+      audio: audioConstraints1
+    });
 
-        // Obtener micrófono seleccionado
-        const micId = getSelectedMicId(1);
-        
-        const audioConstraints = {
-            echoCancellation: false,
-            noiseSuppression: false,
-            autoGainControl: false,
-            channelCount: 1,
-            sampleRate: 48000
-        };
+    let finalStream = karaokeStream;
 
-        // Si hay un mic seleccionado, usarlo
-        if (micId) {
-            audioConstraints.deviceId = { exact: micId };
-        }
+    // Si es DÚO, obtener y mezclar Mic 2
+    if (isDuo && mic2Id) {
+      const audioConstraints2 = {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+        channelCount: 1,
+        sampleRate: 48000,
+        deviceId: { exact: mic2Id }
+      };
 
-        karaokeStream = await navigator.mediaDevices.getUserMedia({
-            audio: audioConstraints
-        });
+      karaokeStream2 = await navigator.mediaDevices.getUserMedia({
+        audio: audioConstraints2
+      });
 
-        const options = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-            ? { mimeType: "audio/webm;codecs=opus" }
-            : {};
+      // Crear contexto de audio para mezclar
+      karaokeDuoAudioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-        karaokeMediaRecorder = new MediaRecorder(karaokeStream, options);
+      const source1 = karaokeDuoAudioContext.createMediaStreamSource(karaokeStream);
+      const source2 = karaokeDuoAudioContext.createMediaStreamSource(karaokeStream2);
 
-        karaokeMediaRecorder.ondataavailable = (e) => {
-            if (e.data.size > 0) karaokeChunks.push(e.data);
-        };
+      // Crear analizadores para visualización
+      karaokeDuoAnalyser1 = karaokeDuoAudioContext.createAnalyser();
+      karaokeDuoAnalyser2 = karaokeDuoAudioContext.createAnalyser();
+      karaokeDuoAnalyser1.fftSize = 256;
+      karaokeDuoAnalyser2.fftSize = 256;
 
-        karaokeMediaRecorder.onstop = () => {
-            karaokeRecordedBlob = new Blob(karaokeChunks, { type: "audio/webm" });
-            $("karaokeVoicePlayer").src = URL.createObjectURL(karaokeRecordedBlob);
-            $("karaokeStatus").textContent = "Estado: Grabación finalizada ✅";
-        };
+      // Crear mezclador
+      const merger = karaokeDuoAudioContext.createChannelMerger(2);
+      const destination = karaokeDuoAudioContext.createMediaStreamDestination();
 
-        karaokeMediaRecorder.start();
-        track.currentTime = 0;
-        track.play();
+      // Conectar: fuentes -> analizadores -> mezclador -> destino
+      source1.connect(karaokeDuoAnalyser1);
+      source2.connect(karaokeDuoAnalyser2);
+      karaokeDuoAnalyser1.connect(merger, 0, 0);
+      karaokeDuoAnalyser2.connect(merger, 0, 1);
+      merger.connect(destination);
 
-        // ¡AQUÍ ACTIVAMOS EL MONITOR!
-        startKaraokePitchDetection();
+      finalStream = destination.stream;
 
-        // Mostrar qué micrófono se está usando
-        const micSelect = $("mic1Select");
-        const micName = micSelect ? micSelect.options[micSelect.selectedIndex]?.text : "Predeterminado";
-        $("karaokeStatus").textContent = `Estado: 🔴 Grabando con ${micName}...`;
-        $("karaokeStartBtn").disabled = true;
+      // Mostrar indicador de dúo
+      const duoIndicator = $("karaokeDuoIndicator");
+      if (duoIndicator) {
+        duoIndicator.style.display = "block";
+      }
 
-    } catch (err) {
-        console.error(err);
-        alert("❌ Error al acceder al micrófono. Verifica en Configuración.");
+      // Iniciar visualización de niveles
+      startKaraokeDuoLevelMonitor();
     }
+
+    const options = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+      ? { mimeType: "audio/webm;codecs=opus" }
+      : {};
+
+    karaokeMediaRecorder = new MediaRecorder(finalStream, options);
+
+    karaokeMediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) karaokeChunks.push(e.data);
+    };
+
+    karaokeMediaRecorder.onstop = () => {
+      karaokeRecordedBlob = new Blob(karaokeChunks, { type: "audio/webm" });
+      $("karaokeVoicePlayer").src = URL.createObjectURL(karaokeRecordedBlob);
+      $("karaokeStatus").textContent = "Estado: Grabación finalizada ✅";
+
+      // Ocultar indicador dúo
+      const duoIndicator = $("karaokeDuoIndicator");
+      if (duoIndicator) {
+        duoIndicator.style.display = "none";
+      }
+
+      stopKaraokeDuoLevelMonitor();
+    };
+
+    karaokeMediaRecorder.start();
+    track.currentTime = 0;
+    track.play();
+
+    // ¡AQUÍ ACTIVAMOS EL MONITOR!
+    startKaraokePitchDetection();
+
+    // Mostrar estado
+    const mic1Select = $("mic1Select");
+    const mic1Name = mic1Select ? mic1Select.options[mic1Select.selectedIndex]?.text : "Predeterminado";
+
+    if (isDuo && mic2Id) {
+      const mic2Select = $("mic2Select");
+      const mic2Name = mic2Select ? mic2Select.options[mic2Select.selectedIndex]?.text : "Mic 2";
+      $("karaokeStatus").textContent = `Estado: 🔴 Grabando DÚO (${mic1Name} + ${mic2Name})...`;
+    } else {
+      $("karaokeStatus").textContent = `Estado: 🔴 Grabando con ${mic1Name}...`;
+    }
+
+    $("karaokeStartBtn").disabled = true;
+
+  } catch (err) {
+    console.error(err);
+    alert("❌ Error al acceder al micrófono. Verifica en Configuración.");
+  }
+}
+
+function startKaraokeDuoLevelMonitor() {
+  const level1 = $("karaokeDuoMic1Level");
+  const level2 = $("karaokeDuoMic2Level");
+
+  function updateLevels() {
+    if (karaokeDuoAnalyser1 && level1) {
+      const data1 = new Uint8Array(karaokeDuoAnalyser1.frequencyBinCount);
+      karaokeDuoAnalyser1.getByteFrequencyData(data1);
+      const avg1 = data1.reduce((a, b) => a + b, 0) / data1.length;
+      level1.style.width = Math.min(100, (avg1 / 128) * 100) + "%";
+    }
+
+    if (karaokeDuoAnalyser2 && level2) {
+      const data2 = new Uint8Array(karaokeDuoAnalyser2.frequencyBinCount);
+      karaokeDuoAnalyser2.getByteFrequencyData(data2);
+      const avg2 = data2.reduce((a, b) => a + b, 0) / data2.length;
+      level2.style.width = Math.min(100, (avg2 / 128) * 100) + "%";
+    }
+
+    if (karaokeMediaRecorder && karaokeMediaRecorder.state === "recording") {
+      karaokeDuoAnimationId = requestAnimationFrame(updateLevels);
+    }
+  }
+
+  updateLevels();
+}
+
+function stopKaraokeDuoLevelMonitor() {
+  if (karaokeDuoAnimationId) {
+    cancelAnimationFrame(karaokeDuoAnimationId);
+    karaokeDuoAnimationId = null;
+  }
+
+  // Resetear barras
+  const level1 = $("karaokeDuoMic1Level");
+  const level2 = $("karaokeDuoMic2Level");
+  if (level1) level1.style.width = "0%";
+  if (level2) level2.style.width = "0%";
 }
 
 function stopKaraokeRecording() {
@@ -1522,8 +1639,32 @@ function stopKaraokeRecording() {
     karaokeMediaRecorder.stop();
   }
 
+  // Detener Mic 1
   if (karaokeStream) {
     karaokeStream.getTracks().forEach(t => t.stop());
+  }
+
+  // Detener Mic 2 (si existe)
+  if (karaokeStream2) {
+    karaokeStream2.getTracks().forEach(t => t.stop());
+    karaokeStream2 = null;
+  }
+
+  // Cerrar contexto de audio dúo
+  if (karaokeDuoAudioContext) {
+    karaokeDuoAudioContext.close();
+    karaokeDuoAudioContext = null;
+  }
+
+  karaokeDuoAnalyser1 = null;
+  karaokeDuoAnalyser2 = null;
+
+  stopKaraokeDuoLevelMonitor();
+
+  // Ocultar indicador
+  const duoIndicator = $("karaokeDuoIndicator");
+  if (duoIndicator) {
+    duoIndicator.style.display = "none";
   }
 
   const track = $("karaokeTrack");
