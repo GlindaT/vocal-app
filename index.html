@@ -241,6 +241,20 @@
         <h3>2. Grabación Sincronizada</h3>
         <p id="karaokeStatus" style="color: var(--text-muted); margin-bottom: 15px;">Estado: Esperando pista...</p>
         
+        <div id="karaokeDuoIndicator" style="display: none; margin-bottom: 15px; padding: 15px; background: var(--bg-main); border-radius: 8px; border: 1px solid var(--border);">
+          <p style="margin: 0 0 10px 0; font-weight: bold; color: var(--accent);">🎤🎤 Modo Dúo Activo</p>
+          <div style="display: flex; gap: 20px;">
+            <div style="flex: 1;">
+              <small>Mic 1:</small>
+              <div class="mic-level-bar"><div id="karaokeDuoMic1Level" class="mic-level-fill"></div></div>
+            </div>
+            <div style="flex: 1;">
+              <small>Mic 2:</small>
+              <div class="mic-level-bar"><div id="karaokeDuoMic2Level" class="mic-level-fill"></div></div>
+            </div>
+          </div>
+        </div>
+        
         <div class="studio-controls">
           <button id="karaokeStartBtn" class="btn-danger" type="button">🎙️ Iniciar Grabación</button>
           <button id="karaokeStopBtn" type="button">⏹️ Detener</button>
