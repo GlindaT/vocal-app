@@ -1721,7 +1721,8 @@ function initSettings() {
     micCount: "vocalApp_micCount",
     karaokeStage: "vocalApp_stage",
     difficultyLevel: "vocalApp_difficulty",
-    userVoiceType: "vocalApp_voiceType" // Nueva clave
+    userVoiceType: "vocalApp_voiceType",
+    appTheme: "vocalApp_theme"
   };
 
   Object.entries(settings).forEach(([id, storageKey]) => {
@@ -1735,9 +1736,27 @@ function initSettings() {
       el.addEventListener("change", (e) => {
         localStorage.setItem(storageKey, e.target.value);
         showSaveNotification();
+        
+        // Si es el tema, aplicarlo inmediatamente
+        if (id === "appTheme") {
+          applyAppTheme(e.target.value);
+        }
       });
     }
   });
+
+  // Aplicar tema guardado al iniciar
+  applyAppTheme(localStorage.getItem("vocalApp_theme") || "oscuro");
+}
+
+function applyAppTheme(theme) {
+  // Aplicamos el tema al elemento raíz (html)
+  document.documentElement.setAttribute("data-theme", theme);
+  
+  // También al body por si acaso
+  document.body.setAttribute("data-theme", theme);
+  
+  console.log("🎨 Tema aplicado:", theme);
 }
 
 function showSaveNotification() {
