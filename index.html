@@ -174,17 +174,20 @@
   </div>
 
   <div class="sync-adjust" style="margin-top: 15px; padding: 15px; background: var(--bg-main); border-radius: 8px; border: 1px solid var(--border);">
-    <label style="font-weight: bold; display: block; margin-bottom: 10px;">⏱️ Ajuste de sincronización</label>
-    <div style="display: flex; align-items: center; gap: 10px;">
-      <button id="syncMinus" type="button" style="width: 50px; background: #ef4444;">-0.5s</button>
-      <input type="range" id="syncOffset" min="-3" max="3" step="0.1" value="0" style="flex: 1;">
-      <button id="syncPlus" type="button" style="width: 50px; background: #22c55e;">+0.5s</button>
-    </div>
-    <p id="syncValue" style="text-align: center; margin-top: 10px; color: var(--text-muted);">Desfase: 0.0 segundos</p>
-    <p style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">
-      💡 Si la letra va adelantada, usa valores negativos. Si va atrasada, usa positivos.
-    </p>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+    <label style="font-weight: bold;">⏱️ Ajuste de sincronización</label>
+    <button id="toggleAutoScrollBtn" type="button" style="background: #f59e0b; font-size: 12px; padding: 5px 10px;">🔒 Auto-scroll: ON</button>
   </div>
+  <div style="display: flex; align-items: center; gap: 10px;">
+    <button id="syncMinus" type="button" style="width: 50px; background: #ef4444;">-0.5s</button>
+    <input type="range" id="syncOffset" min="-3" max="3" step="0.1" value="0" style="flex: 1;">
+    <button id="syncPlus" type="button" style="width: 50px; background: #22c55e;">+0.5s</button>
+  </div>
+  <p id="syncValue" style="text-align: center; margin-top: 10px; color: var(--text-muted);">Desfase: 0.0 segundos</p>
+  <p style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">
+    💡 Desactiva el auto-scroll para ajustar sin interrupciones. Valores negativos = letra adelantada.
+  </p>
+</div>
 
 
   <div id="karaokeLyrics" class="karaoke-lyrics">
