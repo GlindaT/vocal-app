@@ -436,14 +436,24 @@ async function startStudioRecording() {
 
     $("studioStatus").textContent = "Estado: preparando grabación...";
 
+    // Obtener micrófono seleccionado
+    const micId = getSelectedMicId(1);
+    
+    const audioConstraints = {
+      echoCancellation: false,
+      noiseSuppression: false,
+      autoGainControl: false,
+      channelCount: 1,
+      sampleRate: 48000
+    };
+
+    // Si hay un mic seleccionado, usarlo
+    if (micId) {
+      audioConstraints.deviceId = { exact: micId };
+    }
+
     studioStream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: false,
-        noiseSuppression: false,
-        autoGainControl: false,
-        channelCount: 1,
-        sampleRate: 48000
-      }
+      audio: audioConstraints
     });
 
     const options = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
@@ -466,7 +476,11 @@ async function startStudioRecording() {
     };
 
     studioMediaRecorder.start();
-    $("studioStatus").textContent = "Estado: grabando voz...";
+    
+    // Mostrar qué micrófono se está usando
+    const micSelect = $("mic1Select");
+    const micName = micSelect ? micSelect.options[micSelect.selectedIndex]?.text : "Predeterminado";
+    $("studioStatus").textContent = `Estado: grabando con ${micName}...`;
 
     if (player && player.src) {
       player.currentTime = 0;
@@ -475,7 +489,7 @@ async function startStudioRecording() {
   } catch (error) {
     console.error(error);
     $("studioStatus").textContent = "Estado: error al acceder al micrófono";
-    alert("❌ No se pudo acceder al micrófono");
+    alert("❌ No se pudo acceder al micrófono. Verifica en Configuración.");
   }
 }
 
@@ -1308,14 +1322,24 @@ async function startKaraokeRecording() {
         karaokeRecordedBlob = null;
         $("karaokeVoicePlayer").src = "";
 
+        // Obtener micrófono seleccionado
+        const micId = getSelectedMicId(1);
+        
+        const audioConstraints = {
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false,
+            channelCount: 1,
+            sampleRate: 48000
+        };
+
+        // Si hay un mic seleccionado, usarlo
+        if (micId) {
+            audioConstraints.deviceId = { exact: micId };
+        }
+
         karaokeStream = await navigator.mediaDevices.getUserMedia({
-            audio: {
-                echoCancellation: false,
-                noiseSuppression: false,
-                autoGainControl: false,
-                channelCount: 1,
-                sampleRate: 48000
-            }
+            audio: audioConstraints
         });
 
         const options = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
@@ -1341,12 +1365,15 @@ async function startKaraokeRecording() {
         // ¡AQUÍ ACTIVAMOS EL MONITOR!
         startKaraokePitchDetection();
 
-        $("karaokeStatus").textContent = "Estado: 🔴 Grabando y reproduciendo pista...";
+        // Mostrar qué micrófono se está usando
+        const micSelect = $("mic1Select");
+        const micName = micSelect ? micSelect.options[micSelect.selectedIndex]?.text : "Predeterminado";
+        $("karaokeStatus").textContent = `Estado: 🔴 Grabando con ${micName}...`;
         $("karaokeStartBtn").disabled = true;
 
     } catch (err) {
         console.error(err);
-        alert("❌ Error al acceder al micrófono.");
+        alert("❌ Error al acceder al micrófono. Verifica en Configuración.");
     }
 }
 
@@ -2229,7 +2256,15 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
 // ==========================================
 async function startKaraokePitchDetection() {
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    
+    // Obtener micrófono seleccionado
+    const micId = getSelectedMicId(1);
+    
+    const audioConstraints = { 
+        audio: micId ? { deviceId: { exact: micId } } : true 
+    };
+    
+    const stream = await navigator.mediaDevices.getUserMedia(audioConstraints);
     const mic = audioCtx.createMediaStreamSource(stream);
     const analyser = audioCtx.createAnalyser();
     analyser.fftSize = 2048;
