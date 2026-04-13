@@ -301,6 +301,28 @@
         </div>
         
         <div class="settings-group">
+          <label>🎙️ Micrófono Principal</label>
+          <select id="mic1Select">
+            <option value="">Cargando dispositivos...</option>
+          </select>
+          <button type="button" id="testMic1Btn" style="margin-top: 10px; background: #3b82f6;">🔊 Probar Mic 1</button>
+          <div id="mic1Level" class="mic-level-bar"><div class="mic-level-fill"></div></div>
+        </div>
+        
+        <div class="settings-group" id="mic2Group" style="display: none;">
+          <label>🎙️ Micrófono Secundario (Dúo)</label>
+          <select id="mic2Select">
+            <option value="">Cargando dispositivos...</option>
+          </select>
+          <button type="button" id="testMic2Btn" style="margin-top: 10px; background: #3b82f6;">🔊 Probar Mic 2</button>
+          <div id="mic2Level" class="mic-level-bar"><div class="mic-level-fill"></div></div>
+        </div>
+        
+        <div class="settings-group">
+          <button type="button" id="refreshMicsBtn" style="background: #6b7280;">🔄 Actualizar lista de micrófonos</button>
+        </div>
+        
+        <div class="settings-group">
           <label for="difficultyLevel">📊 Dificultad para el Afinador</label>
           <select id="difficultyLevel">
             <option value="facil">Fácil</option>
