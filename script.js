@@ -1759,6 +1759,200 @@ function applyAppTheme(theme) {
   console.log("🎨 Tema aplicado:", theme);
 }
 
+// ==========================================
+// GESTIÓN DE MICRÓFONOS
+// ==========================================
+let micTestStream = null;
+let micTestAnalyser = null;
+let micTestAnimationId = null;
+
+async function loadAvailableMics() {
+  try {
+    // Primero pedimos permiso para acceder al micrófono
+    await navigator.mediaDevices.getUserMedia({ audio: true });
+    
+    // Luego obtenemos la lista de dispositivos
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const mics = devices.filter(d => d.kind === "audioinput");
+
+    const mic1Select = $("mic1Select");
+    const mic2Select = $("mic2Select");
+
+    if (mic1Select) {
+      mic1Select.innerHTML = "";
+      if (mics.length === 0) {
+        mic1Select.innerHTML = `<option value="">No se detectaron micrófonos</option>`;
+      } else {
+        mics.forEach((mic, index) => {
+          const option = document.createElement("option");
+          option.value = mic.deviceId;
+          option.textContent = mic.label || `Micrófono ${index + 1}`;
+          mic1Select.appendChild(option);
+        });
+      }
+
+      // Cargar selección guardada
+      const savedMic1 = localStorage.getItem("vocalApp_mic1");
+      if (savedMic1) mic1Select.value = savedMic1;
+    }
+
+    if (mic2Select) {
+      mic2Select.innerHTML = "";
+      if (mics.length === 0) {
+        mic2Select.innerHTML = `<option value="">No se detectaron micrófonos</option>`;
+      } else {
+        mics.forEach((mic, index) => {
+          const option = document.createElement("option");
+          option.value = mic.deviceId;
+          option.textContent = mic.label || `Micrófono ${index + 1}`;
+          mic2Select.appendChild(option);
+        });
+      }
+
+      // Cargar selección guardada
+      const savedMic2 = localStorage.getItem("vocalApp_mic2");
+      if (savedMic2) mic2Select.value = savedMic2;
+    }
+
+    console.log("🎙️ Micrófonos detectados:", mics.length);
+  } catch (error) {
+    console.error("Error al cargar micrófonos:", error);
+    
+    const mic1Select = $("mic1Select");
+    const mic2Select = $("mic2Select");
+    
+    if (mic1Select) {
+      mic1Select.innerHTML = `<option value="">⚠️ Permite acceso al micrófono</option>`;
+    }
+    if (mic2Select) {
+      mic2Select.innerHTML = `<option value="">⚠️ Permite acceso al micrófono</option>`;
+    }
+  }
+}
+
+function toggleMic2Visibility() {
+  const micCount = $("micCount");
+  const mic2Group = $("mic2Group");
+
+  if (micCount && mic2Group) {
+    if (micCount.value === "2") {
+      mic2Group.style.display = "block";
+    } else {
+      mic2Group.style.display = "none";
+    }
+  }
+}
+
+async function testMicrophone(micNumber) {
+  // Detener cualquier prueba anterior
+  stopMicTest();
+
+  const selectId = micNumber === 1 ? "mic1Select" : "mic2Select";
+  const levelId = micNumber === 1 ? "mic1Level" : "mic2Level";
+
+  const select = $(selectId);
+  const levelBar = $(levelId);
+
+  if (!select || !levelBar) return;
+
+  const deviceId = select.value;
+  if (!deviceId) {
+    alert("⚠️ Selecciona un micrófono primero");
+    return;
+  }
+
+  try {
+    const constraints = {
+      audio: {
+        deviceId: { exact: deviceId },
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false
+      }
+    };
+
+    micTestStream = await navigator.mediaDevices.getUserMedia(constraints);
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const source = audioCtx.createMediaStreamSource(micTestStream);
+    micTestAnalyser = audioCtx.createAnalyser();
+    micTestAnalyser.fftSize = 256;
+    source.connect(micTestAnalyser);
+
+    const levelFill = levelBar.querySelector(".mic-level-fill");
+    if (levelFill) {
+      levelFill.classList.add("active");
+    }
+
+    function updateLevel() {
+      if (!micTestAnalyser) return;
+
+      const dataArray = new Uint8Array(micTestAnalyser.frequencyBinCount);
+      micTestAnalyser.getByteFrequencyData(dataArray);
+
+      // Calcular volumen promedio
+      const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+      const percentage = Math.min(100, (average / 128) * 100);
+
+      if (levelFill) {
+        levelFill.style.width = percentage + "%";
+      }
+
+      micTestAnimationId = requestAnimationFrame(updateLevel);
+    }
+
+    updateLevel();
+
+    // Detener automáticamente después de 5 segundos
+    setTimeout(() => {
+      stopMicTest();
+    }, 5000);
+
+  } catch (error) {
+    console.error("Error al probar micrófono:", error);
+    alert("❌ No se pudo acceder al micrófono seleccionado");
+  }
+}
+
+function stopMicTest() {
+  if (micTestAnimationId) {
+    cancelAnimationFrame(micTestAnimationId);
+    micTestAnimationId = null;
+  }
+
+  if (micTestStream) {
+    micTestStream.getTracks().forEach(track => track.stop());
+    micTestStream = null;
+  }
+
+  micTestAnalyser = null;
+
+  // Resetear barras de nivel
+  const fills = document.querySelectorAll(".mic-level-fill");
+  fills.forEach(fill => {
+    fill.style.width = "0%";
+    fill.classList.remove("active");
+  });
+}
+
+function saveMicSelection(micNumber) {
+  const selectId = micNumber === 1 ? "mic1Select" : "mic2Select";
+  const storageKey = micNumber === 1 ? "vocalApp_mic1" : "vocalApp_mic2";
+
+  const select = $(selectId);
+  if (select) {
+    localStorage.setItem(storageKey, select.value);
+    showSaveNotification();
+  }
+}
+
+// Función helper para obtener el deviceId del mic seleccionado
+function getSelectedMicId(micNumber) {
+  const selectId = micNumber === 1 ? "mic1Select" : "mic2Select";
+  const select = $(selectId);
+  return select ? select.value : null;
+}
+
 function showSaveNotification() {
   const notif = $("saveNotification");
   if (!notif) return;
@@ -1904,6 +2098,18 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // splitter
     safeAdd("splitBtn", "click", splitAudio);
+
+    // micrófonos
+      safeAdd("refreshMicsBtn", "click", loadAvailableMics);
+      safeAdd("testMic1Btn", "click", () => testMicrophone(1));
+      safeAdd("testMic2Btn", "click", () => testMicrophone(2));
+      safeAdd("mic1Select", "change", () => saveMicSelection(1));
+      safeAdd("mic2Select", "change", () => saveMicSelection(2));
+      safeAdd("micCount", "change", toggleMic2Visibility);
+    
+    // Cargar micrófonos al iniciar
+      loadAvailableMics();
+      toggleMic2Visibility();
 
     // init
     await renderLibrary('todos');
