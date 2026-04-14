@@ -3345,13 +3345,123 @@ async function loadKaraokeCatalog() {
   const container = $("catalogList");
   if (!container) return;
   
-  // Por ahora mostramos mensaje - luego cargaremos del servidor
-  container.innerHTML = `
-    <div style="text-align: center; padding: 20px; color: var(--text-muted);">
-      <p>📚 El catálogo pre-cargado estará disponible próximamente.</p>
-      <p style="font-size: 13px;">Por ahora, importa canciones de UltraStar o crea las tuyas en Estudio.</p>
-    </div>
-  `;
+  container.innerHTML = `<p style="color: var(--text-muted);">Cargando catálogo...</p>`;
+  
+  try {
+    // Cargar el catálogo desde el repositorio
+    const response = await fetch("./karaoke-catalog/catalog.json");
+    
+    if (!response.ok) {
+      throw new Error("No se pudo cargar el catálogo");
+    }
+    
+    const catalog = await response.json();
+    
+    if (!catalog.songs || catalog.songs.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 20px; color: var(--text-muted);">
+          <p>📚 El catálogo está vacío.</p>
+        </div>
+      `;
+      return;
+    }
+    
+    container.innerHTML = "";
+    
+    catalog.songs.forEach(song => {
+      const div = document.createElement("div");
+      div.className = "catalog-item";
+      
+      div.innerHTML = `
+        <div class="catalog-item-info">
+          <p class="catalog-item-title">🎵 ${song.title}</p>
+          <p class="catalog-item-artist">${song.artist}</p>
+        </div>
+        <div class="catalog-item-actions">
+          <button type="button" class="load-catalog-btn" data-folder="${song.folder}" data-title="${song.title}" data-artist="${song.artist}" style="background: #22c55e;">▶️ Cantar</button>
+        </div>
+      `;
+      
+      container.appendChild(div);
+    });
+    
+    // Agregar eventos a los botones
+    container.querySelectorAll(".load-catalog-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        loadCatalogSong(btn.dataset.folder, btn.dataset.title, btn.dataset.artist);
+      });
+    });
+    
+    console.log("📚 Catálogo cargado:", catalog.songs.length, "canciones");
+    
+  } catch (error) {
+    console.error("Error cargando catálogo:", error);
+    container.innerHTML = `
+      <div style="text-align: center; padding: 20px; color: var(--text-muted);">
+        <p>📚 No se pudo cargar el catálogo.</p>
+        <p style="font-size: 13px;">Importa canciones de UltraStar o crea las tuyas en Estudio.</p>
+      </div>
+    `;
+  }
+}
+
+async function loadCatalogSong(folder, title, artist) {
+  const status = $("karaokeStatus");
+  
+  try {
+    if (status) status.textContent = `Estado: Cargando "${title}"...`;
+    
+    // Cargar el archivo de sincronización
+    const syncResponse = await fetch(`./karaoke-catalog/${folder}/sync.txt`);
+    if (!syncResponse.ok) {
+      throw new Error("No se pudo cargar la sincronización");
+    }
+    const syncContent = await syncResponse.text();
+    
+    // Parsear el archivo UltraStar
+    const parsed = parseUltrastarTxt(syncContent);
+    const segments = ultrastarToSegments(parsed);
+    
+    if (segments.length === 0) {
+      throw new Error("No se pudieron extraer las notas");
+    }
+    
+    // Cargar el audio
+    const audioResponse = await fetch(`./karaoke-catalog/${folder}/audio.mp3`);
+    if (!audioResponse.ok) {
+      throw new Error("No se pudo cargar el audio");
+    }
+    const audioBlob = await audioResponse.blob();
+    
+    // Configurar el reproductor
+    const track = $("karaokeTrack");
+    if (track) {
+      track.src = URL.createObjectURL(audioBlob);
+      track.volume = 0.4;
+      karaokeSelectedTrackBlob = audioBlob;
+      karaokeSelectedTrackName = `${title} - ${artist}`;
+    }
+    
+    // Configurar la sincronización
+    transcriptionSegments = segments;
+    baseTranscriptionSegments = segments;
+    cargarLetrasEnMonitor();
+    
+    if (status) status.textContent = `Estado: "${title}" cargada. ¡Lista para cantar! 🎤`;
+    
+    // Scroll al monitor
+    const canvas = $("karaokeCanvas");
+    if (canvas) {
+      canvas.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    
+    console.log("✅ Canción del catálogo cargada:", title);
+    
+  } catch (error) {
+    console.error("Error cargando canción del catálogo:", error);
+    if (status) status.textContent = `Estado: Error al cargar "${title}"`;
+    alert(`❌ Error al cargar la canción: ${error.message}`);
+  }
 }
 
 async function loadMyKaraokeSongs() {
