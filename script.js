@@ -2424,7 +2424,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       safeAdd("syncMinus", "click", () => {
           const slider = $("syncOffset");
           if (slider) {
-              syncOffset = Math.max(-5, syncOffset - 0.5);
+              syncOffset = Math.max(-10, syncOffset - 0.5);
               slider.value = syncOffset;
               slider.dispatchEvent(new Event("input"));
           }
@@ -2433,7 +2433,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       safeAdd("syncPlus", "click", () => {
           const slider = $("syncOffset");
           if (slider) {
-              syncOffset = Math.min(5, syncOffset + 0.5);
+              syncOffset = Math.min(10, syncOffset + 0.5);
               slider.value = syncOffset;
               slider.dispatchEvent(new Event("input"));
           }
