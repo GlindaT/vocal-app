@@ -1151,7 +1151,9 @@ function buildWordTimingFromSegment(segment) {
       words: rawWords.map(word => ({
         word,
         start: segment.start,
-        end: segment.end
+        end: segment.end,
+        pitch: segment.pitch || null,
+        note: segment.note || null
       }))
     };
   }
@@ -1174,7 +1176,9 @@ function buildWordTimingFromSegment(segment) {
     return {
       word,
       start: wordStart,
-      end: wordEnd
+      end: wordEnd,
+      pitch: segment.pitch || null,
+      note: segment.note || null
     };
   });
 
@@ -1183,6 +1187,132 @@ function buildWordTimingFromSegment(segment) {
     words: timedWords
   };
 }
+
+// ==========================================
+// ANÁLISIS DE PITCH PARA ULTRASTAR
+// ==========================================
+async function analyzePitchForSegments(audioBlob, segments) {
+  if (!audioBlob || !segments || !segments.length) {
+    console.log("⚠️ No hay audio o segmentos para analizar");
+    return segments;
+  }
+
+  try {
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const arrayBuffer = await audioBlob.arrayBuffer();
+    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+    
+    const sampleRate = audioBuffer.sampleRate;
+    const channelData = audioBuffer.getChannelData(0);
+    
+    console.log("🎵 Analizando pitch de", segments.length, "segmentos...");
+
+    const analyzedSegments = segments.map((segment, index) => {
+      // Obtener muestras para este segmento
+      const startSample = Math.floor(segment.start * sampleRate);
+      const endSample = Math.floor(segment.end * sampleRate);
+      
+      // Extraer porción del audio
+      const segmentSamples = channelData.slice(startSample, endSample);
+      
+      // Detectar pitch promedio del segmento
+      const pitch = detectPitchFromSamples(segmentSamples, sampleRate);
+      const note = pitch > 0 ? getNoteFromFrequency(pitch) : null;
+      const midiNote = pitch > 0 ? frequencyToMidi(pitch) : null;
+      
+      // Analizar pitch por palabra si hay palabras
+      let analyzedWords = [];
+      if (Array.isArray(segment.words) && segment.words.length > 0) {
+        analyzedWords = segment.words.map(word => {
+          const wordStartSample = Math.floor(word.start * sampleRate);
+          const wordEndSample = Math.floor(word.end * sampleRate);
+          const wordSamples = channelData.slice(wordStartSample, wordEndSample);
+          
+          const wordPitch = detectPitchFromSamples(wordSamples, sampleRate);
+          const wordNote = wordPitch > 0 ? getNoteFromFrequency(wordPitch) : note;
+          const wordMidi = wordPitch > 0 ? frequencyToMidi(wordPitch) : midiNote;
+          
+          return {
+            ...word,
+            pitch: wordPitch > 0 ? wordPitch : pitch,
+            note: wordNote,
+            midi: wordMidi
+          };
+        });
+      }
+
+      return {
+        ...segment,
+        pitch: pitch,
+        note: note,
+        midi: midiNote,
+        words: analyzedWords
+      };
+    });
+
+    console.log("✅ Análisis de pitch completado");
+    return analyzedSegments;
+
+  } catch (error) {
+    console.error("❌ Error analizando pitch:", error);
+    return segments;
+  }
+}
+
+function detectPitchFromSamples(samples, sampleRate) {
+  if (!samples || samples.length < 256) return -1;
+  
+  // Calcular RMS para verificar si hay señal
+  let rms = 0;
+  for (let i = 0; i < samples.length; i++) {
+    rms += samples[i] * samples[i];
+  }
+  rms = Math.sqrt(rms / samples.length);
+  
+  if (rms < 0.01) return -1; // Silencio
+  
+  // Autocorrelación simplificada
+  const bufferSize = Math.min(2048, samples.length);
+  const buffer = samples.slice(0, bufferSize);
+  
+  let bestOffset = -1;
+  let bestCorrelation = 0;
+  
+  for (let offset = 8; offset < bufferSize / 2; offset++) {
+    let correlation = 0;
+    
+    for (let i = 0; i < bufferSize - offset; i++) {
+      correlation += Math.abs(buffer[i] - buffer[i + offset]);
+    }
+    
+    correlation = 1 - (correlation / (bufferSize - offset));
+    
+    if (correlation > bestCorrelation) {
+      bestCorrelation = correlation;
+      bestOffset = offset;
+    }
+  }
+  
+  if (bestCorrelation < 0.8 || bestOffset === -1) return -1;
+  
+  const frequency = sampleRate / bestOffset;
+  
+  // Filtrar frecuencias fuera del rango vocal
+  if (frequency < 80 || frequency > 1000) return -1;
+  
+  return frequency;
+}
+
+function frequencyToMidi(freq) {
+  if (freq <= 0) return 0;
+  return Math.round(12 * Math.log2(freq / 440) + 69);
+}
+
+function midiToFrequency(midi) {
+  return 440 * Math.pow(2, (midi - 69) / 12);
+}
+
+
 
 function splitSegmentsIntoKaraokeLines(segments, maxWordsPerLine = 6) {
   const result = [];
@@ -2483,7 +2613,7 @@ function cancelTapSync() {
   tapSyncCurrentIndex = 0;
 }
 
-function applyTapSync() {
+async function applyTapSync() {
   if (tapSyncTimestamps.length === 0 || tapSyncLines.length === 0) {
     alert("⚠️ No hay datos de sincronización.");
     return;
@@ -2491,6 +2621,10 @@ function applyTapSync() {
   
   const voicePlayer = $("selectedVoicePlayer");
   const totalDuration = voicePlayer ? voicePlayer.duration : 0;
+  const status = $("selectedVoiceStatus");
+  
+  // Mostrar estado
+  if (status) status.textContent = "Estado: Aplicando tiempos y analizando notas...";
   
   const newSegments = [];
   
@@ -2505,8 +2639,15 @@ function applyTapSync() {
     }));
   }
   
-  baseTranscriptionSegments = newSegments;
-  transcriptionSegments = newSegments;
+  // Analizar pitch si tenemos el blob de audio
+  let analyzedSegments = newSegments;
+  if (selectedVoiceBlob) {
+    if (status) status.textContent = "Estado: Analizando notas musicales... 🎵";
+    analyzedSegments = await analyzePitchForSegments(selectedVoiceBlob, newSegments);
+  }
+  
+  baseTranscriptionSegments = analyzedSegments;
+  transcriptionSegments = analyzedSegments;
   
   renderKaraokeLyrics(transcriptionSegments);
   cargarLetrasEnMonitor();
@@ -2524,11 +2665,11 @@ function applyTapSync() {
   tapSyncTimestamps = [];
   tapSyncCurrentIndex = 0;
   
-  const status = $("selectedVoiceStatus");
-  if (status) status.textContent = "Estado: ✅ Sincronización aplicada y guardada";
+  if (status) status.textContent = "Estado: ✅ Sincronización y notas aplicadas";
   
-  alert("✅ ¡Tiempos aplicados! Reproduce para verificar.");
+  alert("✅ ¡Tiempos y notas aplicados! Reproduce para verificar.");
 }
+
 
 function redoTapSync() {
   $("tapSyncResult").style.display = "none";
@@ -2666,119 +2807,180 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
 
-  // Guardamos la frecuencia actual en el historial
+  // Guardamos la frecuencia actual
   pitchHistory.push(currentFreq > 0 ? currentFreq : null);
-  if (pitchHistory.length > canvas.width / 5) pitchHistory.shift();
+  if (pitchHistory.length > 60) pitchHistory.shift();
 
   // Limpiamos el canvas
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // --- DIBUJAR LÍNEAS DEL PENTAGRAMA (FONDO) ---
+  // Configuración del pentagrama
+  const pentagramTop = 30;
+  const pentagramBottom = canvas.height - 60;
+  const pentagramHeight = pentagramBottom - pentagramTop;
+  
+  // Rango de notas (MIDI): C3 (48) a C6 (84)
+  const midiMin = 48;
+  const midiMax = 84;
+  const midiRange = midiMax - midiMin;
+
+  // --- DIBUJAR LÍNEAS DEL PENTAGRAMA ---
   ctx.strokeStyle = "#333";
   ctx.lineWidth = 1;
-  for (let i = 1; i < 5; i++) {
+  const numLines = 12;
+  for (let i = 0; i <= numLines; i++) {
+    const y = pentagramTop + (pentagramHeight / numLines) * i;
     ctx.beginPath();
-    ctx.moveTo(0, (canvas.height / 5) * i);
-    ctx.lineTo(canvas.width, (canvas.height / 5) * i);
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
     ctx.stroke();
   }
 
-  // --- DIBUJAR BARRAS DE LETRAS ---
+  // --- DIBUJAR INDICADORES DE NOTAS A LA IZQUIERDA ---
+  ctx.fillStyle = "#666";
+  ctx.font = "10px Arial";
+  ctx.textAlign = "right";
+  const noteLabels = ["C6", "A5", "F5", "D5", "B4", "G4", "E4", "C4", "A3", "F3", "D3", "C3"];
+  noteLabels.forEach((label, i) => {
+    const y = pentagramTop + (pentagramHeight / numLines) * i + 4;
+    ctx.fillText(label, 25, y);
+  });
+
+  // Función para convertir MIDI a posición Y
+  function midiToY(midi) {
+    if (!midi || midi < midiMin) midi = midiMin;
+    if (midi > midiMax) midi = midiMax;
+    const normalized = (midiMax - midi) / midiRange;
+    return pentagramTop + normalized * pentagramHeight;
+  }
+
+  // --- DIBUJAR BARRAS DE NOTAS (ULTRASTAR STYLE) ---
   if (Array.isArray(transcriptionSegments) && transcriptionSegments.length > 0) {
     
-    // Encontrar el índice de la línea actual
-    let currentIndex = -1;
-    for (let i = 0; i < transcriptionSegments.length; i++) {
-      if (currentTime >= transcriptionSegments[i].start && currentTime <= transcriptionSegments[i].end + 1) {
-        currentIndex = i;
-        break;
-      }
-    }
+    // Ventana de tiempo visible (5 segundos hacia adelante, 1 hacia atrás)
+    const timeWindowStart = currentTime - 1;
+    const timeWindowEnd = currentTime + 5;
+    const pixelsPerSecond = (canvas.width - 40) / 6; // 6 segundos de ventana
+    const lineX = 40; // Línea de tiempo actual
 
-    // Si no encontramos línea actual, buscar la siguiente
-    if (currentIndex === -1) {
-      for (let i = 0; i < transcriptionSegments.length; i++) {
-        if (transcriptionSegments[i].start > currentTime) {
-          currentIndex = i;
-          break;
+    // Dibujar línea de tiempo actual
+    ctx.strokeStyle = "#ef4444";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(lineX, pentagramTop);
+    ctx.lineTo(lineX, pentagramBottom);
+    ctx.stroke();
+
+    // Recorrer todos los segmentos
+    transcriptionSegments.forEach((segment) => {
+      const words = Array.isArray(segment.words) ? segment.words : [];
+      
+      words.forEach((word) => {
+        // Verificar si está en la ventana visible
+        if (word.end < timeWindowStart || word.start > timeWindowEnd) return;
+        
+        // Calcular posición X basada en el tiempo
+        const wordStartX = lineX + (word.start - currentTime) * pixelsPerSecond;
+        const wordEndX = lineX + (word.end - currentTime) * pixelsPerSecond;
+        const barWidth = Math.max(wordEndX - wordStartX, 20);
+        
+        // Posición Y basada en la nota MIDI
+        const midi = word.midi || segment.midi || 60; // Default: C4
+        const barY = midiToY(midi);
+        const barHeight = 22;
+        
+        // Determinar si la palabra está activa
+        const isActive = currentTime >= word.start && currentTime <= word.end;
+        const isPast = currentTime > word.end;
+        
+        // Determinar si el usuario está cantando la nota correcta
+        let isCorrect = false;
+        if (isActive && currentFreq > 0) {
+          const userMidi = frequencyToMidi(currentFreq);
+          isCorrect = Math.abs(userMidi - midi) <= 2; // Tolerancia de 2 semitonos
         }
-      }
-    }
-
-    // Mostrar líneas alrededor de la actual (2 antes, actual, 2 después)
-    const startIdx = Math.max(0, currentIndex - 2);
-    const endIdx = Math.min(transcriptionSegments.length, currentIndex + 3);
-
-    for (let i = startIdx; i < endIdx; i++) {
-      const seg = transcriptionSegments[i];
-      const relativeIndex = i - currentIndex;
-
-      // Calcular posición Y basada en la posición relativa
-      const baseY = canvas.height / 2;
-      const y = baseY + (relativeIndex * 60);
-
-      // Calcular posición X (progreso de la línea)
-      const segDuration = seg.end - seg.start;
-      const progress = Math.max(0, Math.min(1, (currentTime - seg.start) / segDuration));
-      
-      const barWidth = canvas.width * 0.7;
-      const barX = (canvas.width - barWidth) / 2;
-
-      // Determinar si es la línea activa
-      const isActive = (currentTime >= seg.start && currentTime <= seg.end + 0.5);
-
-      // Dibujar barra de fondo
-      ctx.fillStyle = isActive ? "#1e40af" : "#1e3a5f";
-      ctx.fillRect(barX, y - 15, barWidth, 30);
-
-      // Dibujar progreso (parte cantada)
-      if (isActive && progress > 0) {
-        ctx.fillStyle = "#3b82f6";
-        ctx.fillRect(barX, y - 15, barWidth * progress, 30);
-      }
-
-      // Dibujar borde
-      ctx.strokeStyle = isActive ? "#60a5fa" : "#334155";
-      ctx.lineWidth = isActive ? 2 : 1;
-      ctx.strokeRect(barX, y - 15, barWidth, 30);
-
-      // Dibujar texto
-      ctx.fillStyle = isActive ? "#ffffff" : "#94a3b8";
-      ctx.font = isActive ? "bold 16px Arial" : "14px Arial";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      
-      // Truncar texto si es muy largo
-      let displayText = seg.text || "";
-      if (displayText.length > 50) {
-        displayText = displayText.substring(0, 47) + "...";
-      }
-      ctx.fillText(displayText, canvas.width / 2, y);
-    }
+        
+        // Colores según estado
+        let barColor, textColor, borderColor;
+        if (isPast) {
+          barColor = "#4b5563"; // Gris
+          textColor = "#9ca3af";
+          borderColor = "#6b7280";
+        } else if (isActive) {
+          if (isCorrect) {
+            barColor = "#22c55e"; // Verde - ¡Correcto!
+            textColor = "#ffffff";
+            borderColor = "#4ade80";
+          } else {
+            barColor = "#3b82f6"; // Azul - Activo
+            textColor = "#ffffff";
+            borderColor = "#60a5fa";
+          }
+        } else {
+          barColor = "#1e40af"; // Azul oscuro - Próximo
+          textColor = "#93c5fd";
+          borderColor = "#3b82f6";
+        }
+        
+        // Dibujar barra con bordes redondeados
+        ctx.fillStyle = barColor;
+        ctx.beginPath();
+        ctx.roundRect(wordStartX, barY - barHeight/2, barWidth, barHeight, 8);
+        ctx.fill();
+        
+        // Borde
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = isActive ? 2 : 1;
+        ctx.stroke();
+        
+        // Texto de la palabra
+        ctx.fillStyle = textColor;
+        ctx.font = isActive ? "bold 12px Arial" : "11px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        
+        // Truncar si es muy largo
+        let displayWord = word.word || "";
+        if (displayWord.length > 10) {
+          displayWord = displayWord.substring(0, 8) + "..";
+        }
+        ctx.fillText(displayWord, wordStartX + barWidth/2, barY);
+      });
+    });
 
   } else {
-    // Si no hay segmentos, mostrar mensaje
     ctx.fillStyle = "#666";
     ctx.font = "16px Arial";
     ctx.textAlign = "center";
-    ctx.fillText("Carga una voz transcrita en 'Estudio' primero", canvas.width / 2, canvas.height / 2);
+    ctx.fillText("Sincroniza una canción en 'Estudio' para ver las notas", canvas.width / 2, canvas.height / 2);
   }
 
-  // --- DIBUJAR EL RASTRO DE LA VOZ (LÍNEA VERDE) ---
+  // --- DIBUJAR LA VOZ DEL USUARIO (LÍNEA/PUNTO) ---
   if (currentFreq > 0) {
+    const userMidi = frequencyToMidi(currentFreq);
+    const userY = midiToY(userMidi);
+    
+    // Punto grande en la posición actual
     ctx.beginPath();
-    ctx.strokeStyle = "#22c55e";
-    ctx.lineWidth = 4;
-    ctx.shadowBlur = 8;
-    ctx.shadowColor = "#22c55e";
-
+    ctx.fillStyle = "#facc15";
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = "#facc15";
+    ctx.arc(40, userY, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    
+    // Rastro de la voz
+    ctx.beginPath();
+    ctx.strokeStyle = "rgba(250, 204, 21, 0.6)";
+    ctx.lineWidth = 3;
+    
     let started = false;
-    pitchHistory.forEach((f, i) => {
-      if (f) {
-        const x = (i / pitchHistory.length) * canvas.width;
-        const rawY = canvas.height - (Math.log2(f / 110) * 30);
-        const y = Math.max(10, Math.min(canvas.height - 10, rawY));
-
+    pitchHistory.forEach((freq, i) => {
+      if (freq) {
+        const midi = frequencyToMidi(freq);
+        const y = midiToY(midi);
+        const x = 40 - (pitchHistory.length - i) * 2;
+        
         if (!started) {
           ctx.moveTo(x, y);
           started = true;
@@ -2788,10 +2990,39 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
       }
     });
     ctx.stroke();
-    ctx.shadowBlur = 0;
+  }
+
+  // --- DIBUJAR LETRA ACTUAL ABAJO ---
+  const currentSegment = transcriptionSegments.find(seg => 
+    currentTime >= seg.start && currentTime <= seg.end + 0.5
+  );
+  
+  if (currentSegment) {
+    // Fondo para la letra
+    ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+    ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+    
+    // Letra actual
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 20px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(currentSegment.text || "", canvas.width / 2, canvas.height - 25);
+  }
+
+  // --- DIBUJAR SIGUIENTE LÍNEA ---
+  const nextSegment = transcriptionSegments.find(seg => seg.start > currentTime);
+  if (nextSegment && !currentSegment) {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+    ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+    
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "16px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("Próximo: " + (nextSegment.text || ""), canvas.width / 2, canvas.height - 25);
   }
 }
-    
+
 // ==========================================
 // DETECCIÓN DE PITCH PARA KARAOKE
 // ==========================================
