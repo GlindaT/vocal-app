@@ -2742,7 +2742,27 @@ document.addEventListener("DOMContentLoaded", async () => {
     safeAdd("tapBeatBtn", "click", recordTap);
     safeAdd("applyTapSyncBtn", "click", applyTapSync);
     safeAdd("redoTapSyncBtn", "click", redoTapSync);
-
+      
+    // Importador UltraStar
+    safeAdd("importUltrastarBtn", "click", openUltrastarModal);
+    safeAdd("cancelImportBtn", "click", closeUltrastarModal);
+    safeAdd("confirmImportBtn", "click", confirmUltrastarImport);
+    safeAdd("ultrastarTxtFile", "change", handleUltrastarTxtChange);
+    safeAdd("refreshKaraokeCatalogBtn", "click", async () => {
+      await loadKaraokeCatalog();
+      await loadMyKaraokeSongs();
+    });
+      
+    // Cerrar modal al hacer clic fuera
+    $("ultrastarModal")?.addEventListener("click", (e) => {
+      if (e.target.id === "ultrastarModal") {
+        closeUltrastarModal();
+      }
+    });
+      
+    // Cargar catálogo y mis canciones al iniciar
+    loadKaraokeCatalog();
+    loadMyKaraokeSongs();
     
     // biblioteca
     safeAdd("saveLibraryFileBtn", "click", saveManualFileToLibrary);
@@ -3062,4 +3082,377 @@ async function startKaraokePitchDetection() {
     }
 
     loop();
+}
+
+// ==========================================
+// IMPORTADOR ULTRASTAR
+// ==========================================
+let parsedUltrastar = null;
+
+function openUltrastarModal() {
+  const modal = $("ultrastarModal");
+  if (modal) {
+    modal.style.display = "flex";
+    // Limpiar campos
+    $("ultrastarTxtFile").value = "";
+    $("ultrastarAudioFile").value = "";
+    $("ultrastarVocalsFile").value = "";
+    $("ultrastarPreview").style.display = "none";
+    parsedUltrastar = null;
+  }
+}
+
+function closeUltrastarModal() {
+  const modal = $("ultrastarModal");
+  if (modal) {
+    modal.style.display = "none";
+    parsedUltrastar = null;
+  }
+}
+
+function parseUltrastarTxt(content) {
+  const lines = content.split("\n");
+  const metadata = {};
+  const notes = [];
+  
+  let currentBeat = 0;
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    
+    // Metadatos (líneas que empiezan con #)
+    if (trimmed.startsWith("#")) {
+      const match = trimmed.match(/^#(\w+):(.*)$/);
+      if (match) {
+        const key = match[1].toUpperCase();
+        const value = match[2].trim();
+        metadata[key] = value;
+      }
+      continue;
+    }
+    
+    // Notas (líneas que empiezan con :, *, F, o -)
+    if (trimmed.match(/^[:*F\-]/)) {
+      const parts = trimmed.split(/\s+/);
+      const type = parts[0]; // : = normal, * = golden, F = freestyle, - = line break
+      
+      if (type === "-") {
+        // Line break - marca fin de línea
+        continue;
+      }
+      
+      if (parts.length >= 4) {
+        const startBeat = parseInt(parts[1], 10);
+        const duration = parseInt(parts[2], 10);
+        const pitch = parseInt(parts[3], 10);
+        const syllable = parts.slice(4).join(" ");
+        
+        notes.push({
+          type: type,
+          startBeat: startBeat,
+          duration: duration,
+          pitch: pitch, // Nota MIDI relativa
+          syllable: syllable
+        });
+      }
+    }
+  }
+  
+  return {
+    title: metadata.TITLE || "Sin título",
+    artist: metadata.ARTIST || "Desconocido",
+    bpm: parseFloat(metadata.BPM) || 120,
+    gap: parseFloat(metadata.GAP) || 0, // Milisegundos antes de la primera nota
+    videoGap: parseFloat(metadata.VIDEOGAP) || 0,
+    genre: metadata.GENRE || "",
+    language: metadata.LANGUAGE || "",
+    year: metadata.YEAR || "",
+    notes: notes
+  };
+}
+
+function ultrastarToSegments(parsed) {
+  if (!parsed || !parsed.notes || !parsed.notes.length) {
+    return [];
+  }
+  
+  const bpm = parsed.bpm;
+  const gap = parsed.gap / 1000; // Convertir a segundos
+  const beatDuration = 60 / bpm / 4; // Duración de un beat en segundos (UltraStar usa quarter beats)
+  
+  // Agrupar sílabas en líneas/palabras
+  const segments = [];
+  let currentSegment = null;
+  let currentWords = [];
+  let lastEndBeat = 0;
+  
+  for (let i = 0; i < parsed.notes.length; i++) {
+    const note = parsed.notes[i];
+    
+    const startTime = gap + (note.startBeat * beatDuration);
+    const endTime = startTime + (note.duration * beatDuration);
+    const midiNote = 60 + note.pitch; // UltraStar usa pitch relativo, base = C4 (60)
+    
+    // Detectar si hay un salto grande (nueva línea)
+    const gapFromLast = note.startBeat - lastEndBeat;
+    
+    if (gapFromLast > 8 && currentWords.length > 0) {
+      // Guardar segmento anterior
+      if (currentWords.length > 0) {
+        segments.push({
+          start: currentWords[0].start,
+          end: currentWords[currentWords.length - 1].end,
+          text: currentWords.map(w => w.word).join(""),
+          words: currentWords,
+          pitch: currentWords[0].pitch,
+          midi: currentWords[0].midi,
+          note: currentWords[0].note
+        });
+      }
+      currentWords = [];
+    }
+    
+    // Agregar palabra/sílaba
+    currentWords.push({
+      word: note.syllable,
+      start: startTime,
+      end: endTime,
+      pitch: midiToFrequency(midiNote),
+      midi: midiNote,
+      note: getNoteFromFrequency(midiToFrequency(midiNote))
+    });
+    
+    lastEndBeat = note.startBeat + note.duration;
+  }
+  
+  // Agregar último segmento
+  if (currentWords.length > 0) {
+    segments.push({
+      start: currentWords[0].start,
+      end: currentWords[currentWords.length - 1].end,
+      text: currentWords.map(w => w.word).join(""),
+      words: currentWords,
+      pitch: currentWords[0].pitch,
+      midi: currentWords[0].midi,
+      note: currentWords[0].note
+    });
+  }
+  
+  return segments;
+}
+
+async function handleUltrastarTxtChange(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  try {
+    const content = await file.text();
+    parsedUltrastar = parseUltrastarTxt(content);
+    
+    // Mostrar preview
+    $("ultrastarTitle").innerHTML = `<strong>Título:</strong> ${parsedUltrastar.title}`;
+    $("ultrastarArtist").innerHTML = `<strong>Artista:</strong> ${parsedUltrastar.artist}`;
+    $("ultrastarBpm").innerHTML = `<strong>BPM:</strong> ${parsedUltrastar.bpm}`;
+    $("ultrastarNotes").innerHTML = `<strong>Notas:</strong> ${parsedUltrastar.notes.length} sílabas`;
+    $("ultrastarPreview").style.display = "block";
+    
+    console.log("📄 UltraStar parseado:", parsedUltrastar);
+  } catch (error) {
+    console.error("Error parseando UltraStar:", error);
+    alert("❌ Error al leer el archivo. Verifica que sea un .txt de UltraStar válido.");
+  }
+}
+
+async function confirmUltrastarImport() {
+  if (!parsedUltrastar) {
+    alert("⚠️ Primero selecciona un archivo .txt de UltraStar");
+    return;
+  }
+  
+  const audioFile = $("ultrastarAudioFile").files[0];
+  if (!audioFile) {
+    alert("⚠️ Selecciona el archivo de audio de la canción");
+    return;
+  }
+  
+  const vocalsFile = $("ultrastarVocalsFile").files[0];
+  
+  try {
+    // Convertir notas a nuestro formato de segmentos
+    const segments = ultrastarToSegments(parsedUltrastar);
+    
+    if (segments.length === 0) {
+      alert("⚠️ No se pudieron extraer las notas del archivo");
+      return;
+    }
+    
+    // Guardar pista en biblioteca
+    await addLibraryItem({
+      name: `Pista - ${parsedUltrastar.title} (${parsedUltrastar.artist})`,
+      type: "pista",
+      audioBlob: audioFile,
+      date: new Date().toLocaleString("es-ES")
+    });
+    
+    // Si hay voz separada, guardarla también
+    if (vocalsFile) {
+      await addLibraryItem({
+        name: `Voz - ${parsedUltrastar.title} (${parsedUltrastar.artist})`,
+        type: "voz",
+        audioBlob: vocalsFile,
+        date: new Date().toLocaleString("es-ES"),
+        transcription: segments
+      });
+    }
+    
+    // Guardar como "karaoke listo"
+    await addLibraryItem({
+      name: `${parsedUltrastar.title} - ${parsedUltrastar.artist}`,
+      type: "karaoke",
+      audioBlob: audioFile,
+      vocalsBlob: vocalsFile || null,
+      date: new Date().toLocaleString("es-ES"),
+      transcription: segments,
+      metadata: {
+        title: parsedUltrastar.title,
+        artist: parsedUltrastar.artist,
+        bpm: parsedUltrastar.bpm,
+        genre: parsedUltrastar.genre,
+        language: parsedUltrastar.language,
+        year: parsedUltrastar.year
+      }
+    });
+    
+    // Actualizar biblioteca y listas
+    await renderLibrary("todos");
+    await loadMyKaraokeSongs();
+    
+    // Cerrar modal
+    closeUltrastarModal();
+    
+    alert(`✅ ¡"${parsedUltrastar.title}" importada exitosamente!\n\nLa encontrarás en "Mis Canciones" lista para cantar.`);
+    
+  } catch (error) {
+    console.error("Error importando:", error);
+    alert("❌ Error al importar la canción. Revisa la consola para más detalles.");
+  }
+}
+
+// ==========================================
+// CATÁLOGO Y MIS CANCIONES
+// ==========================================
+async function loadKaraokeCatalog() {
+  const container = $("catalogList");
+  if (!container) return;
+  
+  // Por ahora mostramos mensaje - luego cargaremos del servidor
+  container.innerHTML = `
+    <div style="text-align: center; padding: 20px; color: var(--text-muted);">
+      <p>📚 El catálogo pre-cargado estará disponible próximamente.</p>
+      <p style="font-size: 13px;">Por ahora, importa canciones de UltraStar o crea las tuyas en Estudio.</p>
+    </div>
+  `;
+}
+
+async function loadMyKaraokeSongs() {
+  const container = $("myKaraokeList");
+  if (!container) return;
+  
+  try {
+    // Obtener canciones tipo "karaoke" de la biblioteca
+    const karaokeSongs = await getLibraryItemsByType("karaoke");
+    
+    // También obtener voces que tengan transcripción
+    const voces = await getLibraryItemsByType("voz");
+    const vocesConSync = voces.filter(v => v.transcription && v.transcription.length > 0);
+    
+    const allSongs = [...karaokeSongs, ...vocesConSync];
+    
+    if (allSongs.length === 0) {
+      container.innerHTML = `
+        <div style="text-align: center; padding: 20px; color: var(--text-muted);">
+          <p>No tienes canciones listas aún.</p>
+          <p style="font-size: 13px;">Importa de UltraStar o sincroniza una en Estudio.</p>
+        </div>
+      `;
+      return;
+    }
+    
+    container.innerHTML = "";
+    
+    allSongs.forEach(song => {
+      const div = document.createElement("div");
+      div.className = "my-karaoke-item";
+      
+      const title = song.metadata?.title || song.name || "Sin título";
+      const artist = song.metadata?.artist || "";
+      
+      div.innerHTML = `
+        <div class="my-karaoke-item-info">
+          <p class="my-karaoke-item-title">${title}</p>
+          <p class="my-karaoke-item-artist">${artist || "Artista desconocido"}</p>
+        </div>
+        <div class="my-karaoke-item-actions">
+          <button type="button" class="load-karaoke-btn" data-id="${song.id}" style="background: #22c55e;">▶️ Cantar</button>
+          <button type="button" class="delete-karaoke-btn" data-id="${song.id}" style="background: #ef4444; padding: 8px 10px;">🗑️</button>
+        </div>
+      `;
+      
+      container.appendChild(div);
+    });
+    
+    // Agregar eventos
+    container.querySelectorAll(".load-karaoke-btn").forEach(btn => {
+      btn.addEventListener("click", () => loadKaraokeSong(Number(btn.dataset.id)));
+    });
+    
+    container.querySelectorAll(".delete-karaoke-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        if (confirm("¿Eliminar esta canción de tu biblioteca?")) {
+          await deleteLibraryItemFromDB(Number(btn.dataset.id));
+          await loadMyKaraokeSongs();
+        }
+      });
+    });
+    
+  } catch (error) {
+    console.error("Error cargando mis canciones:", error);
+    container.innerHTML = `<p style="color: #ef4444;">Error al cargar canciones</p>`;
+  }
+}
+
+async function loadKaraokeSong(id) {
+  try {
+    const song = await getLibraryItemById(id);
+    if (!song) {
+      alert("⚠️ Canción no encontrada");
+      return;
+    }
+    
+    // Cargar pista
+    const track = $("karaokeTrack");
+    if (track && song.audioBlob) {
+      track.src = URL.createObjectURL(song.audioBlob);
+      track.volume = 0.4;
+      karaokeSelectedTrackBlob = song.audioBlob;
+      karaokeSelectedTrackName = song.name;
+    }
+    
+    // Cargar transcripción
+    if (song.transcription && song.transcription.length > 0) {
+      transcriptionSegments = song.transcription;
+      baseTranscriptionSegments = song.transcription;
+      cargarLetrasEnMonitor();
+    }
+    
+    const title = song.metadata?.title || song.name;
+    $("karaokeStatus").textContent = `Estado: "${title}" cargada. ¡Lista para cantar! 🎤`;
+    
+    // Scroll al monitor
+    $("karaokeCanvas").scrollIntoView({ behavior: "smooth", block: "center" });
+    
+  } catch (error) {
+    console.error("Error cargando canción:", error);
+    alert("❌ Error al cargar la canción");
+  }
 }
