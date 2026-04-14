@@ -743,3 +743,58 @@ input[type="text"] {
   padding-top: 20px;
   margin-top: 10px;
 }
+
+/* ==========================================
+   CATÁLOGO DE KARAOKE
+========================================== */
+.catalog-item, .my-karaoke-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 15px;
+  background: var(--bg-main);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  transition: all 0.2s ease;
+}
+
+.catalog-item:hover, .my-karaoke-item:hover {
+  border-color: var(--accent);
+  transform: translateX(5px);
+}
+
+.catalog-item-info, .my-karaoke-item-info {
+  flex: 1;
+}
+
+.catalog-item-title, .my-karaoke-item-title {
+  font-weight: bold;
+  color: var(--text-main);
+  margin: 0 0 4px 0;
+}
+
+.catalog-item-artist, .my-karaoke-item-artist {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.catalog-item-actions, .my-karaoke-item-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.catalog-item-actions button, .my-karaoke-item-actions button {
+  padding: 8px 15px;
+  font-size: 13px;
+}
+
+/* Modal */
+#ultrastarModal .settings-group {
+  margin-bottom: 15px;
+}
+
+#ultrastarModal input[type="file"] {
+  margin-top: 8px;
+}
