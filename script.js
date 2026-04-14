@@ -26,8 +26,13 @@ let db = null;
 let pitchHistory = [];
 let transcriptionSegments = [];
 let baseTranscriptionSegments = [];
-let syncOffset = 0; // Desfase de sincronización en segundos
 let autoScrollEnabled = true; // Control de auto-scroll
+
+// Variables para sincronización con Taps
+let tapSyncMode = false;
+let tapSyncLines = [];
+let tapSyncTimestamps = [];
+let tapSyncCurrentIndex = 0;
 
 function $(id) {
   return document.getElementById(id);
@@ -1291,9 +1296,6 @@ function updateKaraokeHighlight(currentTime) {
   const lines = document.querySelectorAll(".karaoke-line");
   if (!lines.length) return;
 
-  // Aplicar desfase de sincronización
-  const adjustedTime = currentTime + syncOffset;
-
   let activeLine = null;
 
   lines.forEach((line) => {
@@ -1302,10 +1304,10 @@ function updateKaraokeHighlight(currentTime) {
 
     line.classList.remove("active", "past", "upcoming");
 
-    if (adjustedTime >= start && adjustedTime <= end) {
+    if (currentTime >= start && currentTime <= end) {
       line.classList.add("active");
       activeLine = line;
-    } else if (adjustedTime > end) {
+    } else if (currentTime > end) {
       line.classList.add("past");
     } else {
       line.classList.add("upcoming");
@@ -1318,9 +1320,9 @@ function updateKaraokeHighlight(currentTime) {
 
       word.classList.remove("active-word", "past-word");
 
-      if (adjustedTime >= wordStart && adjustedTime <= wordEnd) {
+      if (currentTime >= wordStart && currentTime <= wordEnd) {
         word.classList.add("active-word");
-      } else if (adjustedTime > wordEnd) {
+      } else if (currentTime > wordEnd) {
         word.classList.add("past-word");
       }
     });
@@ -1333,7 +1335,6 @@ function updateKaraokeHighlight(currentTime) {
     });
   }
 }
-
 
 // ==========================================
 // KARAOKE
@@ -1698,9 +1699,6 @@ function syncKaraokeMonitor(currentTime) {
   const lines = document.querySelectorAll(".karaoke-live-line");
   if (!lines.length) return;
 
-  // Aplicar desfase de sincronización
-  const adjustedTime = currentTime + syncOffset;
-
   let activeLine = null;
 
   lines.forEach(line => {
@@ -1709,10 +1707,10 @@ function syncKaraokeMonitor(currentTime) {
 
     line.classList.remove("active", "past");
 
-    if (adjustedTime >= start && adjustedTime <= end) {
+    if (currentTime >= start && currentTime <= end) {
       line.classList.add("active");
       activeLine = line;
-    } else if (adjustedTime > end) {
+    } else if (currentTime > end) {
       line.classList.add("past");
     }
 
@@ -1723,9 +1721,9 @@ function syncKaraokeMonitor(currentTime) {
 
       word.classList.remove("active-word", "past-word");
 
-      if (adjustedTime >= wordStart && adjustedTime <= wordEnd) {
+      if (currentTime >= wordStart && currentTime <= wordEnd) {
         word.classList.add("active-word");
-      } else if (adjustedTime > wordEnd) {
+      } else if (currentTime > wordEnd) {
         word.classList.add("past-word");
       }
     });
@@ -2344,6 +2342,199 @@ async function applyCorrectedLyrics() {
     }
   }
 }
+
+// ==========================================
+// SINCRONIZACIÓN MANUAL CON TAPS
+// ==========================================
+function startTapSync() {
+  const lyricsText = $("lyricsText");
+  const voicePlayer = $("selectedVoicePlayer");
+  
+  if (!lyricsText || !lyricsText.value.trim()) {
+    alert("⚠️ Primero escribe o corrige la letra en el área de texto.");
+    return;
+  }
+  
+  if (!voicePlayer || !voicePlayer.src) {
+    alert("⚠️ Primero carga una voz desde la Biblioteca.");
+    return;
+  }
+  
+  // Obtener líneas de la letra
+  tapSyncLines = lyricsText.value
+    .split("\n")
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
+  
+  if (tapSyncLines.length === 0) {
+    alert("⚠️ No hay líneas de texto para sincronizar.");
+    return;
+  }
+  
+  // Reiniciar variables
+  tapSyncTimestamps = [];
+  tapSyncCurrentIndex = 0;
+  tapSyncMode = true;
+  
+  // Mostrar/ocultar elementos
+  $("startTapSyncBtn").style.display = "none";
+  $("cancelTapSyncBtn").style.display = "inline-block";
+  $("tapSyncActive").style.display = "block";
+  $("tapSyncResult").style.display = "none";
+  
+  // Mostrar primera línea
+  updateTapSyncDisplay();
+  
+  // Reproducir audio desde el inicio
+  voicePlayer.currentTime = 0;
+  voicePlayer.play();
+  
+  // Activar listener de teclado
+  document.addEventListener("keydown", handleTapSyncKeypress);
+  
+  console.log("🎯 Sincronización iniciada. Líneas:", tapSyncLines.length);
+}
+
+function handleTapSyncKeypress(e) {
+  if (!tapSyncMode) return;
+  
+  if (e.code === "Space" || e.key === " ") {
+    e.preventDefault();
+    recordTap();
+  }
+  
+  if (e.code === "Escape") {
+    cancelTapSync();
+  }
+}
+
+function recordTap() {
+  if (!tapSyncMode) return;
+  
+  const voicePlayer = $("selectedVoicePlayer");
+  if (!voicePlayer) return;
+  
+  const currentTime = voicePlayer.currentTime;
+  
+  tapSyncTimestamps.push(currentTime);
+  tapSyncCurrentIndex++;
+  
+  // Efecto visual
+  const tapBtn = $("tapBeatBtn");
+  if (tapBtn) {
+    tapBtn.style.transform = "scale(0.95)";
+    tapBtn.style.background = "linear-gradient(135deg, #16a34a, #14532d)";
+    setTimeout(() => {
+      tapBtn.style.transform = "scale(1)";
+      tapBtn.style.background = "linear-gradient(135deg, #22c55e, #16a34a)";
+    }, 100);
+  }
+  
+  if (tapSyncCurrentIndex >= tapSyncLines.length) {
+    finishTapSync();
+  } else {
+    updateTapSyncDisplay();
+  }
+}
+
+function updateTapSyncDisplay() {
+  const currentLineEl = $("tapCurrentLine");
+  const progressEl = $("tapProgress");
+  
+  if (currentLineEl && tapSyncCurrentIndex < tapSyncLines.length) {
+    currentLineEl.textContent = tapSyncLines[tapSyncCurrentIndex];
+  }
+  
+  if (progressEl) {
+    progressEl.textContent = `${tapSyncCurrentIndex} / ${tapSyncLines.length} líneas`;
+  }
+}
+
+function finishTapSync() {
+  tapSyncMode = false;
+  
+  const voicePlayer = $("selectedVoicePlayer");
+  if (voicePlayer) voicePlayer.pause();
+  
+  document.removeEventListener("keydown", handleTapSyncKeypress);
+  
+  $("tapSyncActive").style.display = "none";
+  $("tapSyncResult").style.display = "block";
+  $("cancelTapSyncBtn").style.display = "none";
+  
+  console.log("✅ Sincronización completada. Timestamps:", tapSyncTimestamps);
+}
+
+function cancelTapSync() {
+  tapSyncMode = false;
+  
+  const voicePlayer = $("selectedVoicePlayer");
+  if (voicePlayer) voicePlayer.pause();
+  
+  document.removeEventListener("keydown", handleTapSyncKeypress);
+  
+  $("startTapSyncBtn").style.display = "inline-block";
+  $("cancelTapSyncBtn").style.display = "none";
+  $("tapSyncActive").style.display = "none";
+  $("tapSyncResult").style.display = "none";
+  
+  tapSyncLines = [];
+  tapSyncTimestamps = [];
+  tapSyncCurrentIndex = 0;
+}
+
+function applyTapSync() {
+  if (tapSyncTimestamps.length === 0 || tapSyncLines.length === 0) {
+    alert("⚠️ No hay datos de sincronización.");
+    return;
+  }
+  
+  const voicePlayer = $("selectedVoicePlayer");
+  const totalDuration = voicePlayer ? voicePlayer.duration : 0;
+  
+  const newSegments = [];
+  
+  for (let i = 0; i < tapSyncLines.length; i++) {
+    const start = tapSyncTimestamps[i] || 0;
+    let end = (i < tapSyncTimestamps.length - 1) ? tapSyncTimestamps[i + 1] : (totalDuration || start + 3);
+    
+    newSegments.push(buildWordTimingFromSegment({
+      start: start,
+      end: end,
+      text: tapSyncLines[i]
+    }));
+  }
+  
+  baseTranscriptionSegments = newSegments;
+  transcriptionSegments = newSegments;
+  
+  renderKaraokeLyrics(transcriptionSegments);
+  cargarLetrasEnMonitor();
+  
+  if (selectedVoiceId) {
+    updateLibraryItem(selectedVoiceId, { transcription: baseTranscriptionSegments })
+      .then(() => console.log("✅ Guardado en Biblioteca"))
+      .catch(err => console.error("Error:", err));
+  }
+  
+  $("startTapSyncBtn").style.display = "inline-block";
+  $("tapSyncResult").style.display = "none";
+  
+  tapSyncLines = [];
+  tapSyncTimestamps = [];
+  tapSyncCurrentIndex = 0;
+  
+  const status = $("selectedVoiceStatus");
+  if (status) status.textContent = "Estado: ✅ Sincronización aplicada y guardada";
+  
+  alert("✅ ¡Tiempos aplicados! Reproduce para verificar.");
+}
+
+function redoTapSync() {
+  $("tapSyncResult").style.display = "none";
+  startTapSync();
+}
+
 // ==========================================
 // INIT
 // ==========================================
@@ -2399,59 +2590,19 @@ document.addEventListener("DOMContentLoaded", async () => {
       autoScrollEnabled = !autoScrollEnabled;
       const btn = $("toggleAutoScrollBtn");
       if (btn) {
-        if (autoScrollEnabled) {
-          btn.textContent = "🔒 Auto-scroll: ON";
-          btn.style.background = "#f59e0b";
-        } else {
-          btn.textContent = "🔓 Auto-scroll: OFF";
-          btn.style.background = "#6b7280";
-        }
+        btn.textContent = autoScrollEnabled ? "🔒 Auto-scroll: ON" : "🔓 Auto-scroll: OFF";
+        btn.style.background = autoScrollEnabled ? "#f59e0b" : "#6b7280";
       }
     });
 
-    // Controles de sincronización
-    safeAdd("syncOffset", "input", (e) => {
-        syncOffset = parseFloat(e.target.value);
-        const display = $("syncValue");
-        if (display) {
-            const sign = syncOffset >= 0 ? "+" : "";
-            display.textContent = `Desfase: ${sign}${syncOffset.toFixed(1)} segundos`;
-        }
-        // Guardar preferencia
-        localStorage.setItem("vocalApp_syncOffset", syncOffset);
-    });
-      
-      safeAdd("syncMinus", "click", () => {
-          const slider = $("syncOffset");
-          if (slider) {
-              syncOffset = Math.max(-10, syncOffset - 0.5);
-              slider.value = syncOffset;
-              slider.dispatchEvent(new Event("input"));
-          }
-      });
-      
-      safeAdd("syncPlus", "click", () => {
-          const slider = $("syncOffset");
-          if (slider) {
-              syncOffset = Math.min(10, syncOffset + 0.5);
-              slider.value = syncOffset;
-              slider.dispatchEvent(new Event("input"));
-          }
-      });
-      
-      // Cargar desfase guardado
-      const savedOffset = localStorage.getItem("vocalApp_syncOffset");
-      if (savedOffset) {
-          syncOffset = parseFloat(savedOffset);
-          const slider = $("syncOffset");
-          const display = $("syncValue");
-          if (slider) slider.value = syncOffset;
-          if (display) {
-              const sign = syncOffset >= 0 ? "+" : "";
-              display.textContent = `Desfase: ${sign}${syncOffset.toFixed(1)} segundos`;
-          }
-      }
+    // Eventos de sincronización con Taps
+    safeAdd("startTapSyncBtn", "click", startTapSync);
+    safeAdd("cancelTapSyncBtn", "click", cancelTapSync);
+    safeAdd("tapBeatBtn", "click", recordTap);
+    safeAdd("applyTapSyncBtn", "click", applyTapSync);
+    safeAdd("redoTapSyncBtn", "click", redoTapSync);
 
+    
     // biblioteca
     safeAdd("saveLibraryFileBtn", "click", saveManualFileToLibrary);
 
@@ -2515,9 +2666,6 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
 
-  // Aplicar desfase de sincronización
-  const adjustedTime = currentTime + syncOffset;
-
   // Guardamos la frecuencia actual en el historial
   pitchHistory.push(currentFreq > 0 ? currentFreq : null);
   if (pitchHistory.length > canvas.width / 5) pitchHistory.shift();
@@ -2541,7 +2689,7 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     // Encontrar el índice de la línea actual
     let currentIndex = -1;
     for (let i = 0; i < transcriptionSegments.length; i++) {
-      if (adjustedTime >= transcriptionSegments[i].start && adjustedTime <= transcriptionSegments[i].end + 1) {
+      if (currentTime >= transcriptionSegments[i].start && currentTime <= transcriptionSegments[i].end + 1) {
         currentIndex = i;
         break;
       }
@@ -2550,7 +2698,7 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     // Si no encontramos línea actual, buscar la siguiente
     if (currentIndex === -1) {
       for (let i = 0; i < transcriptionSegments.length; i++) {
-        if (transcriptionSegments[i].start > adjustedTime) {
+        if (transcriptionSegments[i].start > currentTime) {
           currentIndex = i;
           break;
         }
@@ -2571,13 +2719,13 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
 
       // Calcular posición X (progreso de la línea)
       const segDuration = seg.end - seg.start;
-      const progress = Math.max(0, Math.min(1, (adjustedTime - seg.start) / segDuration));
+      const progress = Math.max(0, Math.min(1, (currentTime - seg.start) / segDuration));
       
       const barWidth = canvas.width * 0.7;
       const barX = (canvas.width - barWidth) / 2;
 
       // Determinar si es la línea activa
-      const isActive = (adjustedTime >= seg.start && adjustedTime <= seg.end + 0.5);
+      const isActive = (currentTime >= seg.start && currentTime <= seg.end + 0.5);
 
       // Dibujar barra de fondo
       ctx.fillStyle = isActive ? "#1e40af" : "#1e3a5f";
