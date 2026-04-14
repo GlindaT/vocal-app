@@ -27,6 +27,7 @@ let pitchHistory = [];
 let transcriptionSegments = [];
 let baseTranscriptionSegments = [];
 let syncOffset = 0; // Desfase de sincronización en segundos
+let autoScrollEnabled = true; // Control de auto-scroll
 
 function $(id) {
   return document.getElementById(id);
@@ -1325,7 +1326,7 @@ function updateKaraokeHighlight(currentTime) {
     });
   });
 
-  if (activeLine) {
+  if (activeLine && autoScrollEnabled) {
     activeLine.scrollIntoView({
       behavior: "smooth",
       block: "center"
@@ -1730,7 +1731,7 @@ function syncKaraokeMonitor(currentTime) {
     });
   });
 
-  if (activeLine && activeLine !== lastActiveLine) {
+  if (activeLine && activeLine !== lastActiveLine && autoScrollEnabled) {
     activeLine.scrollIntoView({ behavior: "smooth", block: "center" });
     lastActiveLine = activeLine;
   }
@@ -2392,6 +2393,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     safeAdd("loadSelectedVoiceBtn", "click", loadSelectedVoiceFromLibrary);
     safeAdd("transcribeVoiceBtn", "click", transcribeSelectedVoice);
     safeAdd("applyCorrectedLyricsBtn", "click", applyCorrectedLyrics);
+
+    // Toggle auto-scroll
+    safeAdd("toggleAutoScrollBtn", "click", () => {
+      autoScrollEnabled = !autoScrollEnabled;
+      const btn = $("toggleAutoScrollBtn");
+      if (btn) {
+        if (autoScrollEnabled) {
+          btn.textContent = "🔒 Auto-scroll: ON";
+          btn.style.background = "#f59e0b";
+        } else {
+          btn.textContent = "🔓 Auto-scroll: OFF";
+          btn.style.background = "#6b7280";
+        }
+      }
+    });
 
     // Controles de sincronización
     safeAdd("syncOffset", "input", (e) => {
