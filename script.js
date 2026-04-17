@@ -2743,11 +2743,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     safeAdd("applyTapSyncBtn", "click", applyTapSync);
     safeAdd("redoTapSyncBtn", "click", redoTapSync);
       
-      await loadKaraokeCatalog();
-      await loadMyKaraokeSongs();
-    });
-      
-      
     // Cargar catálogo y mis canciones al iniciar
     loadKaraokeCatalog();
     loadMyKaraokeSongs();
