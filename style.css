@@ -789,12 +789,3 @@ input[type="text"] {
   padding: 8px 15px;
   font-size: 13px;
 }
-
-/* Modal */
-#ultrastarModal .settings-group {
-  margin-bottom: 15px;
-}
-
-#ultrastarModal input[type="file"] {
-  margin-top: 8px;
-}
