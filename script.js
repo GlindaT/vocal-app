@@ -3207,8 +3207,8 @@ async function loadCatalogSong(folder, title, artist) {
     }
     
     // Configurar la sincronización
-    transcriptionSegments = segments;
-    baseTranscriptionSegments = segments;
+    const transcriptionSegments = segments;
+    const baseTranscriptionSegments = segments;
     cargarLetrasEnMonitor();
 
     
