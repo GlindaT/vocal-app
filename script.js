@@ -3189,10 +3189,6 @@ async function loadCatalogSong(folder, title, artist) {
     }
     const syncContent = await syncResponse.text();
     
-    if (segments.length === 0) {
-      throw new Error("No se pudieron extraer las notas");
-    }
-    
     // Cargar el audio
     const audioResponse = await fetch(`./karaoke-catalog/${folder}/audio.mp3`);
     if (!audioResponse.ok) {
@@ -3213,6 +3209,7 @@ async function loadCatalogSong(folder, title, artist) {
     transcriptionSegments = segments;
     baseTranscriptionSegments = segments;
     cargarLetrasEnMonitor();
+
     
     if (status) status.textContent = `Estado: "${title}" cargada. ¡Lista para cantar! 🎤`;
     
