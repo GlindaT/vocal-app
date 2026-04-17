@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Impact:wght@600&family=Caveat:wght@600&family=Lobster&family=Comic+Neue:wght@400;700&family=Spectral:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@600&family=Caveat:wght@600&family=Lobster&family=Comic+Neue:wght@400;700&family=Spectral:wght@400;600&display=swap');
 /* ==========================================
    VARIABLES (ESCALABLE)
 ========================================== */
@@ -798,7 +798,7 @@ input[type="text"] {
 }
 
 /* Estilos por Pestaña */
-#afinador { font-family: 'Impact', cursive; }
+#afinador { font-family: 'Comfortaa', cursive; }
 #estudio { font-family: 'Caveat', cursive; }
 #karaoke { font-family: 'Lobster', cursive; }
 #splitter { font-family: 'Comic Neue', cursive; }
