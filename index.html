@@ -28,7 +28,7 @@
 
     <!-- AFINADOR -->
 <section id="afinador" class="tab active">
-  <h1>🎵 Afinador</h1>
+  <h1>👄 Afinador</h1>
   
   <div class="afinador-container">
     <label for="targetNote">Nota objetivo: (Puedes elegir el nivel de dificultad en configuración)</label>
@@ -74,13 +74,13 @@
 </select>
     <button id="recordBtn">Iniciar</button>
     <h2 id="noteDisplay">--</h2>
-    <div id="guideText" style="font-size: 24px; font-weight: bold; margin-top: 10px;"></div>
+    <div id="guideText" style="font-size: 28px; font-weight: bold; margin-top: 10px;"></div>
   </div>
 </section>
     
     <!-- ESTUDIO -->
 <section id="estudio" class="tab">
-  <h1>🎧 Estudio</h1>
+  <h1>🎧🎤👄 Estudio</h1>
 
   <div class="card">
   <h3>Pista musical desde Biblioteca</h3>
@@ -97,7 +97,7 @@
     <button id="loadStudioTrackBtn" type="button">📥 Cargar pista seleccionada</button>
   </div>
 
-  <p style="color: var(--text-muted); font-size: 15px;">O sube un archivo nuevo desde tu PC:</p>
+  <p style="color: var(--text-muted); font-size: 20px;">O sube un archivo nuevo desde tu PC:</p>
   <input type="file" id="audioFile" accept="audio/*">
 
   <audio id="player" controls></audio>
@@ -177,10 +177,10 @@
 <div id="tapSyncSection" style="margin-top: 15px; padding: 15px; background: linear-gradient(135deg, #1e3a5f, #1e293b); border-radius: 8px; border: 2px solid #3b82f6;">
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
     <h4 style="margin: 0; color: #60a5fa;">🎯 Sincronización Manual</h4>
-    <button id="toggleAutoScrollBtn" type="button" style="background: #f59e0b; font-size: 12px; padding: 5px 10px;">🔒 Auto-scroll: ON</button>
+    <button id="toggleAutoScrollBtn" type="button" style="background: #f59e0b; font-size: 14px; padding: 5px 10px;">🔒 Auto-scroll: ON</button>
   </div>
   
-  <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">
+  <p style="font-size: 16px; color: var(--text-muted); margin-bottom: 15px;">
     Escucha el audio y presiona TAP (o ESPACIO) cada vez que empiece una nueva línea.
   </p>
   
@@ -202,7 +202,7 @@
       🎵 TAP (o presiona ESPACIO)
     </button>
     
-    <p style="font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 10px;">
+    <p style="font-size: 15px; color: var(--text-muted); text-align: center; margin-top: 10px;">
       ⌨️ También puedes usar la barra espaciadora
     </p>
   </div>
@@ -246,7 +246,7 @@
 
     <!-- KARAOKE -->
     <section id="karaoke" class="tab">
-      <h1>🎤 Karaoke</h1>
+      <h1>🎤👄 Karaoke</h1>
       <!-- MONITOR DE PENTAGRAMA -->
       <div class="card" style="background: #1a1a1a; padding: 0;">
         <canvas id="karaokeCanvas" width="900" height="300" style="width: 100%; display: block; border-radius: 8px;"></canvas>
@@ -294,7 +294,7 @@
         </div>
 
         <!-- Opción B: Desde la PC -->
-        <p style="color: var(--text-muted); font-size: 14px;">O sube un archivo nuevo desde tu PC:</p>
+        <p style="color: var(--text-muted); font-size: 18px;">O sube un archivo nuevo desde tu PC:</p>
         <input type="file" id="karaokeTrackFile" accept="audio/*">
         
         <audio id="karaokeTrack" controls style="margin-top: 15px;"></audio>
@@ -369,7 +369,7 @@
 
         <div id="splitterStatusBox" style="margin-top: 20px; padding: 15px; background: var(--bg-main); border-radius: 8px; border: 1px solid var(--border); display: none;">
           <h4 id="splitterStatusText" style="color: var(--accent); margin: 0;">Iniciando IA...</h4>
-          <p id="splitterDetailText" style="color: var(--text-muted); font-size: 14px;">Esto puede tardar un poco.</p>
+          <p id="splitterDetailText" style="color: var(--text-muted); font-size: 16px;">Esto puede tardar un poco.</p>
         </div>
       </div>
     </section>
