@@ -2200,8 +2200,8 @@ function initSettings() {
     karaokeStage: "vocalApp_stage",
     difficultyLevel: "vocalApp_difficulty",
     userVoiceType: "vocalApp_voiceType",
-    appTheme: "vocalApp_theme"
-    micSensitivity: "vocalApp_sensitivity" // <--- Añade esta línea
+    appTheme: "vocalApp_theme",
+    micSensitivity: "vocalApp_sensitivity"
   };
 
   Object.entries(settings).forEach(([id, storageKey]) => {
@@ -2223,10 +2223,11 @@ function initSettings() {
       });
     }
   });
+}
 
   // Aplicar tema guardado al iniciar
   applyAppTheme(localStorage.getItem("vocalApp_theme") || "oscuro");
-}
+
 
 function applyAppTheme(theme) {
   // Aplicamos el tema al elemento raíz (html)
