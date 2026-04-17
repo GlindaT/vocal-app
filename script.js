@@ -770,7 +770,6 @@ async function deleteLibraryItem(id) {
     await renderLibrary();
   } catch (error) {
     console.error(error);
-    alert("❌ No se pudo eliminar el archivo");
   }
 }
 
