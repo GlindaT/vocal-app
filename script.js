@@ -359,6 +359,9 @@ function autoCorrelate(buf, sampleRate) {
   }
   rms = Math.sqrt(rms / buf.length);
 
+  // Usamos el valor guardado
+  const umbral = parseFloat(localStorage.getItem("vocalApp_sensitivity")) || 0.01;
+
   // Si el volumen es muy bajo, ignoramos la detección
   if (rms < 0.01) return -1;
 
@@ -770,6 +773,7 @@ async function deleteLibraryItem(id) {
     await renderLibrary();
   } catch (error) {
     console.error(error);
+    alert("✅ Archivo eliminado");
   }
 }
 
@@ -2197,6 +2201,7 @@ function initSettings() {
     difficultyLevel: "vocalApp_difficulty",
     userVoiceType: "vocalApp_voiceType",
     appTheme: "vocalApp_theme"
+    micSensitivity: "vocalApp_sensitivity" // <--- Añade esta línea
   };
 
   Object.entries(settings).forEach(([id, storageKey]) => {
@@ -2207,11 +2212,11 @@ function initSettings() {
       if (saved) el.value = saved;
       
       // Escuchar cambios
-      el.addEventListener("change", (e) => {
+      const eventType = el.type === 'range' ? 'input' : 'change'; // Usar 'input' para sliders
+      el.addEventListener(eventType, (e) => {
         localStorage.setItem(storageKey, e.target.value);
-        showSaveNotification();
+        if (id !== 'micSensitivity') showSaveNotification(); // Opcional: no mostrar notificación en cada milímetro del slider
         
-        // Si es el tema, aplicarlo inmediatamente
         if (id === "appTheme") {
           applyAppTheme(e.target.value);
         }
