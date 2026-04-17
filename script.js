@@ -782,35 +782,41 @@ async function saveManualFileToLibrary() {
   const typeSelect = $("libraryFileType");
   const nameInput = $("libraryFileName");
 
-  const file = fileInput ? fileInput.files[0] : null;
-  const type = typeSelect ? typeSelect.value : "audio";
-  const customName = nameInput ? nameInput.value.trim() : "";
-
+  const file = fileInput.files[0];
   if (!file) {
-    alert("⚠️ Selecciona un archivo de audio");
+    alert("⚠️ Por favor, selecciona un archivo de audio primero.");
     return;
   }
 
-  const finalName = customName || file.name;
+  if (file.size > 20 * 1024 * 1024) { // 20MB
+  alert("⚠️ El archivo es muy grande (máx 20MB).");
+  return;
+  }
+
+  const name = nameInput.value.trim() || file.name;
+  const type = typeSelect.value;
 
   try {
+    // Usamos la función addLibraryItem que ya tienes definida
     await addLibraryItem({
-      name: finalName,
+      name: name,
       type: type,
-      audioBlob: file,
-      date: new Date().toLocaleString("es-ES")
+      audioBlob: file, // Guardamos el archivo directamente como Blob
+      date: new Date().toLocaleString("es-ES"),
+      transcription: [] // Iniciamos vacío, se llenará con Whisper luego
     });
 
-    await loadLibrary();
-
-    if (fileInput) fileInput.value = "";
-    if (nameInput) nameInput.value = "";
-    if (typeSelect) typeSelect.value = "pista";
-
-    alert("✅ Archivo guardado en Biblioteca");
+    // Limpiamos los campos
+    fileInput.value = "";
+    nameInput.value = "";
+    
+    // Recargamos la biblioteca para ver el nuevo archivo
+    await renderLibrary('todos');
+    
+    alert("✅ ¡Archivo subido exitosamente!");
   } catch (error) {
     console.error(error);
-    alert("❌ No se pudo guardar el archivo");
+    alert("❌ Error al guardar el archivo en la base de datos.");
   }
 }
 
