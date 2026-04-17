@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600&family=Caveat:wght@600&family=Lobster&family=Comic+Neue:wght@400;700&family=Spectral:wght@400;600&display=swap');
 /* ==========================================
    VARIABLES (ESCALABLE)
 ========================================== */
@@ -84,8 +85,13 @@ body {
   overflow-y: auto;
 }
 
+.tab h1 {
+  font-family: inherit;
+}
+
 .tab {
   display: none;
+  font-family: inherit;
 }
 
 .tab.active {
@@ -100,6 +106,7 @@ body {
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 20px;
+  font-family: inherit;
 }
 
 /* ==========================================
@@ -789,3 +796,10 @@ input[type="text"] {
   padding: 8px 15px;
   font-size: 13px;
 }
+
+/* Estilos por Pestaña */
+#afinador { font-family: 'Dancing Script', cursive; }
+#estudio { font-family: 'Caveat', cursive; }
+#karaoke { font-family: 'Lobster', cursive; }
+#splitter { font-family: 'Comic Neue', cursive; }
+#config { font-family: 'Spectral', serif; }
