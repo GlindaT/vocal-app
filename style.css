@@ -59,7 +59,7 @@ body {
   background: none;
   border: none;
   color: var(--text-muted);
-  padding: 12px;
+  padding: 15px;
   text-align: left;
   cursor: pointer;
   border-radius: 8px;
@@ -182,7 +182,7 @@ audio {
 ========================================== */
 
 #noteDisplay {
-  font-size: 120px; /* Mucho más grande */
+  font-size: 140px; /* Mucho más grande */
   font-weight: 900;
   margin: 0;
   transition: color 0.3s ease;
