@@ -27,6 +27,7 @@ let pitchHistory = [];
 let transcriptionSegments = [];
 let baseTranscriptionSegments = [];
 let autoScrollEnabled = true; // Control de auto-scroll
+let segments = []; // <--- ESTA ES LA QUE TE FALTA
 
 // Variables para sincronización con Taps
 let tapSyncMode = false;
@@ -3188,7 +3189,7 @@ async function loadCatalogSong(folder, title, artist) {
       throw new Error("No se pudo cargar la sincronización");
     }
     const syncContent = await syncResponse.text();
-    
+
     // Cargar el audio
     const audioResponse = await fetch(`./karaoke-catalog/${folder}/audio.mp3`);
     if (!audioResponse.ok) {
