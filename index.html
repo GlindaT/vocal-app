@@ -31,7 +31,7 @@
   <h1>🎵 Afinador</h1>
   
   <div class="afinador-container">
-    <label for="targetNote">Nota objetivo:</label>
+    <label for="targetNote">Nota objetivo: (Puedes elegir el nivel de dificultad en configuración)</label>
 <select id="targetNote">
   <option value="C2">Do 2 (C2)</option>
   <option value="C#2">Do# 2 (C#2)</option>
@@ -83,7 +83,7 @@
   <h1>🎧 Estudio</h1>
 
   <div class="card">
-  <h3>Pista musical</h3>
+  <h3>Pista musical desde Biblioteca</h3>
 
   <div class="studio-controls">
     <button id="refreshStudioTrackListBtn" type="button">🔄 Actualizar lista</button>
@@ -97,7 +97,7 @@
     <button id="loadStudioTrackBtn" type="button">📥 Cargar pista seleccionada</button>
   </div>
 
-  <p style="color: var(--text-muted); font-size: 14px;">O sube un archivo nuevo desde tu PC:</p>
+  <p style="color: var(--text-muted); font-size: 15px;">O sube un archivo nuevo desde tu PC:</p>
   <input type="file" id="audioFile" accept="audio/*">
 
   <audio id="player" controls></audio>
@@ -132,7 +132,7 @@
 
   <div class="card">
     
-    <h3>Grabación de voz</h3>
+    <h3>Grabación de voz: Canta</h3>
 
     <div class="studio-controls">
       <button id="startStudioRecBtn" type="button">🎙️ Grabar voz</button>
@@ -161,7 +161,7 @@
   </div>
 
  <div class="card">
-  <h3>Letra</h3>
+  <h3>Letra hecha con Whisper (Editable)</h3>
 
   <textarea
     id="lyricsText"
@@ -266,7 +266,7 @@
         
         <!-- Mis canciones importadas/creadas -->
         <div id="myKaraokeSongs" style="margin-top: 20px;">
-          <h4 style="color: #f59e0b; margin-bottom: 10px;">📁 Mis Canciones</h4>
+          <h4 style="color: #f59e0b; margin-bottom: 10px;">📁 Mis Canciones: (Sólo tú tienes acceso)</h4>
           <div id="myKaraokeList" style="max-height: 200px; overflow-y: auto;">
             <p style="color: var(--text-muted);">No tienes canciones guardadas aún.</p>
           </div>
@@ -280,7 +280,7 @@
 
       <!-- Paso 1: Pista -->
       <div class="card">
-        <h3>1. Cargar Pista (Instrumental)</h3>
+        <h3>1. Subir Pista para cantar</h3>
         
         <!-- Opción A: Desde la Biblioteca -->
         <div class="studio-controls">
@@ -310,7 +310,7 @@
 
       <!-- Paso 2: Grabación -->
       <div class="card">
-        <h3>2. Grabación Sincronizada</h3>
+        <h3>2. Grabación Sincronizada: voz y pista</h3>
         <p id="karaokeStatus" style="color: var(--text-muted); margin-bottom: 15px;">Estado: Esperando pista...</p>
         
         <div id="karaokeDuoIndicator" style="display: none; margin-bottom: 15px; padding: 15px; background: var(--bg-main); border-radius: 8px; border: 1px solid var(--border);">
@@ -339,7 +339,7 @@
 
       <!-- Paso 3: Mezcla -->
       <div class="card">
-        <h3>3. Mezcla Final</h3>
+        <h3>3. Mezcla Final: Click para mezclar y escuchar</h3>
         <p style="color: var(--text-muted); margin-bottom: 15px;">Une la pista instrumental con tu voz en un solo archivo de audio.</p>
         
         <div class="studio-controls">
@@ -358,7 +358,7 @@
       <div class="card">
         <h3>Separar Voz e Instrumental</h3>
         <p style="color: var(--text-muted); margin-bottom: 20px;">
-          Sube una canción (MP3 de máximo 3.5 MB). La Inteligencia Artificial la separará y la guardará en tu Biblioteca.
+          Sube una canción. La Inteligencia Artificial la separará y la guardará en tu Biblioteca.
         </p>
 
         <input type="file" id="splitterFile" accept="audio/*">
@@ -383,7 +383,7 @@
         <p style="color: var(--text-muted); margin-bottom: 20px;">Los cambios se guardan automáticamente.</p>
         
         <div class="settings-group">
-          <label for="userVoiceType">👤 Tipo de voz</label>
+          <label for="userVoiceType">👤 Elige tu Tipo de voz</label>
           <select id="userVoiceType">
             <option value="grave">Grave</option>
             <option value="media">Media</option>
