@@ -3296,6 +3296,7 @@ async function loadMyKaraokeSongs() {
   }
 }
 
+// 2. Modifica un poco la lógica de carga para ser más robusto:
 async function loadKaraokeSong(id) {
   try {
     const song = await getLibraryItemById(id);
@@ -3306,17 +3307,27 @@ async function loadKaraokeSong(id) {
     
     // Cargar pista
     const track = $("karaokeTrack");
-    if (track && song.audioBlob) {
-      track.src = URL.createObjectURL(song.audioBlob);
+    if (track) {
+      // Si el audioBlob existe, lo usamos, si no, limpiamos el src
+      if (song.audioBlob) {
+        track.src = URL.createObjectURL(song.audioBlob);
+        karaokeSelectedTrackBlob = song.audioBlob;
+      } else {
+        track.src = "";
+        console.warn("La canción no tiene un audio asociado.");
+      }
       track.volume = 0.4;
-      karaokeSelectedTrackBlob = song.audioBlob;
-      karaokeSelectedTrackName = song.name;
+      karaokeSelectedTrackName = song.name || "Sin título";
     }
     
-    // Cargar transcripción
-    if (song.transcription && song.transcription.length > 0) {
+    // Cargar transcripción (Aquí está la lógica clave)
+    if (Array.isArray(song.transcription) && song.transcription.length > 0) {
       transcriptionSegments = song.transcription;
-      baseTranscriptionSegments = song.transcription;
+      baseTranscriptionSegments = [...song.transcription]; // Clonamos para evitar referencias cruzadas
+      cargarLetrasEnMonitor();
+    } else {
+      // Si no tiene letra, limpiamos el monitor
+      transcriptionSegments = [];
       cargarLetrasEnMonitor();
     }
     
