@@ -760,7 +760,7 @@ async function renderLibrary(filter = 'todos') {
 async function deleteLibraryItem(id) {
   try {
     await deleteLibraryItemFromDB(id);
-    await loadLibrary();
+    await renderLibrary();
   } catch (error) {
     console.error(error);
     alert("❌ No se pudo eliminar el archivo");
