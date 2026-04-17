@@ -241,14 +241,21 @@ async function startAfinador() {
   });
 
   const mic = audioContext.createMediaStreamSource(stream);
+  
+  // --- AQUÍ APLICAMOS LA LIMPIEZA ---
+  const cadenaLimpia = aplicarCadenaDeAudio(audioContext, mic);
+  
   analyser = audioContext.createAnalyser();
   analyser.fftSize = 2048;
-  mic.connect(analyser);
+  
+  // Conectamos la salida de la cadena al analizador
+  cadenaLimpia.connect(analyser);
 
   setTimeout(() => {
     detectPitch();
   }, 300);
 }
+
 
 function stopAfinador() {
   if (stream) stream.getTracks().forEach(t => t.stop());
@@ -1186,6 +1193,29 @@ function buildWordTimingFromSegment(segment) {
     ...segment,
     words: timedWords
   };
+}
+
+function aplicarCadenaDeAudio(audioCtx, source) {
+  // 1. Filtro Paso Alto (Elimina zumbidos graves de 80Hz hacia abajo)
+  const highPass = audioCtx.createBiquadFilter();
+  highPass.type = "highpass";
+  highPass.frequency.value = 80;
+
+  // 2. Filtro Paso Bajo (Elimina siseos eléctricos de 1000Hz hacia arriba)
+  const lowPass = audioCtx.createBiquadFilter();
+  lowPass.type = "lowpass";
+  lowPass.frequency.value = 1000;
+
+  // 3. Control de Ganancia (Un poco de volumen extra)
+  const gainNode = audioCtx.createGain();
+  gainNode.gain.value = 1.5;
+
+  // Conectamos: Fuente -> HighPass -> LowPass -> Gain -> Salida
+  source.connect(highPass);
+  highPass.connect(lowPass);
+  lowPass.connect(gainNode);
+  
+  return gainNode; // Retornamos el último nodo para conectarlo al Analyser
 }
 
 // ==========================================
