@@ -108,25 +108,15 @@ function getAllLibraryItems() {
   });
 }
 
-function updateLibraryItem(id, changes) {
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(["library"], "readwrite");
-    const store = transaction.objectStore("library");
-    const getReq = store.get(id);
+async function updateLibraryItem(id, changes) {
+  const { error } = await supabaseClient
+    .from("library_items")
+    .update(changes)
+    .eq("id", id);
 
-    getReq.onsuccess = () => {
-      const item = getReq.result;
-      if (!item) return reject("Archivo no encontrado");
-
-      const updatedItem = { ...item, ...changes };
-      const putReq = store.put(updatedItem);
-
-      putReq.onsuccess = () => resolve();
-      putReq.onerror = () => reject("Error al actualizar la BD");
-    };
-
-    getReq.onerror = () => reject("Error al buscar en BD");
-  });
+  if (error) {
+    throw new Error(error.message || "Error al actualizar en Supabase");
+  }
 }
 
 function deleteLibraryItemFromDB(id) {
