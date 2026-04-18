@@ -2014,12 +2014,13 @@ function syncKaraokeMonitor(currentTime) {
 }
 
 async function mixKaraoke() {
-  if (!karaokeSelectedTrackBlob || !karaokeRecordedBlob) {
+  const trackEl = $("karaokeTrack");
+
+  if ((!karaokeSelectedTrackBlob && !trackEl?.src) || !karaokeRecordedBlob) {
     alert("⚠️ Faltan ingredientes: Asegúrate de cargar una pista instrumental y grabar tu voz primero.");
     return;
   }
 
-  const trackFile = karaokeSelectedTrackBlob;
   const btn = $("karaokeMixBtn");
   const resultDiv = $("karaokeMixResult");
 
@@ -2030,15 +2031,34 @@ async function mixKaraoke() {
   try {
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-    const trackArrayBuffer = await trackFile.arrayBuffer();
+    let trackBlob = karaokeSelectedTrackBlob;
+    let trackName = karaokeSelectedTrackName || "Karaoke";
+
+    // Si la pista vino desde Supabase o desde una URL remota, la descargamos
+    if (!trackBlob && trackEl?.src) {
+      const trackResponse = await fetch(trackEl.src);
+      if (!trackResponse.ok) {
+        throw new Error("No se pudo descargar la pista instrumental");
+      }
+      trackBlob = await trackResponse.blob();
+    }
+
+    if (!trackBlob) {
+      throw new Error("No hay pista instrumental disponible para mezclar");
+    }
+
+    const trackArrayBuffer = await trackBlob.arrayBuffer();
     const trackBuffer = await audioCtx.decodeAudioData(trackArrayBuffer);
 
     const voiceArrayBuffer = await karaokeRecordedBlob.arrayBuffer();
     const voiceBuffer = await audioCtx.decodeAudioData(voiceArrayBuffer);
 
+    const outputLength = Math.max(trackBuffer.length, voiceBuffer.length);
+    const outputChannels = Math.max(trackBuffer.numberOfChannels, voiceBuffer.numberOfChannels);
+
     const offlineCtx = new OfflineAudioContext(
-      trackBuffer.numberOfChannels,
-      trackBuffer.length,
+      outputChannels,
+      outputLength,
       trackBuffer.sampleRate
     );
 
@@ -2069,7 +2089,7 @@ async function mixKaraoke() {
       <h4 style="color: #22c55e;">✅ ¡Mezcla completada!</h4>
       <audio controls src="${finalUrl}" style="width: 100%; margin-bottom: 15px; border-radius: 8px;"></audio>
       <div style="display: flex; gap: 10px;">
-        <a href="${finalUrl}" download="Mezcla_${trackFile.name || "Karaoke"}.wav" style="flex: 1;">
+        <a href="${finalUrl}" download="Mezcla_${trackName || "Karaoke"}.wav" style="flex: 1;">
           <button type="button" style="width: 100%; background: #22c55e; color: black;">💾 Descargar Archivo</button>
         </a>
         <button id="saveMixToLibBtn" type="button" style="flex: 1; background: #3b82f6; color: white;">📁 Guardar en Biblioteca</button>
@@ -2082,7 +2102,7 @@ async function mixKaraoke() {
       btnSave.disabled = true;
 
       await saveToLibrary(finalWavBlob, {
-        name: `Mezcla - ${trackFile.name || "Canción"}`,
+        name: `Mezcla - ${trackName || "Canción"}`,
         type: "grabacion"
       });
 
@@ -2096,7 +2116,6 @@ async function mixKaraoke() {
     btn.disabled = false;
   }
 }
-
 function exportStereoWav(buffer) {
   const numOfChan = buffer.numberOfChannels;
   const length = buffer.length * numOfChan * 2 + 44;
