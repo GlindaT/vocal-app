@@ -882,8 +882,8 @@ async function loadVoiceOptionsInStudio() {
   select.innerHTML = `<option value="">Selecciona una voz guardada</option>`;
 
   try {
-    const voces = await getLibraryItemsByType("voz");
-    const grabaciones = await getLibraryItemsByType("grabacion");
+    const voces = await getLibraryItemsByTypeFromSupabase("voz");
+    const grabaciones = await getLibraryItemsByTypeFromSupabase("grabacion");
 
     const merged = [...voces, ...grabaciones];
 
@@ -898,7 +898,7 @@ async function loadVoiceOptionsInStudio() {
     merged.forEach((item) => {
       const option = document.createElement("option");
       option.value = item.id;
-      option.textContent = `${item.name} (${item.date || "sin fecha"})`;
+      option.textContent = `${item.name} (${new Date(item.created_at).toLocaleString("es-ES")})`;
       select.appendChild(option);
     });
   } catch (error) {
@@ -914,7 +914,7 @@ async function loadSelectedVoiceFromLibrary() {
 
   if (!select || !player || !status) return;
 
-  const selectedId = Number(select.value);
+  const selectedId = select.value;
 
   if (!selectedId) {
     alert("⚠️ Selecciona una voz");
@@ -922,18 +922,18 @@ async function loadSelectedVoiceFromLibrary() {
   }
 
   try {
-    const item = await getLibraryItemById(selectedId);
+    const item = await getLibraryItemByIdFromSupabase(selectedId);
 
     if (!item) {
       alert("⚠️ No se encontró el archivo");
       return;
     }
 
-    selectedVoiceBlob = item.audioBlob;
+    const response = await fetch(item.file_url);
+    selectedVoiceBlob = await response.blob();
     selectedVoiceId = item.id;
 
-    const audioURL = URL.createObjectURL(item.audioBlob);
-    player.src = audioURL;
+    player.src = item.file_url;
     status.textContent = `Estado: voz seleccionada -> ${item.name}`;
 
     if (Array.isArray(item.transcription) && item.transcription.length > 0) {
@@ -941,9 +941,7 @@ async function loadSelectedVoiceFromLibrary() {
         buildWordTimingFromSegment(seg)
       );
 
-      // IMPORTANTE:
-      // aquí respetamos exactamente las líneas guardadas
-      transcriptionSegments = baseTranscriptionSegments;
+      transcriptionSegments = [...baseTranscriptionSegments];
 
       renderKaraokeLyrics(transcriptionSegments);
       cargarLetrasEnMonitor();
