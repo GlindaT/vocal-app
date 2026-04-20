@@ -3359,7 +3359,7 @@ function parseUltraStarSync(syncContent) {
             word: text,
             start,
             end,
-            midi: 60 + pitch
+            midi: pitch
           }
         ]
       };
