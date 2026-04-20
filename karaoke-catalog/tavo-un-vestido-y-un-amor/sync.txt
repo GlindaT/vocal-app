@@ -2,308 +2,308 @@
 #ARTIST:Fito Páez
 #LANGUAGE:Spanish
 #BPM:92
-#GAP:0
+#GAP:29519
 
-: 45 2 0 Te
-: 48 2 0 vi
-- 50
+: 0 2 0 Te
+: 2 2 0 vi
+- 5
 
-: 50 3 0 Juntabas
-: 53 4 0 margaritas
-: 57 1 0 del
-: 58 2 0 mantel
-- 61
+: 5 3 0 Juntabas
+: 8 4 0 margaritas
+: 12 1 0 del
+: 13 2 0 mantel
+- 16
 
-: 61 1 0 Ya
-: 62 1 0 sé
-: 62 1 0 que
-: 64 1 0 te
-: 64 2 0 traté
-: 66 3 0 bastante
-: 69 1 0 mal
-- 71
+: 16 1 0 Ya
+: 16 1 0 sé
+: 17 1 0 que
+: 18 1 0 te
+: 19 2 0 traté
+: 21 3 0 bastante
+: 24 1 0 mal
+- 25
 
-: 71 1 0 No
-: 71 1 0 sé
-: 72 1 0 si
-: 73 2 0 eras
-: 75 1 0 un
-: 76 2 0 ángel
-: 78 0 0 o
-: 79 1 0 un
-: 79 2 0 rubí
-- 81
+: 25 1 0 No
+: 26 1 0 sé
+: 27 1 0 si
+: 28 2 0 eras
+: 30 1 0 un
+: 31 2 0 ángel
+: 33 0 0 o
+: 33 1 0 un
+: 34 2 0 rubí
+- 36
 
-: 81 1 0 O
-: 82 10 0 simplemente
-: 92 2 0 te
-: 94 2 0 vi
-- 96
+: 36 1 0 O
+: 37 10 0 simplemente
+: 47 2 0 te
+: 49 2 0 vi
+- 51
 
-: 96 2 0 Te
+: 51 2 0 Te
+: 53 2 0 vi
+- 56
+
+: 56 3 0 Saliste
+: 59 2 0 entre
+: 61 1 0 la
+: 62 2 0 gente
+: 64 0 0 a
+: 64 3 0 saludar
+- 67
+
+: 67 1 0 Los
+: 68 2 0 astros
+: 71 1 0 se
+: 72 2 0 rieron
+: 74 2 0 otra
+: 75 1 0 vez
+- 77
+
+: 77 1 0 La
+: 77 2 0 llave
+: 80 1 0 de
+: 81 3 0 mandala
+: 84 1 0 se
+: 85 3 0 quebró
+- 88
+
+: 88 1 0 O
+: 88 9 0 simplemente
+: 97 2 0 te
 : 99 2 0 vi
 - 101
 
-: 101 3 0 Saliste
-: 104 2 0 entre
-: 106 1 0 la
-: 107 2 0 gente
-: 109 0 0 a
-: 110 3 0 saludar
+: 101 2 0 Todo
+: 103 1 0 lo
+: 104 2 0 que
+: 106 2 0 diga
+: 108 2 0 está
+: 110 1 0 de
+: 111 2 0 más
 - 113
 
-: 113 1 0 Los
-: 114 2 0 astros
-: 116 1 0 se
-: 117 2 0 rieron
-: 119 2 0 otra
-: 121 1 0 vez
+: 113 1 0 Las
+: 114 1 0 luces
+: 115 2 0 siempre
+: 117 2 0 encienden
+: 120 1 0 en
+: 120 1 0 el
+: 121 1 0 alma
 - 122
 
-: 122 1 0 La
-: 123 2 0 llave
-: 125 1 0 de
-: 126 3 0 mandala
-: 129 1 0 se
-: 130 3 0 quebró
-- 133
+: 122 1 0 Y
+: 122 3 0 cuando
+: 126 1 0 me
+: 127 3 0 pierdo
+: 130 1 0 en
+: 131 1 0 la
+: 132 3 0 ciudad
+- 136
 
-: 133 1 0 O
-: 134 9 0 simplemente
-: 143 2 0 te
-: 144 2 0 vi
-- 146
+: 136 2 0 Vos
+: 137 1 0 ya
+: 138 3 0 sabés
+: 141 5 0 comprender
+- 147
 
-: 146 2 0 Todo
-: 148 1 0 lo
-: 149 2 0 que
-: 151 2 0 diga
-: 153 2 0 está
-: 155 1 0 de
-: 157 2 0 más
+: 147 1 0 Que
+: 147 1 0 en
+: 148 1 0 solo
+: 149 1 0 un
+: 150 2 0 rato,
+: 152 1 0 no
+: 152 1 0 más
+- 153
+
+: 153 2 0 Tendría
+: 155 1 0 que
+: 156 2 0 llorar
 - 158
 
-: 158 1 0 Las
-: 159 1 0 luces
-: 161 2 0 siempre
-: 162 2 0 encienden
-: 165 1 0 en
-: 165 1 0 el
-: 166 1 0 alma
+: 158 1 0 o
+: 159 4 0 salir
+: 163 1 0 a
+: 164 4 0 matar
 - 167
 
-: 167 1 0 Y
-: 168 3 0 cuando
-: 171 1 0 me
-: 172 3 0 pierdo
-: 175 1 0 en
-: 177 1 0 la
-: 178 3 0 ciudad
-- 181
+: 167 2 0 Te
+: 169 2 0 vi,
+: 171 2 0 te
+: 173 2 0 vi,
+: 175 2 0 te
+: 177 2 0 vi
+- 178
 
-: 181 2 0 Vos
-: 183 1 0 ya
-: 184 3 0 sabés
-: 186 5 0 comprender
-- 192
+: 178 1 0 Yo
+: 180 1 0 no
+: 181 5 0 buscaba
+: 186 1 0 a
+: 187 4 0 nadie
+: 191 1 0 y
+: 192 1 0 te
+: 193 1 0 vi
+- 194
 
-: 192 1 0 Que
-: 193 1 0 en
-: 193 1 0 solo
-: 195 1 0 un
-: 195 2 0 rato,
-: 197 1 0 no
-: 197 1 0 más
-- 198
+: 194 2 0 Te
+: 197 2 0 vi
+- 199
 
-: 198 2 0 Tendría
-: 201 1 0 que
-: 202 2 0 llorar
-- 204
+: 199 3 0 Fumabas
+: 202 2 0 unos
+: 204 3 0 chinos
+: 207 1 0 en
+: 208 3 0 Madrid
+- 210
 
-: 204 1 0 o
-: 204 4 0 salir
-: 208 1 0 a
-: 209 4 0 matar
-- 213
+: 210 1 0 Hay
+: 211 2 0 cosas
+: 213 1 0 que
+: 215 1 0 te
+: 215 2 0 ayudan
+: 218 0 0 a
+: 218 2 0 vivir
+- 220
 
-: 213 2 0 Te
-: 214 2 0 vi,
-: 217 2 0 te
-: 218 2 0 vi,
-: 220 2 0 te
-: 222 2 0 vi
-- 224
+: 220 1 0 No
+: 221 2 0 hacías
+: 223 2 0 otra
+: 225 2 0 cosa
+: 227 1 0 que
+: 228 3 0 escribir
+- 231
 
-: 224 1 0 Yo
-: 225 1 0 no
-: 226 5 0 buscaba
-: 232 1 0 a
-: 232 4 0 nadie
-: 236 1 0 y
-: 237 1 0 te
-: 238 1 0 vi
-- 240
+: 231 1 0 Y
+: 232 1 0 yo
+: 233 8 0 simplemente
+: 242 1 0 te
+: 243 1 0 vi
+- 245
 
-: 240 2 0 Te
-: 242 2 0 vi
-- 244
+: 245 2 0 Me
+: 246 3 0 fui,
+: 249 2 0 me
+: 251 3 0 voy,
+- 254
 
-: 244 3 0 Fumabas
-: 247 2 0 unos
-: 249 3 0 chinos
-: 252 1 0 en
-: 253 3 0 Madrid
-- 256
+: 254 1 0 de
+: 255 1 0 vez
+: 256 1 0 en
+: 257 2 0 cuando
+: 259 0 0 a
+: 259 2 0 algún
+: 261 2 0 lugar
+- 263
 
-: 256 1 0 Hay
-: 257 2 0 cosas
-: 259 1 0 que
-: 260 1 0 te
-: 261 2 0 ayudan
-: 263 0 0 a
-: 263 2 0 vivir
-- 265
+: 263 1 0 Ya
+: 264 1 0 sé
+: 264 1 0 no
+: 265 1 0 te
+: 266 1 0 hace
+: 267 2 0 gracia
+: 270 1 0 este
+: 271 1 0 país
+- 273
 
-: 265 1 0 No
-: 266 2 0 hacías
-: 269 2 0 otra
-: 270 2 0 cosa
-: 272 1 0 que
-: 273 3 0 escribir
-- 276
+: 273 3 0 Tenías
+: 276 1 0 un
+: 277 4 0 vestido
+: 280 1 0 y
+: 281 1 0 un
+: 282 2 0 amor
+- 284
 
-: 276 1 0 Y
-: 277 1 0 yo
-: 279 8 0 simplemente
-: 287 1 0 te
-: 288 1 0 vi
-- 290
+: 284 1 0 Yo
+: 285 8 0 simplemente
+: 294 1 0 te
+: 295 1 0 vi
+- 297
 
-: 290 2 0 Me
-: 291 3 0 fui,
-: 295 2 0 me
-: 296 3 0 voy,
-- 299
+: 297 2 0 Todo
+: 299 1 0 lo
+: 300 2 0 que
+: 302 2 0 diga
+: 304 2 0 está
+: 306 1 0 de
+: 307 2 0 más
+- 309
 
-: 299 1 0 de
-: 300 1 0 vez
-: 301 1 0 en
-: 302 2 0 cuando
-: 304 0 0 a
-: 304 2 0 algún
-: 306 2 0 lugar
-- 308
+: 309 1 0 Las
+: 309 1 0 luces
+: 311 2 0 siempre
+: 313 2 0 encienden
+: 315 1 0 en
+: 316 1 0 el
+: 316 1 0 alma
+- 317
 
-: 308 1 0 Ya
-: 309 1 0 sé
-: 310 1 0 no
-: 310 1 0 te
-: 311 1 0 hace
-: 313 2 0 gracia
-: 315 1 0 este
-: 316 1 0 país
-- 318
+: 317 1 0 Y
+: 318 4 0 cuando
+: 321 1 0 me
+: 323 4 0 pierdo
+: 326 1 0 en
+: 327 1 0 la
+: 328 4 0 ciudad
+- 332
 
-: 318 3 0 Tenías
-: 321 1 0 un
-: 322 4 0 vestido
-: 326 1 0 y
-: 326 1 0 un
-: 327 2 0 amor
-- 329
-
-: 329 1 0 Yo
-: 331 8 0 simplemente
-: 339 1 0 te
-: 340 1 0 vi
+: 332 1 0 Tú
+: 333 1 0 ya
+: 334 3 0 sabes
+: 337 5 0 comprender
 - 342
 
-: 342 2 0 Todo
-: 344 1 0 lo
-: 345 2 0 que
-: 347 2 0 diga
-: 349 2 0 está
-: 351 1 0 de
-: 352 2 0 más
-- 354
+: 342 1 0 Que
+: 343 1 0 en
+: 344 1 0 solo
+: 345 1 0 un
+: 346 2 0 rato,
+: 347 1 0 no
+: 348 1 0 más
+- 349
 
-: 354 1 0 Las
-: 355 1 0 luces
-: 356 2 0 siempre
-: 358 2 0 encienden
-: 360 1 0 en
-: 361 1 0 el
-: 361 1 0 alma
+: 349 2 0 Tendría
+: 351 1 0 que
+: 352 2 0 llorar
+- 353
+
+: 353 1 0 o
+: 354 3 0 salir
+: 357 1 0 a
+: 358 5 0 matarme
 - 362
 
-: 362 1 0 Y
-: 363 4 0 cuando
-: 367 1 0 me
-: 368 4 0 pierdo
-: 371 1 0 en
-: 373 1 0 la
-: 374 4 0 ciudad
-- 377
+: 362 2 0 Te
+: 364 2 0 vi,
+: 366 2 0 te
+: 368 2 0 vi,
+: 370 2 0 te
+: 372 2 0 vi
+- 373
 
-: 377 1 0 Tú
-: 378 1 0 ya
-: 379 3 0 sabes
-: 382 5 0 comprender
-- 387
+: 373 1 0 Yo
+: 374 1 0 no
+: 375 3 0 buscaba
+: 378 0 0 a
+: 379 2 0 nadie
+: 381 0 0 y
+: 381 1 0 te
+: 382 1 0 vi
+- 383
 
-: 387 1 0 Que
-: 388 1 0 en
-: 389 1 0 solo
-: 390 1 0 un
-: 391 2 0 rato,
-: 392 1 0 no
-: 393 1 0 más
-- 394
+: 383 2 0 Te
+: 385 3 0 vi,
+: 387 2 0 te
+: 389 3 0 vi,
+: 392 2 0 te
+: 394 2 0 vi
+- 396
 
-: 394 2 0 Tendría
-: 396 1 0 que
-: 397 2 0 llorar
-- 399
-
-: 399 1 0 o
-: 399 3 0 salir
-: 403 1 0 a
-: 403 5 0 matarme
-- 408
-
-: 408 2 0 Te
-: 409 2 0 vi,
-: 412 2 0 te
-: 413 2 0 vi,
-: 416 2 0 te
-: 417 2 0 vi
-- 419
-
-: 419 1 0 Yo
-: 420 1 0 no
-: 420 3 0 buscaba
-: 423 0 0 a
-: 424 2 0 nadie
-: 426 0 0 y
-: 426 1 0 te
-: 427 1 0 vi
-- 428
-
-: 428 2 0 Te
-: 430 3 0 vi,
-: 433 2 0 te
-: 435 3 0 vi,
-: 437 2 0 te
-: 439 2 0 vi
-- 441
-
-: 441 4 0 Yo
-: 445 4 0 no
-: 449 13 0 buscaba
-: 462 2 0 a
-: 464 10 0 nadie
-: 474 2 0 y
-: 476 4 0 te
-: 479 4 0 vi
-- 483
+: 396 4 0 Yo
+: 400 4 0 no
+: 403 13 0 buscaba
+: 417 2 0 a
+: 419 10 0 nadie
+: 428 2 0 y
+: 430 4 0 te
+: 434 4 0 vi
+- 438
