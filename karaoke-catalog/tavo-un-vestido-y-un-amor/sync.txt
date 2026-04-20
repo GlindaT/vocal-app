@@ -1,5 +1,5 @@
-#TITLE:Exported Song
-#ARTIST:VocalApp
+#TITLE:Un vestido y un amor
+#ARTIST:Tavo Botero
 #LANGUAGE:Spanish
 #BPM:92
 #GAP:29519
@@ -8,13 +8,13 @@
 : 2 2 50 vi
 - 5
 
-: 5 3 48 Juntabas
+: 4 3 48 Juntabas
 : 8 4 48 margaritas
 : 12 1 48 del
 : 13 2 48 mantel
 - 16
 
-: 16 1 50 Ya
+: 15 1 50 Ya
 : 16 1 50 sé
 : 17 1 50 que
 : 18 1 50 te
@@ -30,52 +30,52 @@
 : 30 1 50 un
 : 31 2 50 ángel
 : 33 1 50 o
-: 33 1 50 un
-: 34 2 50 rubí
+: 34 1 50 un
+: 35 2 50 rubí
 - 36
 
-: 36 1 50 O
-: 37 10 50 simplemente
+: 35 1 50 O
+: 36 10 50 simplemente
 : 47 2 50 te
 : 49 2 50 vi
 - 51
 
-: 51 2 50 Te
+: 50 2 50 Te
 : 53 2 50 vi
 - 56
 
-: 56 3 50 Saliste
-: 59 2 50 entre
+: 55 3 50 Saliste
+: 58 2 50 entre
 : 61 1 50 la
 : 62 2 50 gente
 : 64 1 50 a
-: 64 3 50 saludar
+: 65 3 50 saludar
 - 67
 
 : 67 1 50 Los
 : 68 2 50 astros
-: 71 1 50 se
-: 72 2 50 rieron
-: 74 2 50 otra
+: 70 1 50 se
+: 71 2 50 rieron
+: 73 2 50 otra
 : 75 1 50 vez
 - 77
 
-: 77 1 48 La
+: 76 1 48 La
 : 77 2 48 llave
-: 80 1 48 de
-: 81 3 48 mandala
-: 84 1 48 se
-: 85 3 48 quebró
+: 79 1 48 de
+: 80 3 48 mandala
+: 83 1 48 se
+: 84 3 48 quebró
 - 88
 
-: 88 1 40 O
+: 87 1 40 O
 : 88 9 40 simplemente
 : 97 2 40 te
 : 99 2 40 vi
 - 101
 
-: 101 2 50 Todo
-: 103 1 50 lo
+: 100 2 50 Todo
+: 102 1 50 lo
 : 104 2 50 que
 : 106 2 50 diga
 : 108 2 50 está
@@ -87,33 +87,33 @@
 : 114 1 50 luces
 : 115 2 50 siempre
 : 117 2 50 encienden
-: 120 1 50 en
+: 119 1 50 en
 : 120 1 50 el
 : 121 1 50 alma
 - 122
 
-: 122 1 50 Y
+: 121 1 50 Y
 : 122 3 50 cuando
-: 126 1 50 me
-: 127 3 50 pierdo
+: 125 1 50 me
+: 126 3 50 pierdo
 : 130 1 50 en
 : 131 1 50 la
 : 132 3 50 ciudad
 - 136
 
-: 136 2 52 Vos
+: 135 2 52 Vos
 : 137 1 52 ya
 : 138 3 52 sabés
 : 141 5 52 comprender
 - 147
 
-: 147 1 49 Que
+: 146 1 49 Que
 : 147 1 49 en
 : 148 1 49 solo
 : 149 1 49 un
 : 150 2 49 rato,
 : 152 1 49 no
-: 152 1 49 más
+: 153 1 49 más
 - 153
 
 : 153 2 41 Tendría
@@ -136,7 +136,7 @@
 - 178
 
 : 178 1 50 Yo
-: 180 1 50 no
+: 179 1 50 no
 : 181 5 50 buscaba
 : 186 1 50 a
 : 187 4 50 nadie
@@ -146,7 +146,7 @@
 - 194
 
 : 194 2 50 Te
-: 197 2 50 vi
+: 196 2 50 vi
 - 199
 
 : 199 3 47 Fumabas
@@ -159,9 +159,9 @@
 : 210 1 50 Hay
 : 211 2 50 cosas
 : 213 1 50 que
-: 215 1 50 te
+: 214 1 50 te
 : 215 2 50 ayudan
-: 218 1 50 a
+: 217 1 50 a
 : 218 2 50 vivir
 - 220
 
@@ -176,11 +176,11 @@
 : 231 1 48 Y
 : 232 1 48 yo
 : 233 8 48 simplemente
-: 242 1 48 te
+: 241 1 48 te
 : 243 1 48 vi
 - 245
 
-: 245 2 50 Me
+: 244 2 50 Me
 : 246 3 50 fui,
 : 249 2 50 me
 : 251 3 50 voy,
@@ -191,23 +191,23 @@
 : 256 1 50 en
 : 257 2 50 cuando
 : 259 1 50 a
-: 259 2 50 algún
-: 261 2 50 lugar
+: 260 2 50 algún
+: 262 2 50 lugar
 - 263
 
-: 263 1 40 Ya
-: 264 1 40 sé
+: 262 1 40 Ya
+: 263 1 40 sé
 : 264 1 40 no
 : 265 1 40 te
 : 266 1 40 hace
 : 267 2 40 gracia
-: 270 1 40 este
+: 269 1 40 este
 : 271 1 40 país
 - 273
 
-: 273 3 40 Tenías
-: 276 1 40 un
-: 277 4 40 vestido
+: 272 3 40 Tenías
+: 275 1 40 un
+: 276 4 40 vestido
 : 280 1 40 y
 : 281 1 40 un
 : 282 2 40 amor
@@ -215,35 +215,35 @@
 
 : 284 1 50 Yo
 : 285 8 50 simplemente
-: 294 1 50 te
+: 293 1 50 te
 : 295 1 50 vi
 - 297
 
-: 297 2 51 Todo
-: 299 1 51 lo
-: 300 2 51 que
-: 302 2 51 diga
-: 304 2 51 está
-: 306 1 51 de
-: 307 2 51 más
+: 296 2 51 Todo
+: 298 1 51 lo
+: 299 2 51 que
+: 301 2 51 diga
+: 303 2 51 está
+: 305 1 51 de
+: 306 2 51 más
 - 309
 
-: 309 1 61 Las
+: 308 1 61 Las
 : 309 1 61 luces
-: 311 2 61 siempre
-: 313 2 61 encienden
+: 310 2 61 siempre
+: 312 2 61 encienden
 : 315 1 61 en
 : 316 1 61 el
-: 316 1 61 alma
+: 317 1 61 alma
 - 317
 
 : 317 1 50 Y
 : 318 4 50 cuando
-: 321 1 50 me
+: 322 1 50 me
 : 323 4 50 pierdo
-: 326 1 50 en
-: 327 1 50 la
-: 328 4 50 ciudad
+: 327 1 50 en
+: 328 1 50 la
+: 329 4 50 ciudad
 - 332
 
 : 332 1 49 Tú
@@ -257,13 +257,13 @@
 : 344 1 50 solo
 : 345 1 50 un
 : 346 2 50 rato,
-: 347 1 50 no
-: 348 1 50 más
+: 348 1 50 no
+: 349 1 50 más
 - 349
 
-: 349 2 50 Tendría
-: 351 1 50 que
-: 352 2 50 llorar
+: 348 2 50 Tendría
+: 350 1 50 que
+: 351 2 50 llorar
 - 353
 
 : 353 1 50 o
@@ -286,23 +286,23 @@
 : 378 1 51 a
 : 379 2 51 nadie
 : 381 1 51 y
-: 381 1 51 te
-: 382 1 51 vi
+: 382 1 51 te
+: 383 1 51 vi
 - 383
 
-: 383 2 44 Te
-: 385 3 44 vi,
+: 382 2 44 Te
+: 384 3 44 vi,
 : 387 2 44 te
 : 389 3 44 vi,
 : 392 2 44 te
 : 394 2 44 vi
 - 396
 
-: 396 4 50 Yo
-: 400 4 50 no
+: 395 4 50 Yo
+: 399 4 50 no
 : 403 13 50 buscaba
-: 417 2 50 a
-: 419 10 50 nadie
+: 416 2 50 a
+: 418 10 50 nadie
 : 428 2 50 y
 : 430 4 50 te
 : 434 4 50 vi
