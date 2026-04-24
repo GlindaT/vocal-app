@@ -29,12 +29,13 @@ let baseTranscriptionSegments = [];
 let autoScrollEnabled = true; // Control de auto-scroll
 let lastValidMidi = 60;
 let segments = []; // <--- ESTA ES LA QUE TE FALTA
-let lastPitch = null;
+
 // Variables para sincronización con Taps
 let tapSyncMode = false;
 let tapSyncLines = [];
 let tapSyncTimestamps = [];
 let tapSyncCurrentIndex = 0;
+let lastPitch = null;
 
 function $(id) {
   return document.getElementById(id);
@@ -3259,28 +3260,32 @@ async function startKaraokePitchDetection() {
     const analyser = audioCtx.createAnalyser();
     analyser.fftSize = 2048;
     mic.connect(analyser);
-
+    
+    
     function loop() {
         const track = $("karaokeTrack");
         const currentTime = track ? track.currentTime : 0;
 
         const buffer = new Float32Array(analyser.fftSize);
         analyser.getFloatTimeDomainData(buffer);
-        let pitch = autoCorrelate(buffer, audioCtx.sampleRate);
-        drawKaraokeMonitor(currentTime, pitch);
+        
+    let pitch = autoCorrelate(buffer, audioCtx.sampleRate);
 
     // Filtrar valores inválidos
     if (!pitch || pitch <= 0) {
-      pitch = lastPitch;
+       pitch = lastPitch;
     } else {
       lastPitch = pitch;
     }
+
+    drawKaraokeMonitor(currentTime, pitch);
+        
     // Si la pista terminó, paramos
     if (track && track.ended) return;
 
     // Seguimos el loop mientras se graba
     if (karaokeMediaRecorder && karaokeMediaRecorder.state === "recording") {
-        requestAnimationFrame(loop);
+    requestAnimationFrame(loop);
     }
     }
     loop();
