@@ -3164,7 +3164,17 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     // --- DIBUJAR LA VOZ DEL USUARIO (LÍNEA/PUNTO) ---
     if (currentFreq && currentFreq > 0) {
         const userMidi = frequencyToMidi(currentFreq);
-        const userY = midiToY(userMidi);
+        //Forzar rango visual
+        const visualMin = midiMin + 2;
+        const visualMax = midiMax - 2;
+        
+        let adjusteMidi = userMidi;
+
+        //Evita que se pegue arriba
+        if (adjusteMidi < visualMin) adjustedMidi = visualMin;
+        if (adjusteMidi < visualMax) adjustedMidi = visualMax;
+        
+        const userY = = midiToY(adjustedMidi);
         
         // Punto grande en la posición actual
         ctx.beginPath();
@@ -3186,7 +3196,6 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
                 const midi = frequencyToMidi(freq);
                 const y = midiToY(midi);
                 const x = 40 - (pitchHistory.length - i) * 2;
-                
                 if (!started) {
                     ctx.moveTo(x, y);
                     started = true;
