@@ -3164,11 +3164,12 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     // --- DIBUJAR LA VOZ DEL USUARIO (LÍNEA/PUNTO) ---
     if (currentFreq && currentFreq > 0) {
         const userMidi = frequencyToMidi(currentFreq);
+        
+        let adjusteMidi = userMidi;
+        
         //Forzar rango visual
         const visualMin = midiMin + 2;
         const visualMax = midiMax - 2;
-        
-    let adjusteMidi = userMidi;
         
         //Evita que se pegue arriba
         if (adjusteMidi < visualMin) adjustedMidi = visualMin;
