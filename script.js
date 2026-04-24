@@ -3005,8 +3005,8 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
   const pentagramHeight = pentagramBottom - pentagramTop;
   
   // Rango de notas (MIDI): C3 (48) a G4 (67)
-  const midiMin = 48;
-  const midiMax = 67;
+  const midiMin = Math.min(...midiValues, 48) - 2;
+  const midiMax = Math.max(...midiValues, 67) + 2;
   const midiRange = midiMax - midiMin;
 
   // --- DIBUJAR LÍNEAS DEL PENTAGRAMA ---
@@ -3038,6 +3038,12 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     const normalized = (midiMax - midi) / midiRange;
     return pentagramTop + normalized * pentagramHeight;
   }
+
+  let midiValues = [];
+    
+  transcriptionSegments.forEach(seg => {
+    if (seg.midi && seg.midi > 0) midiValues.push(seg.midi);
+  });
 
   // --- DIBUJAR BARRAS DE NOTAS (ULTRASTAR STYLE) ---
   if (Array.isArray(transcriptionSegments) && transcriptionSegments.length > 0) {
