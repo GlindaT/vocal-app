@@ -29,7 +29,7 @@ let baseTranscriptionSegments = [];
 let autoScrollEnabled = true; // Control de auto-scroll
 let lastValidMidi = 60;
 let segments = []; // <--- ESTA ES LA QUE TE FALTA
-
+let lastPitch = null;
 // Variables para sincronización con Taps
 let tapSyncMode = false;
 let tapSyncLines = [];
@@ -3254,7 +3254,14 @@ async function startKaraokePitchDetection() {
 
         const buffer = new Float32Array(analyser.fftSize);
         analyser.getFloatTimeDomainData(buffer);
-        const pitch = autoCorrelate(buffer, audioCtx.sampleRate);
+        let pitch = autoCorrelate(buffer, audioCtx.sampleRate);
+
+    // Filtrar valores inválidos
+    if (!pitch || pitch <= 0) {
+      pitch = lastPitch;
+    } else {
+      lastPitch = pitch;
+    }
 
         drawKaraokeMonitor(currentTime, pitch);
 
