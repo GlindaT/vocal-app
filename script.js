@@ -4,7 +4,7 @@ async function startApp() {
         console.log("Database Ready");
         
         if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
-            applyAppTheme(localstorage.getItem("vocalApp_theme") || "oscuro");
+            applyAppTheme(localStorage.getItem("vocalApp_theme") || "oscuro");
             
         }
         // Cargar vistas iniciales
@@ -2982,7 +2982,7 @@ function applyKaraokeTheme() {
 // ==========================================
 // MONITOR DE KARAOKE (CANVAS)
 // ==========================================
-function drawKaraokeMonitor(currentTime, currentFreq) {
+function drawKaraokeMonitor(adjustedMidi) {
     const canvas = $("karaokeCanvas");
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -2999,7 +2999,7 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     const pentagramBottom = canvas.height - 60;
     const pentagramHeight = pentagramBottom - pentagramTop;
     
-let midiValues = [];
+    let midiValues = [];
     transcriptionSegments.forEach(seg => {
     if (seg.midi && seg.midi > 0) midiValues.push(seg.midi);
     });
@@ -3177,7 +3177,8 @@ let midiValues = [];
     if (adjusteMidi < visualMin) adjustedMidi = visualMin;
     if (adjusteMidi < visualMax) adjustedMidi = visualMax;
         
-    
+    console.log(adjustedMidi);
+        
     const userY = midiToY(adjustedMidi);
     // Punto grande en la posición actual
     ctx.beginPath();
@@ -3267,9 +3268,9 @@ async function startKaraokePitchDetection() {
     } else {
         lastPitch = pitch;
     }
-    drawKaraokeMonitor(currentTime, pitch);
     
     function loop() {
+        const adjustedMidi = calculateMidi(); 
         const track = $("karaokeTrack");
         const currentTime = track ? track.currentTime : 0;
         const buffer = new Float32Array(analyser.fftSize);
@@ -3284,6 +3285,7 @@ async function startKaraokePitchDetection() {
         }
     }
     loop();
+    drawKaraokeMonitor(currentTime, pitch);
 }
 
 
