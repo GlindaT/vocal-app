@@ -1605,13 +1605,13 @@ function updateKaraokeHighlight(currentTime) {
       }
     });
   });
-
-  if (activeLine && autoScrollEnabled) {
-    activeLine.scrollIntoView({
-      behavior: "smooth",
-      block: "center"
-    });
-  }
+    
+    if (activeLine && autoScrollEnabled) {
+        activeLine.scrollIntoView({
+            behavior: "smooth",
+            block: "center"
+        });
+    }
 }
 
 // ==========================================
