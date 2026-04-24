@@ -37,6 +37,7 @@ let lastValidMidi = 60;
 let segments = []; // <--- ESTA ES LA QUE TE FALTA
 let midi = null;
 let currentFreq = 0;
+let currentTime = 0;
 // Variables para sincronización con Taps
 let tapSyncMode = false;
 let tapSyncLines = [];
