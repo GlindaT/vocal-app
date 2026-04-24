@@ -3390,37 +3390,40 @@ function parseUltraStarSync(syncContent) {
   const secondsPerBeat = 60 / bpm;
   const secondsPerTick = secondsPerBeat / 4;
 
-  const parsedWords = noteLines
-    .map(line => {
-      const match = line.match(/^[:*FR]\s+(\d+)\s+(\d+)\s+(-?\d+)\s+(.+)$/);
-      if (!match) return null;
+  return noteLines.map(line => {
+    const match = line.match(/^[:*FR]\s+(\d+)\s+(\d+)\s+(-?\d+)\s+(.+)$/);
+    if (!match) return null;
 
-      const startTick = parseInt(match[1], 10);
-      const durationTick = parseInt(match[2], 10);
-      const pitch = parseInt(match[3], 10);
-      const text = (match[4] || "").trim();
+    const startTick = parseInt(match[1], 10);
+    const durationTick = parseInt(match[2], 10);
+    const midi = parseInt(match[3], 10);
+    const text = (match[4] || "").trim();
 
-      const start = gap / 1000 + startTick * secondsPerTick;
-      const end = gap / 1000 + (startTick + durationTick) * secondsPerTick;
+    const start = gap / 1000 + startTick * secondsPerTick;
+    const end = gap / 1000 + (startTick + durationTick) * secondsPerTick;
 
-      return {
-        start,
-        end,
-        text,
-        words: [
-          {
-            word: text,
-            start,
-            end,
-            midi: pitch
-          }
-        ]
-      };
-    })
-    .filter(Boolean);
+    // Convertir MIDI → frecuencia (para consistencia con tu sistema)
+    const pitch = midi > 0 ? 440 * Math.pow(2, (midi - 69) / 12) : -1;
 
-  return parsedWords;
+    return {
+      start,
+      end,
+      text,
+      midi: midi > 0 ? midi : null,
+      pitch: pitch > 0 ? pitch : -1,
+      words: [
+        {
+          word: text,
+          start,
+          end,
+          midi: midi > 0 ? midi : null,
+          pitch: pitch > 0 ? pitch : -1
+        }
+      ]
+    };
+  }).filter(Boolean);
 }
+
 async function loadCatalogSong(folder, title, artist) {
   const status = $("karaokeStatus");
 
@@ -3586,8 +3589,9 @@ async function loadKaraokeSong(id) {
     
     // Cargar transcripción (Aquí está la lógica clave)
     if (Array.isArray(song.transcription) && song.transcription.length > 0) {
-      transcriptionSegments = song.transcription;
-      baseTranscriptionSegments = [...song.transcription]; // Clonamos para evitar referencias cruzadas
+      transcriptionSegments = JSON.parse(JSON.stringify(song.transcription));
+      baseTranscriptionSegments = [...transcriptionSegments]; // Clonamos para evitar referencias cruzadas
+      segments = [...transcriptionSegments];
       cargarLetrasEnMonitor();
     } else {
       // Si no tiene letra, limpiamos el monitor
