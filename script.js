@@ -3599,7 +3599,7 @@ async function loadKaraokeSong(id) {
       
       // Cargar transcripción (Aquí está la lógica clave)
       if (Array.isArray(song.transcription) && song.transcription.length > 0) {
-          transcriptionSegments = JSON.parse(JSON.stringify(song.transcription));
+          transcriptionSegments = JSON.parse('{"JSON.stringify(song.transcription)"}');
           baseTranscriptionSegments = [...transcriptionSegments]; // Clonamos para evitar referencias cruzadas
           segments = [...transcriptionSegments];
           cargarLetrasEnMonitor();
