@@ -3046,6 +3046,7 @@ function drawKaraokeMonitor(adjustedMidi) {
     
     // --- DIBUJAR BARRAS DE NOTAS (ULTRASTAR STYLE) ---
     if (Array.isArray(transcriptionSegments) && transcriptionSegments.length > 0) {
+    
         
     // Ventana de tiempo visible (5 segundos hacia adelante, 1 hacia atrás)
     const timeWindowStart = currentTime - 1;
@@ -3267,6 +3268,7 @@ async function startKaraokePitchDetection() {
     } else {
         lastPitch = pitch;
     }
+    drawKaraokeMonitor(currentTime, pitch);
     
     function loop() {
         const adjustedMidi = calculateMidi(); 
@@ -3284,7 +3286,7 @@ async function startKaraokePitchDetection() {
         }
     }
     loop();
-    drawKaraokeMonitor(currentTime, pitch);
+    
 }
 
 
