@@ -3174,7 +3174,7 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
         if (adjusteMidi < visualMin) adjustedMidi = visualMin;
         if (adjusteMidi < visualMax) adjustedMidi = visualMax;
         
-        const userY = = midiToY(adjustedMidi);
+        const userY = midiToY(adjustedMidi);
         
         // Punto grande en la posición actual
         ctx.beginPath();
