@@ -36,6 +36,7 @@ let autoScrollEnabled = true; // Control de auto-scroll
 let lastValidMidi = 60;
 let segments = []; // <--- ESTA ES LA QUE TE FALTA
 let midi = null;
+let currentFreq = 0;
 // Variables para sincronización con Taps
 let tapSyncMode = false;
 let tapSyncLines = [];
@@ -2982,6 +2983,7 @@ function applyKaraokeTheme() {
 // ==========================================
 // MONITOR DE KARAOKE (CANVAS)
 // ==========================================
+
 function drawKaraokeMonitor(adjustedMidi) {
     const canvas = $("karaokeCanvas");
     if (!canvas) return;
@@ -3084,7 +3086,6 @@ function drawKaraokeMonitor(adjustedMidi) {
     let freq = word.pitch || segment.pitch;
     if (freq && freq > 0) {
     const detectedMidi = frequencyToMidi(freq);
-                    
     // suavizado simple
     midi = Math.round(detectedMidi);
     }
@@ -3176,8 +3177,6 @@ function drawKaraokeMonitor(adjustedMidi) {
     //Evita que se pegue arriba
     if (adjusteMidi < visualMin) adjustedMidi = visualMin;
     if (adjusteMidi < visualMax) adjustedMidi = visualMax;
-        
-    console.log(adjustedMidi);
         
     const userY = midiToY(adjustedMidi);
     // Punto grande en la posición actual
