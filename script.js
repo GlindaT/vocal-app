@@ -2335,25 +2335,35 @@ function initSettings() {
     micSensitivity: "vocalApp_sensitivity"
   };
 
-  Object.entries(settings).forEach(([id, storageKey]) => {
-    const el = $(id);
-    if (el) {
-      // Cargar valor guardado
-      const saved = localStorage.getItem(storageKey);
-      if (saved) el.value = saved;
+  const sensInput = $("micSensitivity");
+  if (sensInput) {
+    // Cargar valor guardado o usar 0.01 por defecto
+    sensInput.value = localStorage.getItem("vocalApp_sensitivity") || "0.01";
+    
+    sensInput.addEventListener("input", (e) => {
+      localStorage.setItem("vocalApp_sensitivity", e.target.value);
+    });
+  }
+    
+    Object.entries(settings).forEach(([id, storageKey]) => {
+      const el = $(id);
+      if (el) {
+       // Cargar valor guardado
+        const saved = localStorage.getItem(storageKey);
+        if (saved) el.value = saved;
       
-      // Escuchar cambios
-      const eventType = el.type === 'range' ? 'input' : 'change'; // Usar 'input' para sliders
-      el.addEventListener(eventType, (e) => {
-        localStorage.setItem(storageKey, e.target.value);
-        if (id !== 'micSensitivity') showSaveNotification(); // Opcional: no mostrar notificación en cada milímetro del slider
+        // Escuchar cambios
+        const eventType = el.type === 'range' ? 'input' : 'change'; // Usar 'input' para sliders
+        el.addEventListener(eventType, (e) => {
+          localStorage.setItem(storageKey, e.target.value);
+          if (id !== 'micSensitivity') showSaveNotification(); // Opcional: no mostrar notificación en cada milímetro del slider
         
-        if (id === "appTheme") {
-          applyAppTheme(e.target.value);
-        }
-      });
-    }
-  });
+          if (id === "appTheme") {
+            applyAppTheme(e.target.value);
+          }
+        });
+      }
+    });
 }
 
   // Aplicar tema guardado al iniciar
