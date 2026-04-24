@@ -3165,7 +3165,7 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     if (currentFreq && currentFreq > 0) {
         const userMidi = frequencyToMidi(currentFreq);
         
-    let adjusteMidi = userMidi;
+let adjusteMidi = userMidi;
         
         //Forzar rango visual
         const visualMin = midiMin + 2;
