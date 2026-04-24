@@ -3267,6 +3267,7 @@ async function startKaraokePitchDetection() {
         const buffer = new Float32Array(analyser.fftSize);
         analyser.getFloatTimeDomainData(buffer);
         let pitch = autoCorrelate(buffer, audioCtx.sampleRate);
+        drawKaraokeMonitor(currentTime, pitch);
 
     // Filtrar valores inválidos
     if (!pitch || pitch <= 0) {
@@ -3274,18 +3275,14 @@ async function startKaraokePitchDetection() {
     } else {
       lastPitch = pitch;
     }
+    // Si la pista terminó, paramos
+    if (track && track.ended) return;
 
-        drawKaraokeMonitor(currentTime, pitch);
-
-        // Si la pista terminó, paramos
-        if (track && track.ended) return;
-
-        // Seguimos el loop mientras se graba
-        if (karaokeMediaRecorder && karaokeMediaRecorder.state === "recording") {
-            requestAnimationFrame(loop);
-        }
+    // Seguimos el loop mientras se graba
+    if (karaokeMediaRecorder && karaokeMediaRecorder.state === "recording") {
+        requestAnimationFrame(loop);
     }
-
+    }
     loop();
 }
 
