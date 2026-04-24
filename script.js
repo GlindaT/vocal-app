@@ -1,14 +1,23 @@
-// Añadir al inicio del archivo para asegurar que la DB cargue
-window.addEventListener('DOMContentLoaded', async () => {
+async:
+
+/* jshint esversion: 8 */
+async function startApp() {
     try {
         await initDB();
         console.log("Database Ready");
+        
+        if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
+            applyAppTheme(localstorage.getItem("vocalApp_theme") || "oscuro");
+            
+        }
         // Cargar vistas iniciales
         renderLibrary();
     } catch (err) {
         console.error(err);
     }
-});
+}
+
+startApp();
 
 // Reutilizar el buffer para el afinador
 const pitchBuffer = new Float32Array(2048);
@@ -2363,7 +2372,10 @@ function initSettings() {
 }
 
   // Aplicar tema guardado al iniciar
-  applyAppTheme(localStorage.getItem("vocalApp_theme") || "oscuro");
+  if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
+    applyAppTheme(localStorage.getItem("vocalApp_theme") || "oscuro");
+}
+
 
 
 function applyAppTheme(theme) {
@@ -2851,23 +2863,33 @@ function redoTapSync() {
 // ==========================================
 // INIT
 // ==========================================
-document.addEventListener("DOMContentLoaded", async () => {
-  try {
-    await initDB();
+if (typeof document !== 'undefined') {
+    document.addEventListener("DOMContentLoaded", async () => {
+        
+        await initDB();
+        await renderLibrary('todos');
+        await loadTrackOptionsInStudio();
+        await loadTrackOptionsInKaraoke();
+        
+        function applyKaraokeTheme() {
+            const theme = localStorage.getItem("vocalApp_stage") || "clasico";
+            const monitor = $("karaokeLiveLyrics");
+            if (monitor) {
+                monitor.className = "karaoke-lyrics theme-" + theme;
+                
+            }
+        }
+        
     initSettings();
-      
-function applyKaraokeTheme() {
-    const theme = localStorage.getItem("vocalApp_stage") || "clasico";
-    const monitor = $("karaokeLiveLyrics");
-    if (monitor) {
-        monitor.className = "karaoke-lyrics theme-" + theme;
-    }
     applyKaraokeTheme();
-
+    
     safeAdd("karaokeStage", "change", (e) => {
-      saveSetting("vocalApp_stage", e.target);
-      
+        saveSetting("vocalApp_stage", e.target);
+        applyKaraokeTheme();
     });
+    console.log("Environment is not a browser. DOM manipulation skipped.");
+    // Optionally call startApp() or other non-DOM logic here
+    startApp();
 
     // navegación
     safeAdd("btnAfinador", "click", () => showTab("afinador"));
@@ -2928,48 +2950,50 @@ function applyKaraokeTheme() {
     safeAdd("karaokeMixBtn", "click", mixKaraoke);
     safeAdd("refreshKaraokeTrackBtn", "click", loadTrackOptionsInKaraoke);
     safeAdd("loadKaraokeTrackBtn", "click", loadSelectedTrackFromLibraryKaraoke);
-
-    const kTrack = $("karaokeTrack");
-    if (kTrack) {
-      kTrack.addEventListener("timeupdate", () => {
+    try {
+    
+      const kTrack = $("karaokeTrack");
+      if (kTrack) {
+        kTrack.addEventListener("timeupdate", () => {
         syncKaraokeMonitor(kTrack.currentTime);
-      });
-    }
+            
+        });
+      }
 
     // splitter
     safeAdd("splitBtn", "click", splitAudio);
 
     // micrófonos
-      safeAdd("refreshMicsBtn", "click", loadAvailableMics);
-      safeAdd("testMic1Btn", "click", () => testMicrophone(1));
-      safeAdd("testMic2Btn", "click", () => testMicrophone(2));
-      safeAdd("mic1Select", "change", () => saveMicSelection(1));
-      safeAdd("mic2Select", "change", () => saveMicSelection(2));
-      safeAdd("micCount", "change", toggleMic2Visibility);
+    safeAdd("refreshMicsBtn", "click", loadAvailableMics);
+    safeAdd("testMic1Btn", "click", () => testMicrophone(1));
+    safeAdd("testMic2Btn", "click", () => testMicrophone(2));
+    safeAdd("mic1Select", "change", () => saveMicSelection(1));
+    safeAdd("mic2Select", "change", () => saveMicSelection(2));
+    safeAdd("micCount", "change", toggleMic2Visibility);
+    
     
     // Cargar micrófonos al iniciar
-      loadAvailableMics();
-      toggleMic2Visibility();
+    loadAvailableMics();
+    toggleMic2Visibility();
 
-    // init
-    await renderLibrary('todos');
-    await loadTrackOptionsInStudio();
-    await loadTrackOptionsInKaraoke();
 
     const player = $("player");
     if (player) {
       player.addEventListener("timeupdate", () => {
         updateKaraokeHighlight(player.currentTime);
       });
-
+         
+         
       player.addEventListener("ended", () => {
         updateKaraokeHighlight(player.currentTime);
+             
       });
     }
   } catch (error) {
-    console.error(error);
-    alert("❌ Error inicializando la app");
+        console.error(error);
+        alert("❌ Error inicializando la app");
   }
+    
 });
 
 // ==========================================
@@ -3553,28 +3577,30 @@ async function loadMyKaraokeSongs() {
   }
 }
 
-// 2. Modifica un poco la lógica de carga para ser más robusto:
 async function loadKaraokeSong(id) {
   try {
     const song = await getLibraryItemById(id);
     if (!song) {
-      alert("⚠️ Canción no encontrada");
-      return;
+    alert("⚠️ Canción no encontrada");
+    return;
+        
     }
     
     // Cargar pista
     const track = $("karaokeTrack");
     if (track) {
-      // Si el audioBlob existe, lo usamos, si no, limpiamos el src
-      if (song.audioBlob) {
+    // Si el audioBlob existe, lo usamos, si no, limpiamos el src
+    if (song.audioBlob) {
         track.src = URL.createObjectURL(song.audioBlob);
         karaokeSelectedTrackBlob = song.audioBlob;
-      } else {
+        
+    } else {
         track.src = "";
         console.warn("La canción no tiene un audio asociado.");
-      }
-      track.volume = 0.4;
-      karaokeSelectedTrackName = song.name || "Sin título";
+        
+    }
+    track.volume = 0.4;
+    karaokeSelectedTrackName = song.name || "Sin título";
     }
     
     // Cargar transcripción (Aquí está la lógica clave)
@@ -3594,9 +3620,9 @@ async function loadKaraokeSong(id) {
     
     // Scroll al monitor
     $("karaokeCanvas").scrollIntoView({ behavior: "smooth", block: "center" });
-    
+      
   } catch (error) {
     console.error("Error cargando canción:", error);
     alert("❌ Error al cargar la canción");
-  }
+    }
 }
