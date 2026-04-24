@@ -3171,11 +3171,6 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     ctx.stroke();
   }
 
-  // --- DIBUJAR LETRA ACTUAL ABAJO ---
-  const currentSegment = transcriptionSegments.find(seg => 
-    currentTime >= seg.start && currentTime <= seg.end + 0.5
-  );
-  
   if (currentSegment) {
     // Fondo para la letra
     ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
