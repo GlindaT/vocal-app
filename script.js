@@ -3524,18 +3524,17 @@ async function loadMyKaraokeSongs() {
     
     if (allSongs.length === 0) {
       container.innerHTML = `
-        <div style="text-align: center; padding: 20px; color: var(--text-muted);">
-          <p>No tienes canciones listas aún.</p>
-          <p style="font-size: 13px;">Sincroniza una en Estudio.</p>
-        </div>
+      <div style="text-align: center; padding: 20px; color: var(--text-muted);">
+      <p>No tienes canciones listas aún.</p>
+      <p style="font-size: 13px;">Sincroniza una en Estudio.</p>
+      </div>
       `;
-      return;
+        
+        return;
     }
-    
-    container.innerHTML = "";
-    
-    allSongs.forEach(song => {
-      const div = document.createElement("div");
+      container.innerHTML = "";
+      allSongs.forEach(song => {
+          const div = document.createElement("div");
       div.className = "my-karaoke-item";
       
       const title = song.metadata?.title || song.name || "Sin título";
@@ -3577,12 +3576,12 @@ async function loadMyKaraokeSongs() {
 
 async function loadKaraokeSong(id) {
   try {
-      const song = await getLibraryItemById(id);
+    const song = await getLibraryItemById(id);
       if (!song) {
           alert("⚠️ Canción no encontrada");
           return;
       }
-      // Cargar pista
+    // Cargar pista
       const track = $("karaokeTrack");
       if (track) {
           // Si el audioBlob existe, lo usamos, si no, limpiamos el src
@@ -3605,18 +3604,18 @@ async function loadKaraokeSong(id) {
           cargarLetrasEnMonitor();
       } else {
           
-          // Si no tiene letra, limpiamos el monitor
+      // Si no tiene letra, limpiamos el monitor
           transcriptionSegments = [];
           cargarLetrasEnMonitor();
       }
       
       const title = song.metadata?.title || song.name;
       $("karaokeStatus").textContent = `Estado: "${title}" cargada. ¡Lista para cantar! 🎤`;
-      
       // Scroll al monitor
       $("karaokeCanvas").scrollIntoView({ behavior: "smooth", block: "center" });
+  
   } catch (error) {
-      console.error("Error cargando canción:", error);
-      alert("❌ Error al cargar la canción");
+    console.error("Error cargando canción:", error);
+    alert(`"❌ Error al cargar la canción: ${error.message}"`);
   }
 }
