@@ -3008,11 +3008,11 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
   ctx.lineWidth = 1;
   const numLines = 12;
   for (let i = 0; i <= numLines; i++) {
-    const y = pentagramTop + (pentagramHeight / numLines) * i;
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(canvas.width, y);
-    ctx.stroke();
+  const y = pentagramTop + (pentagramHeight / numLines) * i;
+  ctx.beginPath();
+  ctx.moveTo(0, y);
+  ctx.lineTo(canvas.width, y);
+  ctx.stroke();
   }
 
   // --- DIBUJAR INDICADORES DE NOTAS A LA IZQUIERDA ---
@@ -3021,8 +3021,8 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
   ctx.textAlign = "right";
   const noteLabels = ["G4", "F4", "E4", "D4", "C4", "B3", "A3", "G3", "F3", "E3", "D3", "C3"];
   noteLabels.forEach((label, i) => {
-    const y = pentagramTop + (pentagramHeight / numLines) * i + 4;
-    ctx.fillText(label, 25, y);
+  const y = pentagramTop + (pentagramHeight / numLines) * i + 4;
+  ctx.fillText(label, 25, y);
   });
 
   // Función para convertir MIDI a posición Y
@@ -3035,49 +3035,48 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
 
   // --- DIBUJAR BARRAS DE NOTAS (ULTRASTAR STYLE) ---
   if (Array.isArray(transcriptionSegments) && transcriptionSegments.length > 0) {
-    
-    // Ventana de tiempo visible (5 segundos hacia adelante, 1 hacia atrás)
-    const timeWindowStart = currentTime - 1;
-    const timeWindowEnd = currentTime + 5;
-    const pixelsPerSecond = (canvas.width - 40) / 6; // 6 segundos de ventana
-    const lineX = 40; // Línea de tiempo actual
+  // Ventana de tiempo visible (5 segundos hacia adelante, 1 hacia atrás)
+  const timeWindowStart = currentTime - 1;
+  const timeWindowEnd = currentTime + 5;
+  const pixelsPerSecond = (canvas.width - 40) / 6; // 6 segundos de ventana
+  const lineX = 40; // Línea de tiempo actual
 
-    // Dibujar línea de tiempo actual
-    ctx.strokeStyle = "#ef4444";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(lineX, pentagramTop);
-    ctx.lineTo(lineX, pentagramBottom);
-    ctx.stroke();
-
-    // Recorrer todos los segmentos
-    transcriptionSegments.forEach((segment) => {
-      const words = Array.isArray(segment.words) ? segment.words : [];
+  // Dibujar línea de tiempo actual
+  ctx.strokeStyle = "#ef4444";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(lineX, pentagramTop);
+  ctx.lineTo(lineX, pentagramBottom);
+  ctx.stroke();
+  
+  // Recorrer todos los segmentos
+  transcriptionSegments.forEach((segment) => {
+  const words = Array.isArray(segment.words) ? segment.words : [];
       
-      words.forEach((word) => {
-        // Verificar si está en la ventana visible
-        if (word.end < timeWindowStart || word.start > timeWindowEnd) return;
+  words.forEach((word) => {
+  // Verificar si está en la ventana visible
+  if (word.end < timeWindowStart || word.start > timeWindowEnd) return;
+      
+  // Calcular posición X basada en el tiempo
+  const wordStartX = lineX + (word.start - currentTime) * pixelsPerSecond;
+  const wordEndX = lineX + (word.end - currentTime) * pixelsPerSecond;
+  const barWidth = Math.max(wordEndX - wordStartX, 20);
         
-        // Calcular posición X basada en el tiempo
-        const wordStartX = lineX + (word.start - currentTime) * pixelsPerSecond;
-        const wordEndX = lineX + (word.end - currentTime) * pixelsPerSecond;
-        const barWidth = Math.max(wordEndX - wordStartX, 20);
+  // Posición Y basada en la nota MIDI
+  const midi = word.midi || segment.midi || 60; // Default: C3
+  const barY = midiToY(midi);
+  const barHeight = 22;
         
-        // Posición Y basada en la nota MIDI
-        const midi = word.midi || segment.midi || 60; // Default: C3
-        const barY = midiToY(midi);
-        const barHeight = 22;
+  // Determinar si la palabra está activa
+  const isActive = currentTime >= word.start && currentTime <= word.end;
+  const isPast = currentTime > word.end;
         
-        // Determinar si la palabra está activa
-        const isActive = currentTime >= word.start && currentTime <= word.end;
-        const isPast = currentTime > word.end;
-        
-        // Determinar si el usuario está cantando la nota correcta
-        let isCorrect = false;
-        if (isActive && currentFreq > 0) {
-          const userMidi = frequencyToMidi(currentFreq);
-          isCorrect = Math.abs(userMidi - midi) <= 2; // Tolerancia de 2 semitonos
-        }
+  // Determinar si el usuario está cantando la nota correcta
+  let isCorrect = false;
+  if (isActive && currentFreq > 0) {
+  const userMidi = frequencyToMidi(currentFreq);
+  isCorrect = Math.abs(userMidi - midi) <= 2; // Tolerancia de 2 semitonos
+  }
         
         // Colores según estado
         let barColor, textColor, borderColor;
@@ -3170,7 +3169,12 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     });
     ctx.stroke();
   }
-
+    
+  // --- DIBUJAR LETRA ACTUAL ABAJO ---
+  const currentSegment = transcriptionSegments.find(seg => 
+    currentTime >= seg.start && currentTime <= seg.end + 0.5
+  );
+  
   if (currentSegment) {
     // Fondo para la letra
     ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
