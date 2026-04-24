@@ -2995,7 +2995,7 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     const pentagramBottom = canvas.height - 60;
     const pentagramHeight = pentagramBottom - pentagramTop;
     
-    let midiValues = [];
+  let midiValues = [];
     
     transcriptionSegments.forEach(seg => {
         if (seg.midi && seg.midi > 0) midiValues.push(seg.midi);
@@ -3165,46 +3165,46 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     if (currentFreq && currentFreq > 0) {
         const userMidi = frequencyToMidi(currentFreq);
         
-let adjusteMidi = userMidi;
+    let adjusteMidi = userMidi;
+    //Forzar rango visual
+    const visualMin = midiMin + 2;
+    const visualMax = midiMax - 2;
         
-        //Forzar rango visual
-        const visualMin = midiMin + 2;
-        const visualMax = midiMax - 2;
+    //Evita que se pegue arriba
+    if (adjusteMidi < visualMin) adjustedMidi = visualMin;
+    if (adjusteMidi < visualMax) adjustedMidi = visualMax;
         
-        //Evita que se pegue arriba
-        if (adjusteMidi < visualMin) adjustedMidi = visualMin;
-        if (adjusteMidi < visualMax) adjustedMidi = visualMax;
+    
+    const userY = midiToY(adjustedMidi);
         
-        const userY = midiToY(adjustedMidi);
+    // Punto grande en la posición actual
+    ctx.beginPath();
+    ctx.fillStyle = "#facc15";
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = "#facc15";
+    ctx.arc(40, userY, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
         
-        // Punto grande en la posición actual
-        ctx.beginPath();
-        ctx.fillStyle = "#facc15";
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = "#facc15";
-        ctx.arc(40, userY, 8, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.shadowBlur = 0;
+    // Rastro de la voz
+    ctx.beginPath();
+    ctx.strokeStyle = "rgba(250, 204, 21, 0.6)";
+    ctx.lineWidth = 3;
         
-        // Rastro de la voz
-        ctx.beginPath();
-        ctx.strokeStyle = "rgba(250, 204, 21, 0.6)";
-        ctx.lineWidth = 3;
-        
-        let started = false;
-        pitchHistory.forEach((freq, i) => {
-            if (freq && freq > 0) {
-                const midi = frequencyToMidi(freq);
-                const y = midiToY(midi);
-                const x = 40 - (pitchHistory.length - i) * 2;
-                if (!started) {
-                    ctx.moveTo(x, y);
-                    started = true;
-                } else {
-                    ctx.lineTo(x, y);
-                }
-            }
-        });
+    let started = false;
+    pitchHistory.forEach((freq, i) => {
+    if (freq && freq > 0) {
+    const midi = frequencyToMidi(freq);
+    const y = midiToY(midi);
+    const x = 40 - (pitchHistory.length - i) * 2;
+    if (!started) {
+        ctx.moveTo(x, y);
+    started = true;
+    } else {
+        ctx.lineTo(x, y);
+    }
+    }
+    });
         ctx.stroke();
     }
     
