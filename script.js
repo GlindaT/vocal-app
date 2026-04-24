@@ -770,42 +770,47 @@ async function saveManualFileToLibrary() {
   const fileInput = $("libraryFileInput");
   const typeSelect = $("libraryFileType");
   const nameInput = $("libraryFileName");
+  const progress = $("uploadProgress");
+  const btn = $("saveLibraryFileBtn");
 
   const file = fileInput.files[0];
-  if (!file) {
-    alert("⚠️ Por favor, selecciona un archivo de audio primero.");
-    return;
-  }
+  if (!file) return alert("⚠️ Selecciona un archivo.");
 
-  if (file.size > 20 * 1024 * 1024) {
-    alert("⚠️ El archivo es muy grande (máx 20MB).");
-    return;
-  }
-
-  const name = nameInput.value.trim() || file.name;
-  const type = typeSelect.value;
+  // Mostrar barra de progreso
+  progress.style.display = "block";
+  progress.value = 10;
+  btn.disabled = true;
 
   try {
-    await saveLibraryItemToSupabase({
-      name,
-      type,
-      blob: file,
-      transcription: [],
-      metadata: {}
+    progress.value = 30; // Simulamos lectura
+    
+    // Aquí ocurre el proceso real
+    await addLibraryItem({
+      name: nameInput.value.trim() || file.name,
+      type: typeSelect.value,
+      audioBlob: file,
+      date: new Date().toLocaleString("es-ES"),
+      transcription: []
     });
 
-    fileInput.value = "";
-    nameInput.value = "";
-
-    await renderLibrary("todos");
-
-    alert("✅ ¡Archivo subido y guardado en la nube!");
+    progress.value = 80;
+    await renderLibrary('todos');
+    
+    progress.value = 100;
+    alert("✅ ¡Archivo guardado exitosamente!");
+    
   } catch (error) {
     console.error(error);
-    alert("❌ Error al guardar el archivo en Supabase.");
+    alert("❌ Error al guardar.");
+  } finally {
+    // Resetear UI
+    progress.style.display = "none";
+    progress.value = 0;
+    btn.disabled = false;
+    fileInput.value = "";
+    nameInput.value = "";
   }
 }
-
 async function loadTrackOptionsInStudio() {
   const select = $("studioTrackSelect");
   if (!select) return;
