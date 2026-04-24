@@ -3168,8 +3168,8 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
         const visualMin = midiMin + 2;
         const visualMax = midiMax - 2;
         
-        let adjusteMidi = userMidi;
-
+    let adjusteMidi = userMidi;
+        
         //Evita que se pegue arriba
         if (adjusteMidi < visualMin) adjustedMidi = visualMin;
         if (adjusteMidi < visualMax) adjustedMidi = visualMax;
