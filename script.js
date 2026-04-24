@@ -356,7 +356,7 @@ function autoCorrelate(buf, sampleRate) {
   const umbral = parseFloat(localStorage.getItem("vocalApp_sensitivity")) || 0.01;
 
   // Si el volumen es muy bajo, ignoramos la detección
-  if (rms < 0.01) return -1;
+  if (rms < umbral) return -1;
 
   let bestOffset = -1;
   let bestCorrelation = 0;
