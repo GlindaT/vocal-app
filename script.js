@@ -3070,6 +3070,7 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
         
   // Posición Y basada en la nota MIDI
   let midi = null;
+      
   // 1. Prioridad: MIDI directo
   if (word.midi && word.midi > 0) {
     midi = word.midi;
@@ -3088,7 +3089,7 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
 
   // 3. Si aún no hay nada válido
   if (!midi) {
-    midi = lastValidMidi;
+    return;
   } else {
     lastValidMidi = midi;
   }
