@@ -1,5 +1,3 @@
-async:
-
 /* jshint esversion: 8 */
 async function startApp() {
     try {
