@@ -3162,7 +3162,7 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     }
     
     // --- DIBUJAR LA VOZ DEL USUARIO (LÍNEA/PUNTO) ---
-    if (currentFreq > 0) {
+    if (currentFreq && currentFreq > 0) {
         const userMidi = frequencyToMidi(currentFreq);
         const userY = midiToY(userMidi);
         
@@ -3182,10 +3182,11 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
         
         let started = false;
         pitchHistory.forEach((freq, i) => {
-            if (freq) {
+            if (freq && freq > 0) {
                 const midi = frequencyToMidi(freq);
                 const y = midiToY(midi);
                 const x = 40 - (pitchHistory.length - i) * 2;
+                
                 if (!started) {
                     ctx.moveTo(x, y);
                     started = true;
