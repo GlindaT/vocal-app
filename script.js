@@ -3260,22 +3260,20 @@ async function startKaraokePitchDetection() {
     analyser.fftSize = 2048;
     mic.connect(analyser);
     
+    let pitch = autoCorrelate(buffer, audioCtx.sampleRate);
+    // Filtrar valores inválidos
+    if (!pitch || pitch <= 0) {
+        pitch = lastPitch;
+    } else {
+        lastPitch = pitch;
+    }
+    drawKaraokeMonitor(currentTime, pitch);
+    
     function loop() {
         const track = $("karaokeTrack");
         const currentTime = track ? track.currentTime : 0;
-        
         const buffer = new Float32Array(analyser.fftSize);
         analyser.getFloatTimeDomainData(buffer);
-        
-        let pitch = autoCorrelate(buffer, audioCtx.sampleRate);
-        
-        // Filtrar valores inválidos
-        if (!pitch || pitch <= 0) {
-            pitch = lastPitch;
-        } else {
-            lastPitch = pitch;
-        }
-        drawKaraokeMonitor(currentTime, pitch);
         
         // Si la pista terminó, paramos
         if (track && track.ended) return;
