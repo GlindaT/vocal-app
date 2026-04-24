@@ -35,14 +35,14 @@ let baseTranscriptionSegments = [];
 let autoScrollEnabled = true; // Control de auto-scroll
 let lastValidMidi = 60;
 let segments = []; // <--- ESTA ES LA QUE TE FALTA
-
+let midi = null;
 // Variables para sincronización con Taps
 let tapSyncMode = false;
 let tapSyncLines = [];
 let tapSyncTimestamps = [];
 let tapSyncCurrentIndex = 0;
 let lastPitch = null;
-let midi = null;
+
 
 function $(id) {
   return document.getElementById(id);
@@ -2367,22 +2367,18 @@ function initSettings() {
       }
     });
 }
-
-  // Aplicar tema guardado al iniciar
-  if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
+// Aplicar tema guardado al iniciar
+if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined') {
     applyAppTheme(localStorage.getItem("vocalApp_theme") || "oscuro");
 }
 
-
-
 function applyAppTheme(theme) {
-  // Aplicamos el tema al elemento raíz (html)
-  document.documentElement.setAttribute("data-theme", theme);
+    // Aplicamos el tema al elemento raíz (html)
+    document.documentElement.setAttribute("data-theme", theme);
   
-  // También al body por si acaso
-  document.body.setAttribute("data-theme", theme);
-  
-  console.log("🎨 Tema aplicado:", theme);
+    // También al body por si acaso
+    document.body.setAttribute("data-theme", theme);
+    console.log("🎨 Tema aplicado:", theme);
 }
 
 // ==========================================
@@ -2862,31 +2858,28 @@ function redoTapSync() {
 // ==========================================
 if (typeof document !== 'undefined') {
     document.addEventListener("DOMContentLoaded", async () => {
-        
         await initDB();
         await renderLibrary('todos');
         await loadTrackOptionsInStudio();
         await loadTrackOptionsInKaraoke();
         
-        function applyKaraokeTheme() {
-            const theme = localStorage.getItem("vocalApp_stage") || "clasico";
-            const monitor = $("karaokeLiveLyrics");
-            if (monitor) {
-                monitor.className = "karaoke-lyrics theme-" + theme;
-                
-            }
-        }
-        
-    initSettings();
-    applyKaraokeTheme();
+function applyKaraokeTheme() {
+    const theme = localStorage.getItem("vocalApp_stage") || "clasico";
+    const monitor = $("karaokeLiveLyrics");
+    if (monitor) {
+        monitor.className = "karaoke-lyrics theme-" + theme;
+    }
+}
+        initSettings();
+        applyKaraokeTheme();
     
     safeAdd("karaokeStage", "change", (e) => {
         saveSetting("vocalApp_stage", e.target);
         applyKaraokeTheme();
     });
-    console.log("Environment is not a browser. DOM manipulation skipped.");
-    // Optionally call startApp() or other non-DOM logic here
-    startApp();
+        console.log("Environment is not a browser. DOM manipulation skipped.");
+        // Optionally call startApp() or other non-DOM logic here
+        startApp();
 
     // navegación
     safeAdd("btnAfinador", "click", () => showTab("afinador"));
@@ -2933,8 +2926,8 @@ if (typeof document !== 'undefined') {
     safeAdd("redoTapSyncBtn", "click", redoTapSync);
       
     // Cargar catálogo y mis canciones al iniciar
-    loadKaraokeCatalog();
-    loadMyKaraokeSongs();
+        loadKaraokeCatalog();
+        loadMyKaraokeSongs();
     
     // biblioteca
     safeAdd("saveLibraryFileBtn", "click", saveManualFileToLibrary);
@@ -2947,16 +2940,14 @@ if (typeof document !== 'undefined') {
     safeAdd("karaokeMixBtn", "click", mixKaraoke);
     safeAdd("refreshKaraokeTrackBtn", "click", loadTrackOptionsInKaraoke);
     safeAdd("loadKaraokeTrackBtn", "click", loadSelectedTrackFromLibraryKaraoke);
-    try {
-    
-      const kTrack = $("karaokeTrack");
-      if (kTrack) {
-        kTrack.addEventListener("timeupdate", () => {
-        syncKaraokeMonitor(kTrack.currentTime);
+        try {
+            const kTrack = $("karaokeTrack");
+            if (kTrack) {
+                kTrack.addEventListener("timeupdate", () => {
+                    syncKaraokeMonitor(kTrack.currentTime);
+                });
+            }
             
-        });
-      }
-
     // splitter
     safeAdd("splitBtn", "click", splitAudio);
 
@@ -2968,38 +2959,34 @@ if (typeof document !== 'undefined') {
     safeAdd("mic2Select", "change", () => saveMicSelection(2));
     safeAdd("micCount", "change", toggleMic2Visibility);
     
-    
     // Cargar micrófonos al iniciar
-    loadAvailableMics();
-    toggleMic2Visibility();
-
-
-    const player = $("player");
-    if (player) {
-      player.addEventListener("timeupdate", () => {
-        updateKaraokeHighlight(player.currentTime);
-      });
-         
-         
-      player.addEventListener("ended", () => {
-        updateKaraokeHighlight(player.currentTime);
-             
-      });
-    }
-  } catch (error) {
-        console.error(error);
-        alert("❌ Error inicializando la app");
-  }
-    
-});
+            loadAvailableMics();
+            toggleMic2Visibility();
+            
+            const player = $("player");
+            if (player) {
+                player.addEventListener("timeupdate", () => {
+                    updateKaraokeHighlight(player.currentTime);
+                });
+                player.addEventListener("ended", () => {
+                    updateKaraokeHighlight(player.currentTime);
+                });
+            }
+        } catch (error) {
+            console.error(error);
+            alert("❌ Error inicializando la app");
+        }
+    });
+}
 
 // ==========================================
 // MONITOR DE KARAOKE (CANVAS)
 // ==========================================
 function drawKaraokeMonitor(currentTime, currentFreq) {
-  const canvas = $("karaokeCanvas");
-  if (!canvas) return;
-  const ctx = canvas.getContext("2d");
+    const canvas = $("karaokeCanvas");
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    
     // Guardamos la frecuencia actual
     pitchHistory.push(currentFreq > 0 ? currentFreq : null);
     if (pitchHistory.length > 60) pitchHistory.shift();
@@ -3011,7 +2998,8 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     const pentagramTop = 30;
     const pentagramBottom = canvas.height - 60;
     const pentagramHeight = pentagramBottom - pentagramTop;
-    let midiValues = [];
+    
+let midiValues = [];
     transcriptionSegments.forEach(seg => {
     if (seg.midi && seg.midi > 0) midiValues.push(seg.midi);
     });
@@ -3581,40 +3569,39 @@ async function loadKaraokeSong(id) {
           return;
       }
     // Cargar pista
-      const track = $("karaokeTrack");
-      if (track) {
-          // Si el audioBlob existe, lo usamos, si no, limpiamos el src
-          if (song.audioBlob) {
-              track.src = URL.createObjectURL(song.audioBlob);
-              karaokeSelectedTrackBlob = song.audioBlob;
-          } else {
-              track.src = "";
-              console.warn("La canción no tiene un audio asociado.");
-          }
-          track.volume = 0.4;
-          karaokeSelectedTrackName = song.name || "Sin título";
-      }
+    const track = $("karaokeTrack");
+    if (track) {
+    // Si el audioBlob existe, lo usamos, si no, limpiamos el src
+    if (song.audioBlob) {
+        track.src = URL.createObjectURL(song.audioBlob);
+        karaokeSelectedTrackBlob = song.audioBlob;
+    } else {
+        track.src = "";
+        console.warn("La canción no tiene un audio asociado.");
+    }
+        track.volume = 0.4;
+        karaokeSelectedTrackName = song.name || "Sin título";
+    }
       
-      // Cargar transcripción (Aquí está la lógica clave)
-      if (Array.isArray(song.transcription) && song.transcription.length > 0) {
-          transcriptionSegments = JSON.parse('{"JSON.stringify(song.transcription)"}');
-          baseTranscriptionSegments = [...transcriptionSegments]; // Clonamos para evitar referencias cruzadas
-          segments = [...transcriptionSegments];
-          cargarLetrasEnMonitor();
-      } else {
+    // Cargar transcripción (Aquí está la lógica clave)
+    if (Array.isArray(song.transcription) && song.transcription.length > 0) {
+        transcriptionSegments = JSON.parse(JSON.stringify(song.transcription));
+        baseTranscriptionSegments = [...transcriptionSegments]; // Clonamos para evitar referencias cruzadas
+        segments = [...transcriptionSegments];
+        cargarLetrasEnMonitor();
+    } else {
           
-      // Si no tiene letra, limpiamos el monitor
-          transcriptionSegments = [];
-          cargarLetrasEnMonitor();
-      }
-      
+    // Si no tiene letra, limpiamos el monitor
+        transcriptionSegments = [];
+        cargarLetrasEnMonitor();
+    }
       const title = song.metadata?.title || song.name;
       $("karaokeStatus").textContent = `Estado: "${title}" cargada. ¡Lista para cantar! 🎤`;
       // Scroll al monitor
       $("karaokeCanvas").scrollIntoView({ behavior: "smooth", block: "center" });
   
   } catch (error) {
-    console.error("Error cargando canción:", error);
-    alert(`"❌ Error al cargar la canción: ${error.message}"`);
+      console.error("Error cargando canción:", error);
+      alert(`"❌ Error al cargar la canción: ${error.message}"`);
   }
 }
