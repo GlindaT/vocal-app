@@ -12,6 +12,12 @@
       "title": "Born To Die",
       "artist": "Lana Del Rey",
       "folder": "lana-born-to-die"
+    },
+    {
+      "id": "madonna-material-girl",
+      "title": "Material Girl",
+      "artist": "Madonna",
+      "folder": "madonna-material-girl"
     }
   ]
 }
