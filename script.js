@@ -37,7 +37,7 @@ let tapSyncTimestamps = [];
 let tapSyncCurrentIndex = 0;
 let lastPitch = null;
 let midi = null;
-let adjusteMidi = userMidi;
+let adjusteMidi = userMidi
 
 function $(id) {
   return document.getElementById(id);
