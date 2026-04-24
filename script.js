@@ -27,6 +27,7 @@ let pitchHistory = [];
 let transcriptionSegments = [];
 let baseTranscriptionSegments = [];
 let autoScrollEnabled = true; // Control de auto-scroll
+let lastValidMidi = 60;
 let segments = []; // <--- ESTA ES LA QUE TE FALTA
 
 // Variables para sincronización con Taps
@@ -3068,7 +3069,29 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
   const barWidth = Math.max(wordEndX - wordStartX, 20);
         
   // Posición Y basada en la nota MIDI
-  const midi = word.midi || segment.midi || 60; // Default: C3
+  let midi = null;
+  // 1. Prioridad: MIDI directo
+  if (word.midi && word.midi > 0) {
+    midi = word.midi;
+  } else if (segment.midi && segment.midi > 0) {
+    midi = segment.midi;
+  }
+
+  // 2. Si no hay MIDI, usar pitch (frecuencia)
+  if (!midi) {
+    let freq = word.pitch || segment.pitch;
+
+    if (freq && freq > 0) {
+      midi = frequencyToMidi(freq);
+    }
+  }
+
+  // 3. Si aún no hay nada válido
+  if (!midi) {
+    midi = lastValidMidi;
+  } else {
+    lastValidMidi = midi;
+  }
   const barY = midiToY(midi);
   const barHeight = 22;
         
