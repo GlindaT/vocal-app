@@ -2855,20 +2855,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   try {
     await initDB();
     initSettings();
-
-    function applyKaraokeTheme() {
-      const theme = localStorage.getItem("vocalApp_stage") || "clasico";
-      const monitor = $("karaokeLiveLyrics");
-      if (monitor) {
+      
+function applyKaraokeTheme() {
+    const theme = localStorage.getItem("vocalApp_stage") || "clasico";
+    const monitor = $("karaokeLiveLyrics");
+    if (monitor) {
         monitor.className = "karaoke-lyrics theme-" + theme;
-      }
     }
-
     applyKaraokeTheme();
 
     safeAdd("karaokeStage", "change", (e) => {
       saveSetting("vocalApp_stage", e.target);
-      applyKaraokeTheme();
+      
     });
 
     // navegación
@@ -2978,14 +2976,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 // MONITOR DE KARAOKE (CANVAS)
 // ==========================================
 function drawKaraokeMonitor(currentTime, currentFreq) {
-    const canvas = $("karaokeCanvas");
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    
+  const canvas = $("karaokeCanvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
     // Guardamos la frecuencia actual
     pitchHistory.push(currentFreq > 0 ? currentFreq : null);
     if (pitchHistory.length > 60) pitchHistory.shift();
-    
     
     // Limpiamos el canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -2994,11 +2990,9 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     const pentagramTop = 30;
     const pentagramBottom = canvas.height - 60;
     const pentagramHeight = pentagramBottom - pentagramTop;
-    
-  let midiValues = [];
-    
+    let midiValues = [];
     transcriptionSegments.forEach(seg => {
-        if (seg.midi && seg.midi > 0) midiValues.push(seg.midi);
+    if (seg.midi && seg.midi > 0) midiValues.push(seg.midi);
     });
     
     // Rango de notas (MIDI): C3 (48) a G4 (67)
@@ -3014,11 +3008,11 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     ctx.lineWidth = 1;
     const numLines = 12;
     for (let i = 0; i <= numLines; i++) {
-        const y = pentagramTop + (pentagramHeight / numLines) * i;
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
-        ctx.stroke();
+    const y = pentagramTop + (pentagramHeight / numLines) * i;
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
+    ctx.stroke();
     }
     
     // --- DIBUJAR INDICADORES DE NOTAS A LA IZQUIERDA ---
@@ -3027,133 +3021,133 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     ctx.textAlign = "right";
     const noteLabels = ["G4", "F4", "E4", "D4", "C4", "B3", "A3", "G3", "F3", "E3", "D3", "C3"];
     noteLabels.forEach((label, i) => {
-        const y = pentagramTop + (pentagramHeight / numLines) * i + 4;
-        ctx.fillText(label, 25, y);
+    const y = pentagramTop + (pentagramHeight / numLines) * i + 4;
+    ctx.fillText(label, 25, y);
     });
     
     // Función para convertir MIDI a posición Y
     function midiToY(midi) {
-        if (!midi || midi < midiMin) midi = midiMin;
-        if (midi > midiMax) midi = midiMax;
-        const normalized = (midiMax - midi) / midiRange;
-        return pentagramTop + normalized * pentagramHeight;
+    if (!midi || midi < midiMin) midi = midiMin;
+    if (midi > midiMax) midi = midiMax;
+    const normalized = (midiMax - midi) / midiRange;
+    return pentagramTop + normalized * pentagramHeight;
     }
     
     // --- DIBUJAR BARRAS DE NOTAS (ULTRASTAR STYLE) ---
     if (Array.isArray(transcriptionSegments) && transcriptionSegments.length > 0) {
         
-        // Ventana de tiempo visible (5 segundos hacia adelante, 1 hacia atrás)
-        const timeWindowStart = currentTime - 1;
-        const timeWindowEnd = currentTime + 5;
-        const pixelsPerSecond = (canvas.width - 40) / 6; // 6 segundos de ventana
-        const lineX = 40; // Línea de tiempo actual
+    // Ventana de tiempo visible (5 segundos hacia adelante, 1 hacia atrás)
+    const timeWindowStart = currentTime - 1;
+    const timeWindowEnd = currentTime + 5;
+    const pixelsPerSecond = (canvas.width - 40) / 6; // 6 segundos de ventana
+    const lineX = 40; // Línea de tiempo actual
         
-        // Dibujar línea de tiempo actual
-        ctx.strokeStyle = "#ef4444";
-        ctx.lineWidth = 2;
+    // Dibujar línea de tiempo actual
+    ctx.strokeStyle = "#ef4444";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(lineX, pentagramTop);
+    ctx.lineTo(lineX, pentagramBottom);
+    ctx.stroke();
+        
+    // Recorrer todos los segmentos
+    transcriptionSegments.forEach((segment) => {
+    const words = Array.isArray(segment.words) ? segment.words : [];
+    words.forEach((word) => {
+                
+    // Verificar si está en la ventana visible
+    if (word.end < timeWindowStart || word.start > timeWindowEnd) return;
+                
+    // Calcular posición X basada en el tiempo
+    const wordStartX = lineX + (word.start - currentTime) * pixelsPerSecond;
+    const wordEndX = lineX + (word.end - currentTime) * pixelsPerSecond;
+    const barWidth = Math.max(wordEndX - wordStartX, 20);
+                
+    // 1. Prioridad: MIDI directo
+    if (word.midi && word.midi > 0) {
+        midi = word.midi;
+    } else if (segment.midi && segment.midi > 0) {
+        midi = segment.midi;
+    }
+                
+    // 2. Si no hay MIDI, usar pitch (frecuencia)
+    if (!midi) {
+    let freq = word.pitch || segment.pitch;
+    if (freq && freq > 0) {
+    const detectedMidi = frequencyToMidi(freq);
+                    
+    // suavizado simple
+    midi = Math.round(detectedMidi);
+    }
+    }
+                
+    // 3. Si aún no hay nada válido
+    if (!midi) {
+    return;
+    } else {
+    lastValidMidi = midi;
+    }
+    const barY = midiToY(midi);
+    const barHeight = 22;
+                
+    // Determinar si la palabra está activa
+    const isActive = currentTime >= word.start && currentTime <= word.end;
+    const isPast = currentTime > word.end;
+                
+    // Determinar si el usuario está cantando la nota correcta
+    let isCorrect = false;
+    if (isActive && currentFreq > 0) {
+    const userMidi = frequencyToMidi(currentFreq);
+    isCorrect = Math.abs(userMidi - midi) <= 2; // Tolerancia de 2 semitonos
+    }
+                
+    // Colores según estado
+        let barColor, textColor, borderColor;
+        if (isPast) {
+            barColor = "#4b5563"; // Gris
+            textColor = "#9ca3af";
+            borderColor = "#6b7280";
+        } else if (isActive) {
+        if (isCorrect) {
+            barColor = "#22c55e"; // Verde - ¡Correcto!
+            textColor = "#ffffff";
+            borderColor = "#4ade80";
+        } else {
+            barColor = "#3b82f6"; // Azul - Activo
+            textColor = "#ffffff";
+            borderColor = "#60a5fa";
+        }
+        } else {
+            barColor = "#1e40af"; // Azul oscuro - Próximo
+            textColor = "#93c5fd";
+            borderColor = "#3b82f6";
+        }
+                
+    // Dibujar barra con bordes redondeados
+        ctx.fillStyle = barColor;
         ctx.beginPath();
-        ctx.moveTo(lineX, pentagramTop);
-        ctx.lineTo(lineX, pentagramBottom);
+        ctx.roundRect(wordStartX, barY - barHeight/2, barWidth, barHeight, 8);
+        ctx.fill();
+                
+        // Borde
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = isActive ? 2 : 1;
         ctx.stroke();
         
-        // Recorrer todos los segmentos
-        transcriptionSegments.forEach((segment) => {
-            const words = Array.isArray(segment.words) ? segment.words : [];
-            words.forEach((word) => {
+        // Texto de la palabra
+        ctx.fillStyle = textColor;
+        ctx.font = isActive ? "bold 12px Arial" : "11px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
                 
-        // Verificar si está en la ventana visible
-        if (word.end < timeWindowStart || word.start > timeWindowEnd) return;
-                
-        // Calcular posición X basada en el tiempo
-        const wordStartX = lineX + (word.start - currentTime) * pixelsPerSecond;
-        const wordEndX = lineX + (word.end - currentTime) * pixelsPerSecond;
-        const barWidth = Math.max(wordEndX - wordStartX, 20);
-                
-            // 1. Prioridad: MIDI directo
-            if (word.midi && word.midi > 0) {
-                midi = word.midi;
-            } else if (segment.midi && segment.midi > 0) {
-                midi = segment.midi;
-            }
-                
-            // 2. Si no hay MIDI, usar pitch (frecuencia)
-            if (!midi) {
-                let freq = word.pitch || segment.pitch;
-            if (freq && freq > 0) {
-                const detectedMidi = frequencyToMidi(freq);
-                    
-                // suavizado simple
-                midi = Math.round(detectedMidi);
-            }
-            }
-                
-            // 3. Si aún no hay nada válido
-            if (!midi) {
-                return;
-            } else {
-                lastValidMidi = midi;
-            }
-            const barY = midiToY(midi);
-            const barHeight = 22;
-                
-                // Determinar si la palabra está activa
-                const isActive = currentTime >= word.start && currentTime <= word.end;
-                const isPast = currentTime > word.end;
-                
-                // Determinar si el usuario está cantando la nota correcta
-                let isCorrect = false;
-                if (isActive && currentFreq > 0) {
-                    const userMidi = frequencyToMidi(currentFreq);
-                    isCorrect = Math.abs(userMidi - midi) <= 2; // Tolerancia de 2 semitonos
-                }
-                
-                // Colores según estado
-                let barColor, textColor, borderColor;
-                if (isPast) {
-                    barColor = "#4b5563"; // Gris
-                    textColor = "#9ca3af";
-                    borderColor = "#6b7280";
-                } else if (isActive) {
-                if (isCorrect) {
-                    barColor = "#22c55e"; // Verde - ¡Correcto!
-                    textColor = "#ffffff";
-                    borderColor = "#4ade80";
-                } else {
-                    barColor = "#3b82f6"; // Azul - Activo
-                    textColor = "#ffffff";
-                    borderColor = "#60a5fa";
-                }
-                } else {
-                    barColor = "#1e40af"; // Azul oscuro - Próximo
-                    textColor = "#93c5fd";
-                    borderColor = "#3b82f6";
-                }
-                
-                // Dibujar barra con bordes redondeados
-                ctx.fillStyle = barColor;
-                ctx.beginPath();
-                ctx.roundRect(wordStartX, barY - barHeight/2, barWidth, barHeight, 8);
-                ctx.fill();
-                
-                // Borde
-                ctx.strokeStyle = borderColor;
-                ctx.lineWidth = isActive ? 2 : 1;
-                ctx.stroke();
-                
-                // Texto de la palabra
-                ctx.fillStyle = textColor;
-                ctx.font = isActive ? "bold 12px Arial" : "11px Arial";
-                ctx.textAlign = "center";
-                ctx.textBaseline = "middle";
-                
-                // Truncar si es muy largo
-                let displayWord = word.word || "";
-                if (displayWord.length > 10) {
-                    displayWord = displayWord.substring(0, 8) + "..";
-                }
-                ctx.fillText(displayWord, wordStartX + barWidth/2, barY);
-            });
-        });
+        // Truncar si es muy largo
+        let displayWord = word.word || "";
+        if (displayWord.length > 10) {
+            displayWord = displayWord.substring(0, 8) + "..";
+        }
+        ctx.fillText(displayWord, wordStartX + barWidth/2, barY);
+    });
+    });
     } else {
         ctx.fillStyle = "#666";
         ctx.font = "16px Arial";
@@ -3176,7 +3170,6 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
         
     
     const userY = midiToY(adjustedMidi);
-        
     // Punto grande en la posición actual
     ctx.beginPath();
     ctx.fillStyle = "#facc15";
@@ -3215,27 +3208,27 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     
     if (currentSegment) {
         
-        // Fondo para la letra
-        ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-        ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+    // Fondo para la letra
+    ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+    ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
         
-        // Letra actual
-        ctx.fillStyle = "#ffffff";
-        ctx.font = "bold 20px Arial";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(currentSegment.text || "", canvas.width / 2, canvas.height - 25);
+    // Letra actual
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 20px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(currentSegment.text || "", canvas.width / 2, canvas.height - 25);
     }
     
     // --- DIBUJAR SIGUIENTE LÍNEA ---
     const nextSegment = transcriptionSegments.find(seg => seg.start > currentTime);
     if (nextSegment && !currentSegment) {
-        ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-        ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
-        ctx.fillStyle = "#94a3b8";
-        ctx.font = "16px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText("Próximo: " + (nextSegment.text || ""), canvas.width / 2, canvas.height - 25);
+    ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+    ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "16px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("Próximo: " + (nextSegment.text || ""), canvas.width / 2, canvas.height - 25);
     }
 }
 
@@ -3273,7 +3266,6 @@ async function startKaraokePitchDetection() {
         } else {
             lastPitch = pitch;
         }
-        
         drawKaraokeMonitor(currentTime, pitch);
         
         // Si la pista terminó, paramos
