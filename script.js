@@ -31,6 +31,9 @@ let autoScrollEnabled = true; // Control de auto-scroll
 let lastValidMidi = 60;
 let segments = []; // <--- ESTA ES LA QUE TE FALTA
 let midi = null;
+let midiMin = 48; // Valor por defecto (ej. C3)
+let midiMax = 84; // Valor por defecto (ej. C6)
+let currentSegments = []; // Para guardar las notas de la canción
 let currentFreq = 0;
 let currentTime = 0;
 // Variables para sincronización con Taps
@@ -3279,18 +3282,11 @@ function parseUltraStarSync(syncContent) {
       bpm = parseFloat(line.replace("#BPM:", "").trim()) || 120;
       continue;
     }
-
     if (line.startsWith("#GAP:")) {
       gap = parseInt(line.replace("#GAP:", "").trim(), 10) || 0;
       continue;
     }
-
-    if (
-      line.startsWith(":") ||
-      line.startsWith("*") ||
-      line.startsWith("F") ||
-      line.startsWith("R")
-    ) {
+    if (line.startsWith(":") || line.startsWith("*") || line.startsWith("F") || line.startsWith("R")) {
       noteLines.push(line);
     }
   }
@@ -3298,7 +3294,8 @@ function parseUltraStarSync(syncContent) {
   const secondsPerBeat = 60 / bpm;
   const secondsPerTick = secondsPerBeat / 4;
 
-  return noteLines.map(line => {
+  // 1. Primero creamos el array de segmentos
+  const parsedSegments = noteLines.map(line => {
     const match = line.match(/^[:*FR]\s+(\d+)\s+(\d+)\s+(-?\d+)\s+(.+)$/);
     if (!match) return null;
 
@@ -3309,8 +3306,6 @@ function parseUltraStarSync(syncContent) {
 
     const start = gap / 1000 + startTick * secondsPerTick;
     const end = gap / 1000 + (startTick + durationTick) * secondsPerTick;
-
-    // Convertir MIDI → frecuencia (para consistencia con tu sistema)
     const pitch = midi > 0 ? 440 * Math.pow(2, (midi - 69) / 12) : -1;
 
     return {
@@ -3319,19 +3314,28 @@ function parseUltraStarSync(syncContent) {
       text,
       midi: midi > 0 ? midi : null,
       pitch: pitch > 0 ? pitch : -1,
-      words: [
-        {
-          word: text,
-          start,
-          end,
-          midi: midi > 0 ? midi : null,
-          pitch: pitch > 0 ? pitch : -1
-        }
-      ]
+      words: [{
+        word: text,
+        start,
+        end,
+        midi: midi > 0 ? midi : null,
+        pitch: pitch > 0 ? pitch : -1
+      }]
     };
   }).filter(Boolean);
-}
 
+  // 2. AHORA actualizamos las variables globales de rango
+  if (parsedSegments.length > 0) {
+    const allMidis = parsedSegments.filter(s => s.midi).map(s => s.midi);
+    if (allMidis.length > 0) {
+      midiMin = Math.min(...allMidis) - 2;
+      midiMax = Math.max(...allMidis) + 2;
+    }
+    currentSegments = parsedSegments; // Actualizamos la referencia global
+  }
+
+  return parsedSegments;
+}
 async function loadCatalogSong(folder, title, artist) {
   const status = $("karaokeStatus");
 
