@@ -2000,12 +2000,6 @@ async function mixKaraoke() {
     const outputLength = Math.max(trackBuffer.length, voiceBuffer.length);
     const outputChannels = Math.max(trackBuffer.numberOfChannels, voiceBuffer.numberOfChannels);
 
-    const offlineCtx = new OfflineAudioContext(
-      outputChannels,
-      outputLength,
-      trackBuffer.sampleRate
-    );
-
     const trackGain = offlineCtx.createGain();
     trackGain.gain.value = 0.4;
 
