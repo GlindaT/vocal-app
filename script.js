@@ -1997,7 +1997,6 @@ async function mixKaraoke() {
       throw new Error("No hay pista instrumental disponible para mezclar");
     }
 
-    const trackArrayBuffer = await trackBlob.arrayBuffer();
     const trackBuffer = await audioCtx.decodeAudioData(trackArrayBuffer);
 
     const voiceArrayBuffer = await karaokeRecordedBlob.arrayBuffer();
