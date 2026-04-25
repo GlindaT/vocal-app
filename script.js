@@ -259,15 +259,10 @@ function detectPitch() {
   analyser.getFloatTimeDomainData(pitchBuffer);
   const pitch = autoCorrelate(pitchBuffer, audioContext.sampleRate);
 
-  if (document.getElementById("karaokeCanvas")) {
-    if (typeof drawKaraokeMonitor === 'function') drawKaraokeMonitor(0, pitch);
-  }
-
   const display = $("noteDisplay");
   const guide = $("guideText");
   const targetNoteEl = $("targetNote");
   const targetNote = targetNoteEl ? targetNoteEl.value : "E2";
-
   if (display && guide) {
     if (pitch !== -1) {
       const noteFull = getNoteFromFrequency(pitch);
@@ -2909,6 +2904,18 @@ toggleMic2Visibility();
 function drawKaraokeMonitor(currentTime, currentFreq) {
   const canvas = $("karaokeCanvas");
   if (!canvas) return;
+
+  if (!transcriptionSegments || transcriptionSegments.length === 0) {
+    // Opcional: mensaje visual en canvas
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#666";
+    ctx.font = "16px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("Sin datos de karaoke", canvas.width / 2, canvas.height / 2);
+    return;
+  }
+
   const ctx = canvas.getContext("2d");
 
   // Guardamos la frecuencia actual
@@ -2917,8 +2924,6 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
 
   // Limpieza
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  if (!transcriptionSegments || transcriptionSegments.length === 0) return;
 
   // --- 1. CÁLCULO DE ESCALA ---
   const allMidis = transcriptionSegments.map(s => s.midi).filter(m => m > 0);
