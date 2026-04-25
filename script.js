@@ -16,9 +16,6 @@ async function startApp() {
 
 startApp();
 
-// Reutilizar el buffer para el afinador
-const pitchBuffer = new Float32Array(2048);
-
 // ==========================================
 // CONFIG GLOBAL
 // ==========================================
@@ -54,6 +51,8 @@ function safeAdd(id, event, handler) {
   const el = $(id);
   if (el) el.addEventListener(event, handler);
 }
+// Reutilizar el buffer para el afinador
+const pitchBuffer = new Float32Array(2048);
 
 // ==========================================
 // INDEXED DB - BIBLIOTECA
@@ -3261,6 +3260,10 @@ async function startKaraokePitchDetection() {
     const analyser = audioCtx.createAnalyser();
     analyser.fftSize = 2048;
     mic.connect(analyser);
+    const adjustedMidi = calculateMidi(); const track = $("karaokeTrack");
+    const currentTime = track ? track.currentTime : 0;
+    const buffer = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(buffer);
     
     let pitch = autoCorrelate(buffer, audioCtx.sampleRate);
     // Filtrar valores inválidos
@@ -3272,12 +3275,6 @@ async function startKaraokePitchDetection() {
     drawKaraokeMonitor(currentTime, pitch);
     
     function loop() {
-        const adjustedMidi = calculateMidi(); 
-        const track = $("karaokeTrack");
-        const currentTime = track ? track.currentTime : 0;
-        const buffer = new Float32Array(analyser.fftSize);
-        analyser.getFloatTimeDomainData(buffer);
-        
         // Si la pista terminó, paramos
         if (track && track.ended) return;
         
