@@ -2980,20 +2980,42 @@ function drawKaraokeMonitor(adjustedMidi) {
 
     // --- 4. VOZ DEL USUARIO (RESTAURADA) ---
     // Usamos tanto currentFreq (instante) como pitchHistory (rastro)
-    if (typeof currentFreq !== 'undefined' && currentFreq > 0) {
-        // Convertimos frecuencia a MIDI
-        const userMidi = 69 + 12 * Math.log2(currentFreq / 440);
+    // 1. Verificamos que la frecuencia sea válida
+    const freqToDraw = (typeof currentFreq !== 'undefined' && currentFreq > 0) ? currentFreq : 0;
+
+    if (freqToDraw > 0) {
+        const userMidi = 69 + 12 * Math.log2(freqToDraw / 440);
         const userY = getNoteY(userMidi);
 
-        // 1. Punto de impacto (la bola amarilla)
-        ctx.save(); // Guardamos estado para el brillo
-        ctx.fillStyle = "#facc15";
+        // Dibujamos el rastro (historial) hacia la izquierda
+        if (typeof pitchHistory !== 'undefined' && pitchHistory.length > 0) {
+            ctx.beginPath();
+            ctx.strokeStyle = "rgba(255, 255, 0, 0.5)"; // Amarillo suave
+            ctx.lineWidth = 4;
+            let started = false;
+            for (let i = 0; i < pitchHistory.length; i++) {
+                if (pitchHistory[i] > 0) {
+                    const hMidi = 69 + 12 * Math.log2(pitchHistory[i] / 440);
+                    const hY = getNoteY(hMidi);
+                    const hX = timelineX - (pitchHistory.length - i) * 2;
+                    if (hX < 50) continue;
+                    if (!started) { ctx.moveTo(hX, hY); started = true; }
+                    else { ctx.lineTo(hX, hY); }
+                }
+            }
+            ctx.stroke();
+        }
+
+        // Dibujamos el punto de impacto actual (La bola amarilla)
+        ctx.save();
         ctx.shadowBlur = 15;
-        ctx.shadowColor = "#facc15";
+        ctx.shadowColor = "yellow";
+        ctx.fillStyle = "#ffff00";
         ctx.beginPath();
         ctx.arc(timelineX, userY, 8, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
+    }
 
         // 2. Dibujar el RASTRO (la línea amarilla hacia atrás)
         if (typeof pitchHistory !== 'undefined' && pitchHistory.length > 0) {
