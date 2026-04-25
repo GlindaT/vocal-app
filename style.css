@@ -856,3 +856,24 @@ progress::-webkit-progress-value {
     color: #facc15 !important; 
     transform: scale(1.15); 
 }
+/* Asegurar el desplazamiento en la app */
+.app {
+    display: flex;
+    height: 100vh;
+    overflow: hidden; /* El contenedor padre no scrollea */
+}
+
+.content {
+    flex: 1;
+    overflow-y: auto !important; /* El contenido SI scrollea */
+    padding: 20px;
+    height: 100%;
+    display: block;
+}
+
+/* Evitar que el monitor de letras flote (el error de tu imagen) */
+#karaokeLiveLyricsContainer {
+    position: relative !important;
+    width: 100% !important;
+    z-index: 10;
+}
