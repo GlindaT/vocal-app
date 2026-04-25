@@ -2978,18 +2978,53 @@ function drawKaraokeMonitor(adjustedMidi) {
         ctx.fillText(seg.text, x + w / 2, y - 15);
     });
 
-    // --- 4. VOZ DEL USUARIO (PUNTO AMARILLO) ---
+    // --- 4. VOZ DEL USUARIO (RESTAURADA) ---
+    // Usamos tanto currentFreq (instante) como pitchHistory (rastro)
     if (typeof currentFreq !== 'undefined' && currentFreq > 0) {
+        // Convertimos frecuencia a MIDI
         const userMidi = 69 + 12 * Math.log2(currentFreq / 440);
         const userY = getNoteY(userMidi);
 
-        ctx.fillStyle = "yellow";
+        // 1. Punto de impacto (la bola amarilla)
+        ctx.save(); // Guardamos estado para el brillo
+        ctx.fillStyle = "#facc15";
         ctx.shadowBlur = 15;
-        ctx.shadowColor = "yellow";
+        ctx.shadowColor = "#facc15";
         ctx.beginPath();
         ctx.arc(timelineX, userY, 8, 0, Math.PI * 2);
         ctx.fill();
-        ctx.shadowBlur = 0;
+        ctx.restore();
+
+        // 2. Dibujar el RASTRO (la línea amarilla hacia atrás)
+        if (typeof pitchHistory !== 'undefined' && pitchHistory.length > 0) {
+            ctx.beginPath();
+            ctx.strokeStyle = "rgba(250, 204, 21, 0.6)"; // Amarillo semitransparente
+            ctx.lineWidth = 4;
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
+
+            let started = false;
+            // Recorremos el historial de atrás hacia adelante
+            for (let i = 0; i < pitchHistory.length; i++) {
+                const freq = pitchHistory[i];
+                if (freq && freq > 0) {
+                    const hMidi = 69 + 12 * Math.log2(freq / 440);
+                    const hY = getNoteY(hMidi);
+                    // La X se desplaza hacia la izquierda según la antigüedad del dato
+                    const hX = timelineX - (pitchHistory.length - i) * 2; 
+
+                    if (hX < 50) continue; // No dibujar fuera del área de notas
+
+                    if (!started) {
+                        ctx.moveTo(hX, hY);
+                        started = true;
+                    } else {
+                        ctx.lineTo(hX, hY);
+                    }
+                }
+            }
+            ctx.stroke();
+        }
     }
 
     // --- 5. LÍNEA ROJA DE TIEMPO ---
