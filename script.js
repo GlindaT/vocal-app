@@ -266,15 +266,39 @@ function stopAfinador() {
 function detectPitch() {
   if (!state.isRecording || !analyser) return;
 
-  // Usamos el buffer global en lugar de crear uno nuevo cada 16ms
+  // 1. Obtener datos del Analyser
   analyser.getFloatTimeDomainData(pitchBuffer);
   const pitch = autoCorrelate(pitchBuffer, audioContext.sampleRate);
   
-  if (document.getElementById("karaokeCanvas")) {
-    // Asegúrate de que esta función esté definida o comentada para evitar errores
-    if (typeof drawKaraokeMonitor === 'function') drawKaraokeMonitor(0, pitch); 
+  // --- ACTUALIZACIÓN PARA EL MONITOR DE KARAOKE ---
+  // Actualizamos las variables que drawKaraokeMonitor usará
+  if (typeof pitch !== 'undefined') {
+    
+    // Si detectamos voz (pitch > 0), actualizamos frecuencia actual e historial
+    if (pitch !== -1) {
+      window.currentFreq = pitch; 
+      
+    // Añadimos al historial para el rastro (limitamos a 100 puntos para rendimiento)
+    if (!window.pitchHistory) window.pitchHistory = [];
+      window.pitchHistory.push(pitch);
+      if (window.pitchHistory.length > 100) window.pitchHistory.shift();
+    } else {
+    // Si hay silencio, limpiamos la frecuencia actual
+      window.currentFreq = 0;
+    // Opcional: podrías meter un 0 al historial para crear huecos en el rastro
+      if (window.pitchHistory) window.pitchHistory.push(0);
+      if (window.pitchHistory && window.pitchHistory.length > 100) window.pitchHistory.shift();
+    }
   }
-
+  
+  // 2. Llamada al Dibujo
+  if (document.getElementById("karaokeCanvas")) {
+    if (typeof drawKaraokeMonitor === 'function') {
+      // Pasamos el pitch detectado directamente
+      drawKaraokeMonitor(pitch); 
+    }
+  }
+  // --- LÓGICA DE FEEDBACK VISUAL (TEXTO) ---
   const display = $("noteDisplay");
   const guide = $("guideText");
   const targetNoteEl = $("targetNote");
@@ -284,37 +308,36 @@ function detectPitch() {
     if (pitch !== -1) {
       const noteFull = getNoteFromFrequency(pitch);
       const targetFreq = getNoteFrequency(targetNote);
-      // Evitar logaritmo de 0 o infinito
       const cents = 1200 * Math.log2(pitch / targetFreq);
 
       display.textContent = noteFull;
 
       const dificultad = localStorage.getItem("vocalApp_difficulty") || "medio";
       let maxDesviation = 30;
-        if (dificultad === "facil") maxDesviation = 50;
-        else if (dificultad === "dificil") maxDesviation = 15;
-        else if (dificultad === "experto") maxDesviation = 5;
+      if (dificultad === "facil") maxDesviation = 50;
+      else if (dificultad === "dificil") maxDesviation = 15;
+      else if (dificultad === "experto") maxDesviation = 5;
         
-        // Asegúrate de que las llaves envuelven correctamente cada bloque
-        if (Math.abs(cents) <= maxDesviation) {
-            display.style.color = "#22c55e"; 
-            guide.textContent = `🎯 ¡En la nota! (${targetNote})`;
-            guide.style.color = "#22c55e";
-        } else if (cents < 0) {
-            display.style.color = "#f59e0b";
-            guide.textContent = `⬆️ Estás grave. Sube a ${targetNote}`;
-            guide.style.color = "#f59e0b";
-        } else {
-            display.style.color = "#f59e0b";
-            guide.textContent = `⬇️ Estás agudo. Baja a ${targetNote}`;
-            guide.style.color = "#f59e0b";
-        }
+      if (Math.abs(cents) <= maxDesviation) {
+          display.style.color = "#22c55e"; 
+          guide.textContent = `🎯 ¡En la nota! (${targetNote})`;
+          guide.style.color = "#22c55e";
+      } else if (cents < 0) {
+          display.style.color = "#f59e0b";
+          guide.textContent = `⬆️ Estás grave. Sube a ${targetNote}`;
+          guide.style.color = "#f59e0b";
+      } else {
+          display.style.color = "#f59e0b";
+          guide.textContent = `⬇️ Estás agudo. Baja a ${targetNote}`;
+          guide.style.color = "#f59e0b";
+      }
     } else {
       display.textContent = "--";
       display.style.color = "white";
       guide.textContent = "🎤 Esperando voz...";
     }
   }
+
   requestAnimationFrame(detectPitch);
 }
 
