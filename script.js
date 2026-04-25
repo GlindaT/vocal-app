@@ -2905,129 +2905,93 @@ function drawKaraokeMonitor(adjustedMidi) {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
 
-    // 1. Validar datos mínimos
+    // 1. Limpieza total
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
     if (!transcriptionSegments || transcriptionSegments.length === 0) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = "#666";
-        ctx.font = "16px Arial";
         ctx.textAlign = "center";
-        ctx.fillText("Sincroniza una canción para ver las notas", canvas.width / 2, canvas.height / 2);
+        ctx.fillText("Carga una canción para empezar", canvas.width / 2, canvas.height / 2);
         return;
     }
 
-    // 2. Calcular rango MIDI dinámico para esta canción
-    let midiValues = [];
-    transcriptionSegments.forEach(seg => {
-        if (seg.midi && seg.midi > 0) midiValues.push(seg.midi);
-    });
+    // 2. Cálculo dinámico del rango (Para que las notas no queden "arriba")
+    // Buscamos el min y max de TODA la canción para centrar la vista
+    const allMidis = transcriptionSegments.map(s => s.midi).filter(m => m > 0);
+    const songMidiMin = Math.min(...allMidis) - 3; // Margen de 3 notas abajo
+    const songMidiMax = Math.max(...allMidis) + 3; // Margen de 3 notas arriba
+    const songMidiRange = songMidiMax - songMidiMin;
 
-    const safeMin = midiValues.length ? Math.min(...midiValues) : 48;
-    const safeMax = midiValues.length ? Math.max(...midiValues) : 67;
-
-    // Actualizamos las variables de escala (locales para el dibujo)
-    const currentMidiMin = safeMin - 2;
-    const currentMidiMax = safeMax + 2;
-    const midiRange = currentMidiMax - currentMidiMin;
-
-    // 3. Configuración visual
-    const pentagramTop = 30;
-    const pentagramBottom = canvas.height - 60;
+    const pentagramTop = 40;
+    const pentagramBottom = canvas.height - 80;
     const pentagramHeight = pentagramBottom - pentagramTop;
 
-    // Función interna corregida
+    // Función de conversión LOCAL
     const midiToY = (m) => {
-        const val = Math.max(currentMidiMin, Math.min(currentMidiMax, m));
-        const normalized = (currentMidiMax - val) / midiRange;
-        return pentagramTop + normalized * pentagramHeight;
+        const val = Math.max(songMidiMin, Math.min(songMidiMax, m));
+        const normalized = (songMidiMax - val) / songMidiRange;
+        return pentagramTop + (normalized * pentagramHeight);
     };
 
-    // --- PROCESO DE DIBUJO ---
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Dibujar líneas de fondo
-    ctx.strokeStyle = "#222"; // Más sutil
-    ctx.lineWidth = 1;
-    for (let i = 0; i <= 10; i++) {
-        const y = pentagramTop + (pentagramHeight / 10) * i;
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+    // 3. Dibujar Notas Laterales (Indicadores)
+    ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+    ctx.font = "10px monospace";
+    ctx.textAlign = "left";
+    for (let m = songMidiMin; m <= songMidiMax; m++) {
+        const y = midiToY(m);
+        if (m % 12 === 0) { // Solo marcar Do (C) para no saturar
+            ctx.fillText("C" + (Math.floor(m / 12) - 1), 5, y + 4);
+            ctx.strokeStyle = "rgba(255,255,255,0.1)";
+            ctx.beginPath(); ctx.moveTo(30, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+        }
     }
 
-    // Ventana de tiempo
-    const pixelsPerSecond = (canvas.width - 40) / 6;
-    const lineX = 40; 
+    // 4. Dibujar Barras de Notas y LETRAS
+    const pixelsPerSecond = (canvas.width - 60) / 5; // Ventana de 5 segundos
+    const lineX = 60; 
 
-    // Dibujar barras UltraStar
-    transcriptionSegments.forEach(segment => {
-        const words = Array.isArray(segment.words) ? segment.words : [];
-        words.forEach(word => {
-            if (word.end < currentTime - 1 || word.start > currentTime + 5) return;
+    transcriptionSegments.forEach(seg => {
+        if (seg.start > currentTime + 5 || seg.end < currentTime - 1) return;
 
-            const wordStartX = lineX + (word.start - currentTime) * pixelsPerSecond;
-            const wordEndX = lineX + (word.end - currentTime) * pixelsPerSecond;
-            const barWidth = Math.max(wordEndX - wordStartX, 15);
-            
-            const m = word.midi || segment.midi || 60;
-            const barY = midiToY(m);
-            const barHeight = 20;
+        const x = lineX + (seg.start - currentTime) * pixelsPerSecond;
+        const w = (seg.end - seg.start) * pixelsPerSecond;
+        const y = midiToY(seg.midi);
+        const h = 18; // Grosor de la barra
 
-            const isActive = currentTime >= word.start && currentTime <= word.end;
-            const isPast = currentTime > word.end;
-            
-            // Lógica de color
-            let isCorrect = isActive && currentFreq > 0 && Math.abs(calculateMidi(currentFreq) - m) <= 2;
+        const isActive = currentTime >= seg.start && currentTime <= seg.end;
+        
+        // Color de la barra
+        ctx.fillStyle = isActive ? "#3b82f6" : "#1e3a8a";
+        ctx.beginPath();
+        ctx.roundRect(x, y - h/2, Math.max(w, 5), h, 4);
+        ctx.fill();
 
-            ctx.fillStyle = isPast ? "#4b5563" : (isCorrect ? "#22c55e" : (isActive ? "#3b82f6" : "#1e40af"));
-            ctx.beginPath();
-            ctx.roundRect(wordStartX, barY - barHeight/2, barWidth, barHeight, 5);
-            ctx.fill();
-        });
+        // DIBUJAR TEXTO DENTRO O DEBAJO DE LA BARRA
+        ctx.fillStyle = "white";
+        ctx.font = "bold 11px Arial";
+        ctx.textAlign = "center";
+        // Si la barra es muy pequeña, ponemos el texto arriba
+        const textY = (w < 20) ? y - 12 : y + 4; 
+        ctx.fillText(seg.text || "", x + w/2, textY);
     });
 
-    // Línea de tiempo actual (Roja)
+    // 5. Línea de Tiempo
     ctx.strokeStyle = "#ef4444";
-    ctx.beginPath(); ctx.moveTo(lineX, pentagramTop); ctx.lineTo(lineX, pentagramBottom); ctx.stroke();
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(lineX, 20); ctx.lineTo(lineX, canvas.height - 60); ctx.stroke();
 
-    // --- VOZ DEL USUARIO ---
+    // 6. Voz del Usuario (Punto Amarillo)
     if (currentFreq > 0) {
-        const userMidi = calculateMidi(currentFreq);
+        const userMidi = 69 + 12 * Math.log2(currentFreq / 440);
         const userY = midiToY(userMidi);
 
-        // Punto de impacto
-        ctx.fillStyle = "#facc15";
-        ctx.shadowBlur = 10; ctx.shadowColor = "#facc15";
+        ctx.shadowBlur = 10; ctx.shadowColor = "yellow";
+        ctx.fillStyle = "yellow";
         ctx.beginPath();
         ctx.arc(lineX, userY, 6, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
-
-        // Historial (Rastro)
-        pitchHistory.push(currentFreq);
-        if (pitchHistory.length > 50) pitchHistory.shift();
-        
-        ctx.beginPath();
-        ctx.strokeStyle = "rgba(250, 204, 21, 0.5)";
-        ctx.lineWidth = 3;
-        pitchHistory.forEach((f, i) => {
-            const hX = lineX - (pitchHistory.length - i) * 3;
-            const hY = midiToY(calculateMidi(f));
-            if (i === 0) ctx.moveTo(hX, hY); else ctx.lineTo(hX, hY);
-        });
-        ctx.stroke();
     }
-
-    // --- LETRAS ---
-    const curSeg = transcriptionSegments.find(s => currentTime >= s.start && currentTime <= s.end + 0.5);
-    if (curSeg) {
-        ctx.fillStyle = "rgba(0,0,0,0.8)";
-        ctx.fillRect(0, canvas.height - 45, canvas.width, 45);
-        ctx.fillStyle = "#fff";
-        ctx.font = "bold 22px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText(curSeg.text || "", canvas.width/2, canvas.height - 15);
-    }
-}
-function calculateMidi(frequency) {
-    return Math.round(69 + 12 * Math.log2(frequency / 440));
 }
 // ==========================================
 // DETECCIÓN DE PITCH PARA KARAOKE
