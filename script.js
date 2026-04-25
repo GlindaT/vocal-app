@@ -1963,7 +1963,7 @@ async function mixKaraoke() {
 
   try {
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const trackArrayBuffer = await trackFile.arrayBuffer();
+    const trackArrayBuffer = await trackBlob.arrayBuffer();
     const trackBuffer = await audioCtx.decodeAudioData(trackArrayBuffer);
     const voiceArrayBuffer = await karaokeRecordedBlob.arrayBuffer();
     const voiceBuffer = await audioCtx.decodeAudioData(voiceArrayBuffer);
@@ -3030,6 +3030,7 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
           const userMidi = frequencyToMidi(currentFreq);
           isCorrect = Math.abs(userMidi - midi) <= 2; // Tolerancia de 2 semitonos
         }
+      });
         
         // Colores según estado
         let barColor, textColor, borderColor;
@@ -3052,7 +3053,23 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
           textColor = "#93c5fd";
           borderColor = "#3b82f6";
         }
-  } else {
+        // Dibujar barra
+        ctx.fillStyle = barColor;
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = 2;
+        
+        ctx.beginPath();
+        ctx.roundRect(wordStartX, barY - barHeight / 2, barWidth, barHeight, 6);
+        ctx.fill();
+        ctx.stroke();
+        
+        // Texto
+        ctx.fillStyle = textColor;
+        ctx.font = "12px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(word.word, wordStartX + barWidth / 2, barY + 4);
+    });
+    } else {
     ctx.fillStyle = "#666";
     ctx.font = "16px Arial";
     ctx.textAlign = "center";
