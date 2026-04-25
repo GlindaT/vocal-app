@@ -3272,7 +3272,7 @@ function parseUltraStarSync(syncContent) {
   }).filter(Boolean);
 
 
-  // ACTUALIZACIÓN DE GLOBALES (Solo al final)
+// ACTUALIZACIÓN DE GLOBALES (Solo al final)
   if (parsedSegments.length > 0) {
     const allMidis = parsedSegments.filter(s => s.midi).map(s => s.midi);
     if (allMidis.length > 0) {
@@ -3286,35 +3286,34 @@ function parseUltraStarSync(syncContent) {
 async function loadCatalogSong(folder, title, artist) {
   const status = $("karaokeStatus");
   const track = $("karaokeTrack");
-  
-  // 1. Limpieza previa inmediata
-  if (status) status.textContent = `Estado: Cargando "${title}"...`;
-  
-  try {
+    
+    // 1. Limpieza previa inmediata
+    if (status) status.textContent = `Estado: Cargando "${title}"...`;
+    
+    try {
     // 2. Cargar sincronización (TXT)
-    const syncResponse = await fetch(`./karaoke-catalog/${folder}/sync.txt`);
-    if (!syncResponse.ok) throw new Error("No se pudo cargar la sincronización");
-    
-    const syncContent = await syncResponse.text();
-    const parsedSegments = parseUltraStarSync(syncContent);
-    
-    if (!parsedSegments.length) throw new Error("Formato de sincronización no válido");
-
+        const syncResponse = await fetch(`./karaoke-catalog/${folder}/sync.txt`);
+        if (!syncResponse.ok) throw new Error("No se pudo cargar la sincronización");
+        
+        const syncContent = await syncResponse.text();
+        const parsedSegments = parseUltraStarSync(syncContent);
+        
+        if (!parsedSegments.length) throw new Error("Formato de sincronización no válido");
     // 3. Cargar audio (MP3)
-    const audioResponse = await fetch(`./karaoke-catalog/${folder}/audio.mp3`);
-    if (!audioResponse.ok) throw new Error("No se pudo cargar el audio");
-    
-    const audioBlob = await audioResponse.blob();
+        const audioResponse = await fetch(`./karaoke-catalog/${folder}/audio.mp3`);
+        if (!audioResponse.ok) throw new Error("No se pudo cargar el audio");
+        
+        const audioBlob = await audioResponse.blob();
 
     // 4. Configurar el reproductor (Manejo de memoria)
-    if (track) {
-        // Liberamos la URL anterior si existía para evitar fugas de memoria
-        if (track.src && track.src.startsWith("blob:")) {
-            URL.revokeObjectURL(track.src);
+        if (track) {
+            // Liberamos la URL anterior si existía para evitar fugas de memoria
+            if (track.src && track.src.startsWith("blob:")) {
+                URL.revokeObjectURL(track.src);
+            }
+            track.src = URL.createObjectURL(audioBlob);
+            track.volume = 0.4;
         }
-        track.src = URL.createObjectURL(audioBlob);
-        track.volume = 0.4;
-    }
 
     // 5. Actualizar estado global
     karaokeSelectedTrackBlob = audioBlob;
@@ -3341,121 +3340,109 @@ async function loadCatalogSong(folder, title, artist) {
     if (canvas) {
         canvas.scrollIntoView({ behavior: "smooth", block: "center" });
     }
-
-  } catch (error) {
+    } catch (error) {
     console.error("Error en loadCatalogSong:", error);
     if (status) status.textContent = `Estado: Error al cargar "${title}"`;
     alert(`❌ Error: ${error.message}`);
-  }
+    }
 }
 async function loadMyKaraokeSongs() {
   const container = $("myKaraokeList");
   if (!container) return;
-  
-  try {
-    // Obtener canciones tipo "karaoke" de la biblioteca
-    const karaokeSongs = await getLibraryItemsByType("karaoke");
-    
-    // También obtener voces que tengan transcripción
-    const voces = await getLibraryItemsByType("voz");
-    const vocesConSync = voces.filter(v => v.transcription && v.transcription.length > 0);
-    
-    const allSongs = [...karaokeSongs, ...vocesConSync];
-    
-    if (allSongs.length === 0) {
-      container.innerHTML = `
-      <div style="text-align: center; padding: 20px; color: var(--text-muted);">
-      <p>No tienes canciones listas aún.</p>
-      <p style="font-size: 13px;">Sincroniza una en Estudio.</p>
-      </div>
-      `;
-        
-        return;
-    }
-      container.innerHTML = "";
-      allSongs.forEach(song => {
-          const div = document.createElement("div");
-      div.className = "my-karaoke-item";
-      
-      const title = song.metadata?.title || song.name || "Sin título";
-      const artist = song.metadata?.artist || "";
-      
-      div.innerHTML = `
-        <div class="my-karaoke-item-info">
-          <p class="my-karaoke-item-title">${title}</p>
-          <p class="my-karaoke-item-artist">${artist || "Artista desconocido"}</p>
-        </div>
-        <div class="my-karaoke-item-actions">
-          <button type="button" class="load-karaoke-btn" data-id="${song.id}" style="background: #22c55e;">▶️ Cantar</button>
-          <button type="button" class="delete-karaoke-btn" data-id="${song.id}" style="background: #ef4444; padding: 8px 10px;">🗑️</button>
-        </div>
-      `;
-      
-      container.appendChild(div);
-    });
-    
-    // Agregar eventos
-    container.querySelectorAll(".load-karaoke-btn").forEach(btn => {
-      btn.addEventListener("click", () => loadKaraokeSong(Number(btn.dataset.id)));
-    });
-    
-    container.querySelectorAll(".delete-karaoke-btn").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        if (confirm("¿Eliminar esta canción de tu biblioteca?")) {
-          await deleteLibraryItemFromDB(Number(btn.dataset.id));
-          await loadMyKaraokeSongs();
-        }
-      });
-    });
-    
-  } catch (error) {
-    console.error("Error cargando mis canciones:", error);
-    container.innerHTML = `<p style="color: #ef4444;">Error al cargar canciones</p>`;
-  }
-}
-
-async function loadKaraokeSong(id) {
     try {
-        const song = await getLibraryItemById(id);
-        if (!song) {
-            alert("⚠️ Canción no encontrada");
+    // Obtener canciones tipo "karaoke" de la biblioteca
+        const karaokeSongs = await getLibraryItemsByType("karaoke")
+        // También obtener voces que tengan transcripción
+        const voces = await getLibraryItemsByType("voz");
+        const vocesConSync = voces.filter(v => v.transcription && v.transcription.length > 0);
+        
+        const allSongs = [...karaokeSongs, ...vocesConSync];
+        
+        if (allSongs.length === 0) {
+            container.innerHTML = `
+            <div style="text-align: center; padding: 20px; color: var(--text-muted);">
+            <p>No tienes canciones listas aún.</p>
+            <p style="font-size: 13px;">Sincroniza una en Estudio.</p>
+            </div>
+            `;
             return;
         }
-        // Cargar pista
-        const track = $("karaokeTrack");
-        if (track) {
-            // Si el audioBlob existe, lo usamos, si no, limpiamos el src
-            if (song.audioBlob) {
-                track.src = URL.createObjectURL(song.audioBlob);
-                karaokeSelectedTrackBlob = song.audioBlob;
-            } else {
-                track.src = "";
-                console.warn("La canción no tiene un audio asociado.");
-            }
-            track.volume = 0.4;
-            karaokeSelectedTrackName = song.name || "Sin título";
-        }
-        
-        // Cargar transcripción (Aquí está la lógica clave)
-        if (Array.isArray(song.transcription) && song.transcription.length > 0) {
-            transcriptionSegments = JSON.parse(JSON.stringify(song.transcription));
-            baseTranscriptionSegments = [...transcriptionSegments]; // Clonamos para evitar referencias cruzadas
-            segments = [...transcriptionSegments];
-            cargarLetrasEnMonitor();
-        } else {
+        container.innerHTML = "";
+        allSongs.forEach(song => {
+            const div = document.createElement("div");
+            div.className = "my-karaoke-item";
             
-            // Si no tiene letra, limpiamos el monitor
-            transcriptionSegments = [];
-            cargarLetrasEnMonitor();
-        }
+            const title = song.metadata?.title || song.name || "Sin título";
+            const artist = song.metadata?.artist || "";
+            
+            div.innerHTML = `
+            <div class="my-karaoke-item-info">
+            <p class="my-karaoke-item-title">${title}</p>
+            <p class="my-karaoke-item-artist">${artist || "Artista desconocido"}</p>
+            </div>
+            <div class="my-karaoke-item-actions">
+            <button type="button" class="load-karaoke-btn" data-id="${song.id}" style="background: #22c55e;">▶️ Cantar</button>
+            <button type="button" class="delete-karaoke-btn" data-id="${song.id}" style="background: #ef4444; padding: 8px 10px;">🗑️</button>
+            </div>
+            `;
+            container.appendChild(div);
+        });
         
-        const title = song.metadata?.title || song.name;
-        $("karaokeStatus").textContent = `Estado: "${title}" cargada. ¡Lista para cantar! 🎤`;
-        // Scroll al monitor
-        $("karaokeCanvas").scrollIntoView({ behavior: "smooth", block: "center" });
-    
+        // Agregar eventos
+        container.querySelectorAll(".load-karaoke-btn").forEach(btn => {
+            btn.addEventListener("click", () => loadKaraokeSong(Number(btn.dataset.id)));
+        });
+        container.querySelectorAll(".delete-karaoke-btn").forEach(btn => {
+            btn.addEventListener("click", async () => {
+                if (confirm("¿Eliminar esta canción de tu biblioteca?")) {
+                    await deleteLibraryItemFromDB(Number(btn.dataset.id));
+                    await loadMyKaraokeSongs();
+                }
+            });
+        });
     } catch (error) {
-        console.error("Error cargando canción:", error);
-        alert("❌ Error al cargar la canción");
+        console.error("Error cargando mis canciones:", error);
+        container.innerHTML = `<p style="color: #ef4444;">Error al cargar canciones</p>`;
     }
+}
+async function loadKaraokeSong(id) {
+  try {
+    const song = await getLibraryItemById(id);
+      if (!song) {
+          alert("⚠️ Canción no encontrada");
+          return;
+      }
+      // Cargar pista
+      const track = $("karaokeTrack");
+      if (track) {
+          // Si el audioBlob existe, lo usamos, si no, limpiamos el src
+          if (song.audioBlob) {
+              track.src = URL.createObjectURL(song.audioBlob);
+              karaokeSelectedTrackBlob = song.audioBlob;
+          } else {
+              track.src = "";
+              console.warn("La canción no tiene un audio asociado.");
+          }
+          track.volume = 0.4;
+          karaokeSelectedTrackName = song.name || "Sin título";
+      }
+      // Cargar transcripción (Aquí está la lógica clave)
+      if (Array.isArray(song.transcription) && song.transcription.length > 0) {
+          transcriptionSegments = JSON.parse(JSON.stringify(song.transcription));
+          baseTranscriptionSegments = [...transcriptionSegments]; // Clonamos para evitar referencias cruzadas
+          segments = [...transcriptionSegments];
+          cargarLetrasEnMonitor();
+      } else {
+          // Si no tiene letra, limpiamos el monitor
+          transcriptionSegments = [];
+          cargarLetrasEnMonitor();
+      }
+      const title = song.metadata?.title || song.name;
+      $("karaokeStatus").textContent = `Estado: "${title}" cargada. ¡Lista para cantar! 🎤`;
+      // Scroll al monitor
+      $("karaokeCanvas").scrollIntoView({ behavior: "smooth", block: "center" });
+  } catch (error) {
+      console.error("Error cargando canción:", error);
+      alert("❌ Error al cargar la canción");
+  }
 }
