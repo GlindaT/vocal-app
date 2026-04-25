@@ -3090,7 +3090,6 @@ function drawKaraokeMonitor(adjustedMidi) {
     if (adjustedMidi < visualMin) adjustedMidi = visualMin;
     if (adjustedMidi > visualMax) adjustedMidi = visualMax;
     
-    const userY = midiToY(adjustedMidi);
     // Punto grande en la posición actual
     ctx.beginPath();
     ctx.fillStyle = "#facc15";
