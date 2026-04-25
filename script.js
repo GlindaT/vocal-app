@@ -2955,14 +2955,13 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     }
   }
   function midiToY(midi) {
-    if (!midi || midi < midiMin) midi = midiMin;
-    if (midi > midiMax) midi = midiMax;
-    const normalized = (midiMax - midi) / midiRange;
-    return pentagramTop + normalized * pentagramHeight;
+      if (!midi || midi < viewMidiMin) midi = viewMidiMin;
+      if (midi > viewMidiMax) midi = viewMidiMax;
+      const normalized = (viewMidiMax - midi) / midiRange;
+      return topMargin + normalized * drawHeight;
   }
 
   // --- 3. DIBUJAR BARRAS Y LETRAS ---
-  const pixelsPerSecond = 150; 
   const timelineX = 100; 
   let currentLyric = ""; 
 
@@ -2998,8 +2997,8 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     ctx.strokeStyle = "#ef4444";
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(lineX, pentagramTop);
-    ctx.lineTo(lineX, pentagramBottom);
+    ctx.moveTo(lineX, topMargin);
+    ctx.lineTo(lineX, canvas.height - bottomMargin);
     ctx.stroke();
 
     // Recorrer todos los segmentos
