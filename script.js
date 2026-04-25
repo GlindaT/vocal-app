@@ -264,81 +264,78 @@ function stopAfinador() {
 }
 
 function detectPitch() {
-  if (!state.isRecording || !analyser) return;
+    if (!state.isRecording || !analyser) return;
 
-  // 1. Obtener datos del Analyser
-  analyser.getFloatTimeDomainData(pitchBuffer);
-  const pitch = autoCorrelate(pitchBuffer, audioContext.sampleRate);
-  
-  // --- ACTUALIZACIÓN PARA EL MONITOR DE KARAOKE ---
-  // Actualizamos las variables que drawKaraokeMonitor usará
-  if (typeof pitch !== 'undefined') {
-    
-    // Si detectamos voz (pitch > 0), actualizamos frecuencia actual e historial
+    // 1. Obtener datos del Analyser
+    analyser.getFloatTimeDomainData(pitchBuffer);
+    const pitch = autoCorrelate(pitchBuffer, audioContext.sampleRate);
+
+    // --- ACTUALIZACIÓN DE VARIABLES GLOBALES ---
+    // Usamos el objeto global 'window' para asegurar que drawKaraokeMonitor tenga acceso
     if (pitch !== -1) {
-      window.currentFreq = pitch; 
-      
-    // Añadimos al historial para el rastro (limitamos a 100 puntos para rendimiento)
-    if (!window.pitchHistory) window.pitchHistory = [];
-      window.pitchHistory.push(pitch);
-      if (window.pitchHistory.length > 100) window.pitchHistory.shift();
-    } else {
-    // Si hay silencio, limpiamos la frecuencia actual
-      window.currentFreq = 0;
-    // Opcional: podrías meter un 0 al historial para crear huecos en el rastro
-      if (window.pitchHistory) window.pitchHistory.push(0);
-      if (window.pitchHistory && window.pitchHistory.length > 100) window.pitchHistory.shift();
-    }
-  }
-  
-  // 2. Llamada al Dibujo
-  if (document.getElementById("karaokeCanvas")) {
-    if (typeof drawKaraokeMonitor === 'function') {
-      // Pasamos el pitch detectado directamente
-      drawKaraokeMonitor(pitch); 
-    }
-  }
-  // --- LÓGICA DE FEEDBACK VISUAL (TEXTO) ---
-  const display = $("noteDisplay");
-  const guide = $("guideText");
-  const targetNoteEl = $("targetNote");
-  const targetNote = targetNoteEl ? targetNoteEl.value : "E2";
+        window.currentFreq = pitch;
 
-  if (display && guide) {
-    if (pitch !== -1) {
-      const noteFull = getNoteFromFrequency(pitch);
-      const targetFreq = getNoteFrequency(targetNote);
-      const cents = 1200 * Math.log2(pitch / targetFreq);
-
-      display.textContent = noteFull;
-
-      const dificultad = localStorage.getItem("vocalApp_difficulty") || "medio";
-      let maxDesviation = 30;
-      if (dificultad === "facil") maxDesviation = 50;
-      else if (dificultad === "dificil") maxDesviation = 15;
-      else if (dificultad === "experto") maxDesviation = 5;
+        if (!window.pitchHistory) window.pitchHistory = [];
+        window.pitchHistory.push(pitch);
         
-      if (Math.abs(cents) <= maxDesviation) {
-          display.style.color = "#22c55e"; 
-          guide.textContent = `🎯 ¡En la nota! (${targetNote})`;
-          guide.style.color = "#22c55e";
-      } else if (cents < 0) {
-          display.style.color = "#f59e0b";
-          guide.textContent = `⬆️ Estás grave. Sube a ${targetNote}`;
-          guide.style.color = "#f59e0b";
-      } else {
-          display.style.color = "#f59e0b";
-          guide.textContent = `⬇️ Estás agudo. Baja a ${targetNote}`;
-          guide.style.color = "#f59e0b";
-      }
+        if (window.pitchHistory.length > 100) {
+            window.pitchHistory.shift();
+        }
     } else {
-      display.textContent = "--";
-      display.style.color = "white";
-      guide.textContent = "🎤 Esperando voz...";
+        window.currentFreq = 0;
+        // Insertar 0 ayuda a que el rastro no sea una línea continua si dejas de cantar
+        if (window.pitchHistory) {
+            window.pitchHistory.push(0);
+            if (window.pitchHistory.length > 100) window.pitchHistory.shift();
+        }
     }
-  }
 
-  requestAnimationFrame(detectPitch);
+    // 2. Llamada al Dibujo (IMPORTANTE: El Canvas debe estar visible)
+    const canvas = document.getElementById("karaokeCanvas");
+    if (canvas && typeof drawKaraokeMonitor === 'function') {
+        // Forzamos el paso del pitch actual
+        drawKaraokeMonitor(pitch); 
+    }
+
+    // --- FEEDBACK VISUAL (TEXTO) ---
+    const display = $("noteDisplay");
+    const guide = $("guideText");
+    const targetNoteEl = $("targetNote");
+    const targetNote = targetNoteEl ? targetNoteEl.value : "E2";
+
+    if (display && guide) {
+        if (pitch !== -1) {
+            const noteFull = getNoteFromFrequency(pitch);
+            const targetFreq = getNoteFrequency(targetNote);
+            const cents = 1200 * Math.log2(pitch / targetFreq);
+
+            display.textContent = noteFull;
+
+            // Selección de dificultad (Corregido según el nuevo HTML)
+            const dificultad = localStorage.getItem("vocalApp_difficulty") || "medio";
+            let maxDesviation = 30;
+            if (dificultad === "facil") maxDesviation = 50;
+            else if (dificultad === "dificil") maxDesviation = 15;
+            else if (dificultad === "experto") maxDesviation = 5;
+
+            if (Math.abs(cents) <= maxDesviation) {
+                display.style.color = "#22c55e";
+                guide.textContent = `🎯 ¡En la nota! (${targetNote})`;
+                guide.style.color = "#22c55e";
+            } else {
+                display.style.color = "#f59e0b";
+                guide.textContent = cents < 0 ? `⬆️ Sube a ${targetNote}` : `⬇️ Baja a ${targetNote}`;
+                guide.style.color = "#f59e0b";
+            }
+        } else {
+            display.textContent = "--";
+            display.style.color = "white";
+            guide.textContent = "🎤 Esperando voz...";
+            guide.style.color = "#6b7280"; // Gris neutro
+        }
+    }
+
+    requestAnimationFrame(detectPitch);
 }
 
 function getNoteFromFrequency(freq) {
