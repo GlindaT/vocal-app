@@ -754,7 +754,7 @@ async function saveManualFileToLibrary() {
   const progress = $("uploadProgress");
   const btn = $("saveLibraryFileBtn");
   
-  const file = fileInput.files[0] : null;
+  const file = fileInput ? fileInput.files[0] : null;
   const type = typeSelect ? typeSelect.value : "audio";
   const customName = nameInput ? nameInput.value.trim() : "";
   
