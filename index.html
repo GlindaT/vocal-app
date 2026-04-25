@@ -259,11 +259,13 @@
 
     <!-- KARAOKE -->
     <section id="karaoke" class="tab">
-      <h1>🎤👄 Karaoke</h1>
-      <!-- MONITOR DE PENTAGRAMA -->
-      <div class="card" style="background: #1a1a1a; padding: 0;">
-        <canvas id="karaokeCanvas" width="900" height="300" style="width: 100%; display: block; border-radius: 8px;"></canvas>
-      </div>
+  <h1>🎤👄 Karaoke</h1>
+  <div class="card" style="background: #1a1a1a; padding: 0; overflow: hidden;">
+    <!-- Aseguramos dimensiones fijas para el cálculo de coordenadas JS -->
+    <canvas id="karaokeCanvas" width="800" height="400" style="width: 100%; display: block; border-radius: 8px;"></canvas>
+  </div>
+  <!-- ... resto de la sección ... -->
+</section>
 
       <!-- CATÁLOGO DE CANCIONES LISTAS -->
       <div class="card">
@@ -442,23 +444,24 @@
         </div>
         
         <div class="settings-group">
-          <label for="difficultyLevel">📊 Dificultad para el Afinador</label>
-          <select id="difficultyLevel">
-            <option value="facil">Fácil</option>
-            <option value="medio">Medio</option>
-            <option value="dificil">Difícil</option>
-            <option value="experto">Experto</option>
-          </select>
-        </div>
+  <label for="difficultyLevel">📊 Dificultad para el Afinador</label>
+  <select id="difficultyLevel">
+    <option value="facil">Fácil</option>
+    <option value="medio" selected>Medio</option>
+    <option value="dificil">Difícil</option>
+    <option value="experto">Experto</option>
+  </select>
+</div>
         
         <div class="settings-group">
-          <label for="difficultyLevel">📊 Dificultad para el Pentagrama</label>
-          <select id="difficultyLevel">
-            <option value="facil">Fácil</option>
-            <option value="medio">Medio</option>
-            <option value="dificil">Difícil</option>
-          </select>
-        </div>
+  <label for="difficultyLevelPentagrama">📊 Dificultad para el Pentagrama</label>
+  <select id="difficultyLevelPentagrama">
+    <option value="facil">Fácil</option>
+    <option value="medio" selected>Medio</option>
+    <option value="dificil">Difícil</option>
+  </select>
+</div>
+        
         <div class="settings-group">
           <label for="appTheme">🎨 Tema de la App</label>
           <select id="appTheme">
