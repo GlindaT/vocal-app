@@ -2900,7 +2900,6 @@ function applyKaraokeTheme() {
 // ==========================================
 
 function drawKaraokeMonitor(adjustedMidi) {
-  let adjustedMidi = userMidi;
   const visualMin = midiMin; 
   const visualMax = midiMax;
   const canvas = $("karaokeCanvas");
