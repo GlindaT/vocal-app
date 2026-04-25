@@ -2901,168 +2901,130 @@ function applyKaraokeTheme() {
 // ==========================================
 
 function drawKaraokeMonitor(adjustedMidi) {
-    const canvas = $("karaokeCanvas");
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
+  const canvas = $("karaokeCanvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
 
-    // Limpieza
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // Limpieza
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (!transcriptionSegments || transcriptionSegments.length === 0) return;
+  if (!transcriptionSegments || transcriptionSegments.length === 0) return;
 
-    // --- 1. CÁLCULO DE ESCALA (Mantenemos tu lógica de rango) ---
-    // Usamos un margen pequeño alrededor de las notas de la canción para que no se vean diminutas
-    const allMidis = transcriptionSegments.map(s => s.midi).filter(m => m > 0);
-    const viewMidiMin = Math.min(...allMidis) - 5; 
-    const viewMidiMax = Math.max(...allMidis) + 5;
-    const midiRange = viewMidiMax - viewMidiMin;
+  // --- 1. CÁLCULO DE ESCALA ---
+  const allMidis = transcriptionSegments.map(s => s.midi).filter(m => m > 0);
+  const viewMidiMin = Math.min(...allMidis) - 5; 
+  const viewMidiMax = Math.max(...allMidis) + 5;
+  const midiRange = viewMidiMax - viewMidiMin;
 
-    const topMargin = 50;
-    const bottomMargin = 100; // Espacio para la letra grande abajo
-    const drawHeight = canvas.height - topMargin - bottomMargin;
+  const topMargin = 50;
+  const bottomMargin = 100; 
+  const drawHeight = canvas.height - topMargin - bottomMargin;
+  
+  const getNoteY = (m) => {
+    const normalized = (viewMidiMax - m) / midiRange;
+    return topMargin + (normalized * drawHeight);
+  };
 
-    const getNoteY = (m) => {
-        const normalized = (viewMidiMax - m) / midiRange;
-        return topMargin + (normalized * drawHeight);
-    };
-
-    // --- 2. DIBUJAR PENTAGRAMA Y ESCALA LATERAL ---
-    ctx.textAlign = "left";
-    ctx.textBaseline = "middle";
-    for (let m = viewMidiMin; m <= viewMidiMax; m++) {
-        const y = getNoteY(m);
-        
-        // Dibujamos líneas para cada nota (como tenías antes)
-        ctx.strokeStyle = (m % 12 === 0) ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.05)";
-        ctx.beginPath();
-        ctx.moveTo(50, y);
-        ctx.lineTo(canvas.width, y);
-        ctx.stroke();
-
-        // Escala de notas a la izquierda
-        if (m % 12 === 0 || m % 12 === 4 || m % 12 === 7) { // C, E, G
-            ctx.fillStyle = "rgba(255,255,255,0.5)";
-            ctx.font = "10px Arial";
-            const noteNames = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
-            const name = noteNames[m % 12] + (Math.floor(m / 12) - 1);
-            ctx.fillText(name, 10, y);
-        }
-    }
-
-    // --- 3. DIBUJAR BARRAS Y LETRAS ---
-    const pixelsPerSecond = 150; 
-    const timelineX = 100; // Línea roja de tiempo
-
-    let currentLyric = ""; // Para la letra de abajo
-
-    transcriptionSegments.forEach(seg => {
-        const x = timelineX + (seg.start - currentTime) * pixelsPerSecond;
-        const w = (seg.end - seg.start) * pixelsPerSecond;
-        const y = getNoteY(seg.midi);
-        
-        if (x + w < 0 || x > canvas.width) return;
-
-        const isActive = currentTime >= seg.start && currentTime <= seg.end;
-        if (isActive) currentLyric = seg.text; // Capturamos la palabra actual
-
-        // Dibujar barra
-        ctx.fillStyle = isActive ? "#3b82f6" : "rgba(59, 130, 246, 0.4)";
-        ctx.beginPath();
-        ctx.roundRect(x, y - 10, w, 20, 5);
-        ctx.fill();
-
-        // Letra sobre la barra
-        ctx.fillStyle = "white";
-        ctx.font = "bold 12px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText(seg.text, x + w / 2, y - 15);
-    });
-
-    // --- 4. VOZ DEL USUARIO (RESTAURADA) ---
-    // Usamos tanto currentFreq (instante) como pitchHistory (rastro)
-    // 1. Verificamos que la frecuencia sea válida
-    const freqToDraw = (typeof currentFreq !== 'undefined' && currentFreq > 0) ? currentFreq : 0;
-
-    if (freqToDraw > 0) {
-        const userMidi = 69 + 12 * Math.log2(freqToDraw / 440);
-        const userY = getNoteY(userMidi);
-
-        // Dibujamos el rastro (historial) hacia la izquierda
-        if (typeof pitchHistory !== 'undefined' && pitchHistory.length > 0) {
-            ctx.beginPath();
-            ctx.strokeStyle = "rgba(255, 255, 0, 0.5)"; // Amarillo suave
-            ctx.lineWidth = 4;
-            let started = false;
-            for (let i = 0; i < pitchHistory.length; i++) {
-                if (pitchHistory[i] > 0) {
-                    const hMidi = 69 + 12 * Math.log2(pitchHistory[i] / 440);
-                    const hY = getNoteY(hMidi);
-                    const hX = timelineX - (pitchHistory.length - i) * 2;
-                    if (hX < 50) continue;
-                    if (!started) { ctx.moveTo(hX, hY); started = true; }
-                    else { ctx.lineTo(hX, hY); }
-                }
-            }
-            ctx.stroke();
-        }
-
-        // Dibujamos el punto de impacto actual (La bola amarilla)
-        ctx.save();
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = "yellow";
-        ctx.fillStyle = "#ffff00";
-        ctx.beginPath();
-        ctx.arc(timelineX, userY, 8, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-    }
-
-        // 2. Dibujar el RASTRO (la línea amarilla hacia atrás)
-        if (typeof pitchHistory !== 'undefined' && pitchHistory.length > 0) {
-            ctx.beginPath();
-            ctx.strokeStyle = "rgba(250, 204, 21, 0.6)"; // Amarillo semitransparente
-            ctx.lineWidth = 4;
-            ctx.lineCap = "round";
-            ctx.lineJoin = "round";
-
-            let started = false;
-            // Recorremos el historial de atrás hacia adelante
-            for (let i = 0; i < pitchHistory.length; i++) {
-                const freq = pitchHistory[i];
-                if (freq && freq > 0) {
-                    const hMidi = 69 + 12 * Math.log2(freq / 440);
-                    const hY = getNoteY(hMidi);
-                    // La X se desplaza hacia la izquierda según la antigüedad del dato
-                    const hX = timelineX - (pitchHistory.length - i) * 2; 
-
-                    if (hX < 50) continue; // No dibujar fuera del área de notas
-
-                    if (!started) {
-                        ctx.moveTo(hX, hY);
-                        started = true;
-                    } else {
-                        ctx.lineTo(hX, hY);
-                    }
-                }
-            }
-            ctx.stroke();
-        }
-    }
-
-    // --- 5. LÍNEA ROJA DE TIEMPO ---
-    ctx.strokeStyle = "red";
-    ctx.lineWidth = 3;
+  // --- 2. DIBUJAR PENTAGRAMA Y ESCALA LATERAL ---
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  for (let m = viewMidiMin; m <= viewMidiMax; m++) {
+    const y = getNoteY(m);
+    ctx.strokeStyle = (m % 12 === 0) ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.05)";
     ctx.beginPath();
-    ctx.moveTo(timelineX, topMargin);
-    ctx.lineTo(timelineX, canvas.height - bottomMargin);
+    ctx.moveTo(50, y);
+    ctx.lineTo(canvas.width, y);
     ctx.stroke();
 
-    // --- 6. LETRA GRANDE ABAJO (PENTAGRAMA) ---
+    if (m % 12 === 0 || m % 12 === 4 || m % 12 === 7) {
+      ctx.fillStyle = "rgba(255,255,255,0.5)";
+      ctx.font = "10px Arial";
+      const noteNames = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+      const name = noteNames[m % 12] + (Math.floor(m / 12) - 1);
+      ctx.fillText(name, 10, y);
+    }
+  }
+
+  // --- 3. DIBUJAR BARRAS Y LETRAS ---
+  const pixelsPerSecond = 150; 
+  const timelineX = 100; 
+  let currentLyric = ""; 
+
+  transcriptionSegments.forEach(seg => {
+    const x = timelineX + (seg.start - currentTime) * pixelsPerSecond;
+    const w = (seg.end - seg.start) * pixelsPerSecond;
+    const y = getNoteY(seg.midi);
+    if (x + w < 0 || x > canvas.width) return;
+    const isActive = currentTime >= seg.start && currentTime <= seg.end;
+    if (isActive) currentLyric = seg.text;
+
+    ctx.fillStyle = isActive ? "#3b82f6" : "rgba(59, 130, 246, 0.4)";
+    ctx.beginPath();
+    ctx.roundRect(x, y - 10, w, 20, 5);
+    ctx.fill();
+
     ctx.fillStyle = "white";
-    ctx.font = "bold 40px Arial";
+    ctx.font = "bold 12px Arial";
     ctx.textAlign = "center";
-    ctx.fillText(currentLyric.toUpperCase(), canvas.width / 2, canvas.height - 40);
+    ctx.fillText(seg.text, x + w / 2, y - 15);
+  });
+
+  // --- 4. VOZ DEL USUARIO (CONSOLIDADA) ---
+  // Accedemos a las variables globales de frecuencia
+  const f = (typeof currentFreq !== 'undefined') ? currentFreq : 0;
+  const history = (typeof pitchHistory !== 'undefined') ? pitchHistory : [];
+
+  if (f > 0 || history.length > 0) {
+    // A. Dibujar el Rastro (Línea)
+    if (history.length > 0) {
+      ctx.beginPath();
+      ctx.strokeStyle = "rgba(255, 255, 0, 0.6)"; 
+      ctx.lineWidth = 4;
+      ctx.lineCap = "round";
+      let started = false;
+
+      for (let i = 0; i < history.length; i++) {
+        if (history[i] > 0) {
+          const hMidi = 69 + 12 * Math.log2(history[i] / 440);
+          const hY = getNoteY(hMidi);
+          const hX = timelineX - (history.length - i) * 2;
+          if (hX < 50) continue;
+          if (!started) { ctx.moveTo(hX, hY); started = true; }
+          else { ctx.lineTo(hX, hY); }
+        }
+      }
+      ctx.stroke();
+    }
+
+    // B. Dibujar el Punto de Impacto (Bola)
+    if (f > 0) {
+      const userMidi = 69 + 12 * Math.log2(f / 440);
+      const userY = getNoteY(userMidi);
+      ctx.save();
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = "yellow";
+      ctx.fillStyle = "#ffff00";
+      ctx.beginPath();
+      ctx.arc(timelineX, userY, 8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // --- 5. LÍNEA ROJA Y LETRA GRANDE ---
+  ctx.strokeStyle = "red";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(timelineX, topMargin);
+  ctx.lineTo(timelineX, canvas.height - bottomMargin);
+  ctx.stroke();
+
+  ctx.fillStyle = "white";
+  ctx.font = "bold 40px Arial";
+  ctx.textAlign = "center";
+  ctx.fillText(currentLyric.toUpperCase(), canvas.width / 2, canvas.height - 40);
 }
+
 // ==========================================
 // DETECCIÓN DE PITCH PARA KARAOKE
 // ==========================================
