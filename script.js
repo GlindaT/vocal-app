@@ -29,8 +29,6 @@ let transcriptionSegments = [];
 let baseTranscriptionSegments = [];
 let autoScrollEnabled = true; // Control de auto-scroll
 let lastValidMidi = 60;
-let segments = []; // <--- ESTA ES LA QUE TE FALTA
-let midi = null;
 let midiMin = 48; // Valor por defecto (ej. C3)
 let midiMax = 84; // Valor por defecto (ej. C6)
 let currentSegments = []; // Para guardar las notas de la canción
@@ -2903,254 +2901,129 @@ function applyKaraokeTheme() {
 // ==========================================
 
 function drawKaraokeMonitor(adjustedMidi) {
-  const visualMin = midiMin; 
-  const visualMax = midiMax;
-  const canvas = $("karaokeCanvas");
-  if (!canvas) return;
-  const ctx = canvas.getContext("2d");
-  
-  // Guardamos la frecuencia actual
-  pitchHistory.push(currentFreq > 0 ? currentFreq : null);
-  if (pitchHistory.length > 60) pitchHistory.shift();
-    
-  // Limpiamos el canvas
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-  // Configuración del pentagrama
-  const pentagramTop = 30;
-  const pentagramBottom = canvas.height - 60;
-  const pentagramHeight = pentagramBottom - pentagramTop;
-  
-  let midiValues = [];
-  transcriptionSegments.forEach(seg => {
-    if (seg.midi && seg.midi > 0) midiValues.push(seg.midi);
+    const canvas = $("karaokeCanvas");
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+
+    // 1. Validar datos mínimos
+    if (!transcriptionSegments || transcriptionSegments.length === 0) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#666";
+        ctx.font = "16px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("Sincroniza una canción para ver las notas", canvas.width / 2, canvas.height / 2);
+        return;
+    }
+
+    // 2. Calcular rango MIDI dinámico para esta canción
+    let midiValues = [];
+    transcriptionSegments.forEach(seg => {
+        if (seg.midi && seg.midi > 0) midiValues.push(seg.midi);
     });
-    
-  // Rango de notas (MIDI): C3 (48) a G4 (67)
-  const safeMin = midiValues.length ? Math.min(...midiValues) : 48;
-  const safeMax = midiValues.length ? Math.max(...midiValues) : 67;
-    
-  const midiMin = safeMin - 2;
-  const midiMax = safeMax + 2;
-  const midiRange = midiMax - midiMin;
-    
-  // --- DIBUJAR LÍNEAS DEL PENTAGRAMA ---
-  ctx.strokeStyle = "#333";
-  ctx.lineWidth = 1;
-  const numLines = 12;
-  for (let i = 0; i <= numLines; i++) {
-  const y = pentagramTop + (pentagramHeight / numLines) * i;
-  ctx.beginPath();
-  ctx.moveTo(0, y);
-  ctx.lineTo(canvas.width, y);
-  ctx.stroke();
-  }
-  
-  // --- DIBUJAR INDICADORES DE NOTAS A LA IZQUIERDA ---
-  ctx.fillStyle = "#666";
-  ctx.font = "10px Arial";
-  ctx.textAlign = "right";
-  const noteLabels = ["G4", "F4", "E4", "D4", "C4", "B3", "A3", "G3", "F3", "E3", "D3", "C3"];
-  noteLabels.forEach((label, i) => {
-  const y = pentagramTop + (pentagramHeight / numLines) * i + 4;
-  ctx.fillText(label, 25, y);
-  });
-    
-  // Función para convertir MIDI a posición Y
-  function midiToY(midi) {
-  if (!midi || midi < midiMin) midi = midiMin;
-  if (midi > midiMax) midi = midiMax;
-  const normalized = (midiMax - midi) / midiRange;
-  return pentagramTop + normalized * pentagramHeight;
-  }
-    
-  // --- DIBUJAR BARRAS DE NOTAS (ULTRASTAR STYLE) ---
-  if (Array.isArray(transcriptionSegments) && transcriptionSegments.length > 0) {
-    
-        
-  // Ventana de tiempo visible (5 segundos hacia adelante, 1 hacia atrás)
-  const timeWindowStart = currentTime - 1;
-  const timeWindowEnd = currentTime + 5;
-  const pixelsPerSecond = (canvas.width - 40) / 6; // 6 segundos de ventana
-  const lineX = 40; // Línea de tiempo actual
-        
-  // Dibujar línea de tiempo actual
-  ctx.strokeStyle = "#ef4444";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(lineX, pentagramTop);
-  ctx.lineTo(lineX, pentagramBottom);
-  ctx.stroke();
-        
-  // Recorrer todos los segmentos
-  transcriptionSegments.forEach((segment) => {
-  const words = Array.isArray(segment.words) ? segment.words : [];
-  words.forEach((word) => {
-                
-  // Verificar si está en la ventana visible
-  if (word.end < timeWindowStart || word.start > timeWindowEnd) return;
-                
-  // Calcular posición X basada en el tiempo
-  const wordStartX = lineX + (word.start - currentTime) * pixelsPerSecond;
-  const wordEndX = lineX + (word.end - currentTime) * pixelsPerSecond;
-  const barWidth = Math.max(wordEndX - wordStartX, 20);
-    // 1. Prioridad: MIDI directo
-    if (word.midi && word.midi > 0) {
-      midi = word.midi;
-    } else if (segment.midi && segment.midi > 0) {
-      midi = segment.midi;
+
+    const safeMin = midiValues.length ? Math.min(...midiValues) : 48;
+    const safeMax = midiValues.length ? Math.max(...midiValues) : 67;
+
+    // Actualizamos las variables de escala (locales para el dibujo)
+    const currentMidiMin = safeMin - 2;
+    const currentMidiMax = safeMax + 2;
+    const midiRange = currentMidiMax - currentMidiMin;
+
+    // 3. Configuración visual
+    const pentagramTop = 30;
+    const pentagramBottom = canvas.height - 60;
+    const pentagramHeight = pentagramBottom - pentagramTop;
+
+    // Función interna corregida
+    const midiToY = (m) => {
+        const val = Math.max(currentMidiMin, Math.min(currentMidiMax, m));
+        const normalized = (currentMidiMax - val) / midiRange;
+        return pentagramTop + normalized * pentagramHeight;
+    };
+
+    // --- PROCESO DE DIBUJO ---
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Dibujar líneas de fondo
+    ctx.strokeStyle = "#222"; // Más sutil
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 10; i++) {
+        const y = pentagramTop + (pentagramHeight / 10) * i;
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
     }
-                
-    // 2. Si no hay MIDI, usar pitch (frecuencia)
-    if (!midi) {
-      let freq = word.pitch || segment.pitch;
-      if (freq && freq > 0) {
-        const detectedMidi = frequencyToMidi(freq);
-        // suavizado simple
-        midi = Math.round(detectedMidi);
-      }
-    }
-                
-    // 3. Si aún no hay nada válido
-    if (!midi) {
-      return;
-    } else {
-      lastValidMidi = midi;
-    }
-    const barY = midiToY(midi);
-    const barHeight = 22;
-                
-    // Determinar si la palabra está activa
-    const isActive = currentTime >= word.start && currentTime <= word.end;
-    const isPast = currentTime > word.end;
-                
-    // Determinar si el usuario está cantando la nota correcta
-    let isCorrect = false;
-    if (isActive && currentFreq > 0) {
-    const userMidi = frequencyToMidi(currentFreq);
-    isCorrect = Math.abs(userMidi - midi) <= 2; // Tolerancia de 2 semitonos
-    }
-                
-    // Colores según estado
-    let barColor, textColor, borderColor;
-    if (isPast) {
-      barColor = "#4b5563"; // Gris
-      textColor = "#9ca3af";
-      borderColor = "#6b7280";
-    } else if (isActive) {
-      if (isCorrect) {
-        barColor = "#22c55e"; // Verde - ¡Correcto!
-        textColor = "#ffffff";
-        borderColor = "#4ade80";
-      } else {
-        barColor = "#3b82f6"; // Azul - Activo
-        textColor = "#ffffff";
-        borderColor = "#60a5fa";
-      }
-    } else {
-      barColor = "#1e40af"; // Azul oscuro - Próximo
-      textColor = "#93c5fd";
-      borderColor = "#3b82f6";
-    }
-                
-    // Dibujar barra con bordes redondeados
-    ctx.fillStyle = barColor;
-    ctx.beginPath();
-    ctx.roundRect(wordStartX, barY - barHeight/2, barWidth, barHeight, 8);
-    ctx.fill();
-    // Borde
-    ctx.strokeStyle = borderColor;
-    ctx.lineWidth = isActive ? 2 : 1;
-    ctx.stroke();
-    // Texto de la palabra
-    ctx.fillStyle = textColor;
-    ctx.font = isActive ? "bold 12px Arial" : "11px Arial";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    // Truncar si es muy largo
-    let displayWord = word.word || "";
-    if (displayWord.length > 10) {
-      displayWord = displayWord.substring(0, 8) + "..";
-    }
-    ctx.fillText(displayWord, wordStartX + barWidth/2, barY);
-  });
-  });
-  } else {
-    ctx.fillStyle = "#666";
-    ctx.font = "16px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText("Sincroniza una canción en 'Estudio' para ver las notas", canvas.width / 2, canvas.height / 2);
-  }
-  // --- DIBUJAR LA VOZ DEL USUARIO (LÍNEA/PUNTO) ---
-  if (currentFreq && currentFreq > 0) {
-    const userMidi = frequencyToMidi(currentFreq);    
-    //Forzar rango visual
-    const visualMin = midiMin + 2;
-    const visualMax = midiMax - 2;
-        
-    //Evita que se pegue arriba
-    if (adjustedMidi < visualMin) adjustedMidi = visualMin;
-    if (adjustedMidi > visualMax) adjustedMidi = visualMax;
-    
-    // Punto grande en la posición actual
-    ctx.beginPath();
-    ctx.fillStyle = "#facc15";
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = "#facc15";
-    ctx.arc(40, userY, 8, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.shadowBlur = 0;
-        
-    // Rastro de la voz
-    ctx.beginPath();
-    ctx.strokeStyle = "rgba(250, 204, 21, 0.6)";
-    ctx.lineWidth = 3;
-        
-    let started = false;
-    pitchHistory.forEach((freq, i) => {
-    if (freq && freq > 0) {
-    const midi = frequencyToMidi(freq);
-    const y = midiToY(midi);
-    const x = 40 - (pitchHistory.length - i) * 2;
-    if (!started) {
-        ctx.moveTo(x, y);
-    started = true;
-    } else {
-        ctx.lineTo(x, y);
-    }
-    }
+
+    // Ventana de tiempo
+    const pixelsPerSecond = (canvas.width - 40) / 6;
+    const lineX = 40; 
+
+    // Dibujar barras UltraStar
+    transcriptionSegments.forEach(segment => {
+        const words = Array.isArray(segment.words) ? segment.words : [];
+        words.forEach(word => {
+            if (word.end < currentTime - 1 || word.start > currentTime + 5) return;
+
+            const wordStartX = lineX + (word.start - currentTime) * pixelsPerSecond;
+            const wordEndX = lineX + (word.end - currentTime) * pixelsPerSecond;
+            const barWidth = Math.max(wordEndX - wordStartX, 15);
+            
+            const m = word.midi || segment.midi || 60;
+            const barY = midiToY(m);
+            const barHeight = 20;
+
+            const isActive = currentTime >= word.start && currentTime <= word.end;
+            const isPast = currentTime > word.end;
+            
+            // Lógica de color
+            let isCorrect = isActive && currentFreq > 0 && Math.abs(calculateMidi(currentFreq) - m) <= 2;
+
+            ctx.fillStyle = isPast ? "#4b5563" : (isCorrect ? "#22c55e" : (isActive ? "#3b82f6" : "#1e40af"));
+            ctx.beginPath();
+            ctx.roundRect(wordStartX, barY - barHeight/2, barWidth, barHeight, 5);
+            ctx.fill();
+        });
     });
+
+    // Línea de tiempo actual (Roja)
+    ctx.strokeStyle = "#ef4444";
+    ctx.beginPath(); ctx.moveTo(lineX, pentagramTop); ctx.lineTo(lineX, pentagramBottom); ctx.stroke();
+
+    // --- VOZ DEL USUARIO ---
+    if (currentFreq > 0) {
+        const userMidi = calculateMidi(currentFreq);
+        const userY = midiToY(userMidi);
+
+        // Punto de impacto
+        ctx.fillStyle = "#facc15";
+        ctx.shadowBlur = 10; ctx.shadowColor = "#facc15";
+        ctx.beginPath();
+        ctx.arc(lineX, userY, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Historial (Rastro)
+        pitchHistory.push(currentFreq);
+        if (pitchHistory.length > 50) pitchHistory.shift();
+        
+        ctx.beginPath();
+        ctx.strokeStyle = "rgba(250, 204, 21, 0.5)";
+        ctx.lineWidth = 3;
+        pitchHistory.forEach((f, i) => {
+            const hX = lineX - (pitchHistory.length - i) * 3;
+            const hY = midiToY(calculateMidi(f));
+            if (i === 0) ctx.moveTo(hX, hY); else ctx.lineTo(hX, hY);
+        });
         ctx.stroke();
     }
-    
-    // --- DIBUJAR LETRA ACTUAL ABAJO ---
-    const currentSegment = transcriptionSegments.find(seg => 
-        currentTime >= seg.start && currentTime <= seg.end + 0.5
-    );
-    
-    if (currentSegment) {
-        
-    // Fondo para la letra
-    ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-    ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
-        
-    // Letra actual
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 20px Arial";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(currentSegment.text || "", canvas.width / 2, canvas.height - 25);
-    }
-    
-    // --- DIBUJAR SIGUIENTE LÍNEA ---
-    const nextSegment = transcriptionSegments.find(seg => seg.start > currentTime);
-    if (nextSegment && !currentSegment) {
-    ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-    ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
-    ctx.fillStyle = "#94a3b8";
-    ctx.font = "16px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText("Próximo: " + (nextSegment.text || ""), canvas.width / 2, canvas.height - 25);
+
+    // --- LETRAS ---
+    const curSeg = transcriptionSegments.find(s => currentTime >= s.start && currentTime <= s.end + 0.5);
+    if (curSeg) {
+        ctx.fillStyle = "rgba(0,0,0,0.8)";
+        ctx.fillRect(0, canvas.height - 45, canvas.width, 45);
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 22px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(curSeg.text || "", canvas.width/2, canvas.height - 15);
     }
 }
 function calculateMidi(frequency) {
@@ -3272,147 +3145,115 @@ function parseUltraStarSync(syncContent) {
   if (!syncContent || typeof syncContent !== "string") return [];
 
   const lines = syncContent.split("\n").map(line => line.trim()).filter(Boolean);
-
-  let bpm = 120;
-  let gap = 0;
+  let bpm = 120, gap = 0;
   const noteLines = [];
 
   for (const line of lines) {
-    if (line.startsWith("#BPM:")) {
-      bpm = parseFloat(line.replace("#BPM:", "").trim()) || 120;
-      continue;
-    }
-    if (line.startsWith("#GAP:")) {
-      gap = parseInt(line.replace("#GAP:", "").trim(), 10) || 0;
-      continue;
-    }
-    if (line.startsWith(":") || line.startsWith("*") || line.startsWith("F") || line.startsWith("R")) {
-      noteLines.push(line);
-    }
+    if (line.startsWith("#BPM:")) bpm = parseFloat(line.replace("#BPM:", "").trim()) || 120;
+    else if (line.startsWith("#GAP:")) gap = parseInt(line.replace("#GAP:", "").trim(), 10) || 0;
+    else if (/^[:*FR]/.test(line)) noteLines.push(line);
   }
 
-  const secondsPerBeat = 60 / bpm;
-  const secondsPerTick = secondsPerBeat / 4;
+  const secondsPerTick = (60 / bpm) / 4;
 
-  // 1. Primero creamos el array de segmentos
   const parsedSegments = noteLines.map(line => {
     const match = line.match(/^[:*FR]\s+(\d+)\s+(\d+)\s+(-?\d+)\s+(.+)$/);
     if (!match) return null;
 
     const startTick = parseInt(match[1], 10);
     const durationTick = parseInt(match[2], 10);
-    const midi = parseInt(match[3], 10);
+    const midiValue = parseInt(match[3], 10);
     const text = (match[4] || "").trim();
 
     const start = gap / 1000 + startTick * secondsPerTick;
     const end = gap / 1000 + (startTick + durationTick) * secondsPerTick;
-    const pitch = midi > 0 ? 440 * Math.pow(2, (midi - 69) / 12) : -1;
+    const pitch = midiValue > 0 ? 440 * Math.pow(2, (midiValue - 69) / 12) : -1;
 
     return {
-      start,
-      end,
-      text,
-      midi: midi > 0 ? midi : null,
+      start, end, text,
+      midi: midiValue > 0 ? midiValue : null,
       pitch: pitch > 0 ? pitch : -1,
-      words: [{
-        word: text,
-        start,
-        end,
-        midi: midi > 0 ? midi : null,
-        pitch: pitch > 0 ? pitch : -1
-      }]
+      words: [{ word: text, start, end, midi: midiValue > 0 ? midiValue : null, pitch }]
     };
   }).filter(Boolean);
 
-  // 2. AHORA actualizamos las variables globales de rango
+
+  // ACTUALIZACIÓN DE GLOBALES (Solo al final)
   if (parsedSegments.length > 0) {
     const allMidis = parsedSegments.filter(s => s.midi).map(s => s.midi);
     if (allMidis.length > 0) {
       midiMin = Math.min(...allMidis) - 2;
       midiMax = Math.max(...allMidis) + 2;
     }
-    currentSegments = parsedSegments; // Actualizamos la referencia global
+    currentSegments = parsedSegments;
   }
-
   return parsedSegments;
 }
 async function loadCatalogSong(folder, title, artist) {
   const status = $("karaokeStatus");
-
-  try {
-    if (status) status.textContent = `Estado: Cargando "${title}"...`;
-      // Cargar sincronización
-      
-      const syncResponse = await fetch(`./karaoke-catalog/${folder}/sync.txt`);
-      if (!syncResponse.ok) {
-          throw new Error("No se pudo cargar la sincronización");
-      }
-      
-      const syncContent = await syncResponse.text();
-      
-      // Parsear formato UltraStar
-      const parsedSegments = parseUltraStarSync(syncContent);
-      
-      if (!parsedSegments.length) {
-          throw new Error("La sincronización está vacía o tiene un formato no válido");
-      }
-      
-      // Cargar audio
-      
-      const audioResponse = await fetch(`./karaoke-catalog/${folder}/audio.mp3`);
-      if (!audioResponse.ok) {
-          throw new Error("No se pudo cargar el audio");
-      }
-      
-      const audioBlob = await audioResponse.blob();
-      
-      // Configurar reproductor
-      
-      const track = $("karaokeTrack");
-      if (track) {
-          track.src = URL.createObjectURL(audioBlob);
-          track.volume = 0.4;
-      }
-      
-      karaokeSelectedTrackBlob = audioBlob;
-      karaokeSelectedTrackName = `${title} - ${artist}`;
-      
-      // Actualizar variables globales
-      transcriptionSegments = parsedSegments;
-      baseTranscriptionSegments = [...parsedSegments];
-      segments = [...parsedSegments];
-      
-      // Render letras
-      cargarLetrasEnMonitor();
-      
-      // Redibujo inicial del canvas
-      
-      if (typeof drawKaraokeMonitor === "function") {
-          drawKaraokeMonitor(0, 0);
-      }
-      
-      if (status) {
-          status.textContent = `Estado: "${title}" cargada. ¡Lista para cantar! 🎤`;
-      }
-      
-      const canvas = $("karaokeCanvas");
-      if (canvas) {
-          canvas.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-      
-      console.log("✅ Canción del catálogo cargada:", {
-          title,
-          artist,
-          parsedSegments
-      });
+  const track = $("karaokeTrack");
   
+  // 1. Limpieza previa inmediata
+  if (status) status.textContent = `Estado: Cargando "${title}"...`;
+  
+  try {
+    // 2. Cargar sincronización (TXT)
+    const syncResponse = await fetch(`./karaoke-catalog/${folder}/sync.txt`);
+    if (!syncResponse.ok) throw new Error("No se pudo cargar la sincronización");
+    
+    const syncContent = await syncResponse.text();
+    const parsedSegments = parseUltraStarSync(syncContent);
+    
+    if (!parsedSegments.length) throw new Error("Formato de sincronización no válido");
+
+    // 3. Cargar audio (MP3)
+    const audioResponse = await fetch(`./karaoke-catalog/${folder}/audio.mp3`);
+    if (!audioResponse.ok) throw new Error("No se pudo cargar el audio");
+    
+    const audioBlob = await audioResponse.blob();
+
+    // 4. Configurar el reproductor (Manejo de memoria)
+    if (track) {
+        // Liberamos la URL anterior si existía para evitar fugas de memoria
+        if (track.src && track.src.startsWith("blob:")) {
+            URL.revokeObjectURL(track.src);
+        }
+        track.src = URL.createObjectURL(audioBlob);
+        track.volume = 0.4;
+    }
+
+    // 5. Actualizar estado global
+    karaokeSelectedTrackBlob = audioBlob;
+    karaokeSelectedTrackName = `${title} - ${artist}`;
+    transcriptionSegments = parsedSegments;
+    baseTranscriptionSegments = [...parsedSegments];
+    
+    // Reiniciar variables de seguimiento
+    currentTime = 0; 
+    if (typeof pitchHistory !== 'undefined') pitchHistory = [];
+    
+    // 6. UI y Feedback
+    cargarLetrasEnMonitor();
+    
+    if (typeof drawKaraokeMonitor === "function") {
+        drawKaraokeMonitor(0);
+    }
+    
+    if (status) {
+        status.textContent = `Estado: "${title}" cargada. ¡Lista para cantar! 🎤`;
+    }
+    
+    const canvas = $("karaokeCanvas");
+    if (canvas) {
+        canvas.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
   } catch (error) {
-      console.error("Error cargando canción del catálogo:", error);
-      if (status) status.textContent = `Estado: Error al cargar "${title}"`;
-      alert(`❌ Error al cargar la canción: ${error.message}`);
+    console.error("Error en loadCatalogSong:", error);
+    if (status) status.textContent = `Estado: Error al cargar "${title}"`;
+    alert(`❌ Error: ${error.message}`);
   }
 }
-
 async function loadMyKaraokeSongs() {
   const container = $("myKaraokeList");
   if (!container) return;
