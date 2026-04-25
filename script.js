@@ -2893,21 +2893,21 @@ safeAdd("micCount", "change", toggleMic2Visibility);
 // Cargar micrófonos al iniciar
 loadAvailableMics();
 toggleMic2Visibility();
-    try
-      const player = $("player");
-      if (player) {
-        player.addEventListener("timeupdate", () => {
-          updateKaraokeHighlight(player.currentTime);
-        });
-        player.addEventListener("ended", () => {
-          updateKaraokeHighlight(player.currentTime);
-        });
-      }
+    try {
+        const player = $("player");
+        if (player) {
+            player.addEventListener("timeupdate", () => {
+                updateKaraokeHighlight(player.currentTime);
+            });
+            player.addEventListener("ended", () => {
+                updateKaraokeHighlight(player.currentTime);
+            });
+        }
     } catch (error) {
-      console.error(error);
-      alert("❌ Error inicializando la app");
+        console.error(error);
+        alert("❌ Error inicializando la app");
     }
-});
+    });
 
 // ==========================================
 // MONITOR DE KARAOKE (CANVAS)
