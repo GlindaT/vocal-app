@@ -239,7 +239,7 @@ async function startAfinador() {
   const mic = audioContext.createMediaStreamSource(stream);
   analyser = audioContext.createAnalyser();
   analyser.fftSize = 2048;
-  mic.connect(analyzer);
+  mic.connect(analyser);
   
   setTimeout(() => {
     detectPitch();
