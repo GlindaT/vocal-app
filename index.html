@@ -266,6 +266,13 @@
   </div>
   <!-- ... resto de la sección ... -->
 </section>
+    <!-- MONITOR ESTILO ULTRASTAR -->
+      <div class="card" style="background: black; border: 2px solid var(--border);">
+        <h3 style="color: var(--accent); text-align: center; margin-top: 0;">Monitor de Letras</h3>
+        <div id="karaokeLiveLyrics" class="karaoke-lyrics" style="display: none; height: 250px; overflow-y: auto; padding: 20px; background: transparent; border: none; scroll-behavior: smooth;">
+          <p class="karaoke-placeholder" style="font-size: 20px; text-align: center;">Las letras sincronizadas aparecerán aquí...</p>
+        </div>
+      </div>
 
       <!-- CATÁLOGO DE CANCIONES LISTAS -->
       <div class="card">
@@ -278,22 +285,8 @@
             <p style="color: var(--text-muted);">Cargando catálogo...</p>
           </div>
         </div>
-        
-        <!-- Mis canciones importadas/creadas -->
-        <div id="myKaraokeSongs" style="margin-top: 20px;">
-          <h4 style="color: #f59e0b; margin-bottom: 10px;">📁 Mis Canciones: (Debes subir la pista)</h4>
-          <div id="myKaraokeList" style="max-height: 200px; overflow-y: auto;">
-            <p style="color: var(--text-muted);">No tienes canciones guardadas aún.</p>
-          </div>
-        </div>
-        
-        <!-- Botones de acción -->
-        <div class="studio-controls" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border);">
-          <button id="refreshKaraokeCatalogBtn" type="button" style="background: #6b7280;">🔄 Actualizar</button>
-        </div>
-      </div>
 
-      <!-- Paso 1: Pista -->
+        <!-- Paso 1: Pista -->
       <div class="card">
         <h3>1. Subir Pista para cantar</h3>
         
@@ -315,13 +308,7 @@
         <audio id="karaokeTrack" controls style="margin-top: 15px;"></audio>
       </div>
 
-      <!-- MONITOR ESTILO ULTRASTAR -->
-      <div class="card" style="background: black; border: 2px solid var(--border);">
-        <h3 style="color: var(--accent); text-align: center; margin-top: 0;">Monitor de Letras</h3>
-        <div id="karaokeLiveLyrics" class="karaoke-lyrics" style="display: none; height: 250px; overflow-y: auto; padding: 20px; background: transparent; border: none; scroll-behavior: smooth;">
-          <p class="karaoke-placeholder" style="font-size: 20px; text-align: center;">Las letras sincronizadas aparecerán aquí...</p>
-        </div>
-      </div>
+      
 
       <!-- Paso 2: Grabación -->
       <div class="card">
@@ -362,6 +349,20 @@
         </div>
         
         <div id="karaokeMixResult" style="margin-top: 15px;"></div>
+      </div>
+        
+        <!-- Mis canciones importadas/creadas -->
+        <div id="myKaraokeSongs" style="margin-top: 20px;">
+          <h4 style="color: #f59e0b; margin-bottom: 10px;">📁 Mis Canciones: (Debes subir la pista)</h4>
+          <div id="myKaraokeList" style="max-height: 200px; overflow-y: auto;">
+            <p style="color: var(--text-muted);">No tienes canciones guardadas aún.</p>
+          </div>
+        </div>
+        
+        <!-- Botones de acción -->
+        <div class="studio-controls" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border);">
+          <button id="refreshKaraokeCatalogBtn" type="button" style="background: #6b7280;">🔄 Actualizar</button>
+        </div>
       </div>
 
     </section>
