@@ -121,7 +121,7 @@ async function updateLibraryItem(id, changes) {
     .from("library_items")
     .update(changes)
     .eq("id", id);
-
+  
   if (error) {
     throw new Error(error.message || "Error al actualizar en Supabase");
   }
@@ -175,7 +175,6 @@ function getLibraryItemById(id) {
     };
   });
 }
-
 
 
 // ==========================================
@@ -353,12 +352,12 @@ function getNoteFrequency(note) {
   return 440 * Math.pow(2, semitoneOffset / 12);
 }
 
-function autoCorrelate(buf, sampleRate) {
+function autoCorrelate(buffer, sampleRate) {
   let rms = 0;
-  for (let i = 0; i < buf.length; i++) {
-    rms += buf[i] * buf[i];
+  for (let i = 0; i < buffer.length; i++) {
+    rms += buffer[i] * buffer[i];
   }
-  rms = Math.sqrt(rms / buf.length);
+  rms = Math.sqrt(rms / buffer.length);
 
   // Usamos el valor guardado
   const umbral = parseFloat(localStorage.getItem("vocalApp_sensitivity")) || 0.01;
@@ -372,11 +371,11 @@ function autoCorrelate(buf, sampleRate) {
   for (let offset = 8; offset < 1000; offset++) {
     let correlation = 0;
 
-    for (let i = 0; i < buf.length - offset; i++) {
-      correlation += Math.abs(buf[i] - buf[i + offset]);
+    for (let i = 0; i < buffer.length - offset; i++) {
+      correlation += Math.abs(buffer[i] - buffer[i + offset]);
     }
 
-    correlation = 1 - (correlation / (buf.length - offset));
+    correlation = 1 - (correlation / (buffer.length - offset));
 
     if (correlation > bestCorrelation) {
       bestCorrelation = correlation;
@@ -461,222 +460,214 @@ async function startStudioRecording() {
       studioRecordedBlob = null;
       $("voicePlayer").src = "";
       $("studioStatus").textContent = "Estado: preparando grabación...";
-      
-      // Obtener micrófonos seleccionados
-      const mic1Id = getSelectedMicId(1);
-      const mic2Id = getSelectedMicId(2);
-      const audioConstraints1 = {
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
-          channelCount: 1,
-          sampleRate: 48000
+    
+    // Obtener micrófonos seleccionados
+    const mic1Id = getSelectedMicId(1);
+    const mic2Id = getSelectedMicId(2);
+    const audioConstraints1 = {
+      echoCancellation: false,
+      noiseSuppression: false,
+      autoGainControl: false,
+      channelCount: 1,
+      sampleRate: 48000
+    };
+    
+    if (mic1Id) {
+      audioConstraints1.deviceId = { exact: mic1Id };
+    }
+    
+    // Obtener stream del Mic 1
+    studioStream = await navigator.mediaDevices.getUserMedia({
+      audio: audioConstraints1
+    });
+    
+    let finalStream = studioStream;
+    
+    // Si es DÚO, obtener y mezclar Mic 2
+    if (isDuo && mic2Id) {
+      const audioConstraints2 = {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+        channelCount: 1,
+        sampleRate: 48000,
+        deviceId: { exact: mic2Id }
       };
-      
-      if (mic1Id) {
-          audioConstraints1.deviceId = { exact: mic1Id };
-      }
-      
-      // Obtener stream del Mic 1
-      studioStream = await navigator.mediaDevices.getUserMedia({
-          audio: audioConstraints1
+      studioStream2 = await navigator.mediaDevices.getUserMedia({
+        audio: audioConstraints2
       });
+      // Crear contexto de audio para mezclar
+      duoAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const source1 = duoAudioContext.createMediaStreamSource(studioStream);
+      const source2 = duoAudioContext.createMediaStreamSource(studioStream2);
       
-      let finalStream = studioStream;
+      // Crear analizadores para visualización
+      duoAnalyser1 = duoAudioContext.createAnalyser();
+      duoAnalyser2 = duoAudioContext.createAnalyser();
+      duoAnalyser1.fftSize = 256;
+      duoAnalyser2.fftSize = 256;
       
-      // Si es DÚO, obtener y mezclar Mic 2
-      if (isDuo && mic2Id) {
-        const audioConstraints2 = {
-            echoCancellation: false,
-            noiseSuppression: false,
-            autoGainControl: false,
-            channelCount: 1,
-            sampleRate: 48000,
-            deviceId: { exact: mic2Id }
-        };
-          studioStream2 = await navigator.mediaDevices.getUserMedia({
-              audio: audioConstraints2
-          });
-          
-          // Crear contexto de audio para mezclar
-          duoAudioContext = new (window.AudioContext || window.webkitAudioContext)();
-          const source1 = duoAudioContext.createMediaStreamSource(studioStream);
-          const source2 = duoAudioContext.createMediaStreamSource(studioStream2);
-          
-          // Crear analizadores para visualización
-          duoAnalyser1 = duoAudioContext.createAnalyser();
-          duoAnalyser2 = duoAudioContext.createAnalyser();
-          duoAnalyser1.fftSize = 256;
-          duoAnalyser2.fftSize = 256;
-          
-          // Crear mezclador
-          const merger = duoAudioContext.createChannelMerger(2);
-          const destination = duoAudioContext.createMediaStreamDestination();
-          
-          // Conectar: fuentes -> analizadores -> mezclador -> destino
-          source1.connect(duoAnalyser1);
-          source2.connect(duoAnalyser2);
-          duoAnalyser1.connect(merger, 0, 0);
-          duoAnalyser2.connect(merger, 0, 1);
-          merger.connect(destination);
-          
-          finalStream = destination.stream;
-          
-          // Mostrar indicador de dúo
-          const duoIndicator = $("duoIndicator");
-          if (duoIndicator) {
-              duoIndicator.style.display = "block";
-          }
-          
-          // Iniciar visualización de niveles
-          startDuoLevelMonitor();
+      // Crear mezclador
+      const merger = duoAudioContext.createChannelMerger(2);
+      const destination = duoAudioContext.createMediaStreamDestination();
+      
+      // Conectar: fuentes -> analizadores -> mezclador -> destino
+      source1.connect(duoAnalyser1);
+      source2.connect(duoAnalyser2);
+      duoAnalyser1.connect(merger, 0, 0);
+      duoAnalyser2.connect(merger, 0, 1);
+      merger.connect(destination);
+      finalStream = destination.stream;
+      
+      // Mostrar indicador de dúo
+      const duoIndicator = $("duoIndicator");
+      if (duoIndicator) {
+        duoIndicator.style.display = "block";
       }
-      const options = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-          ? { mimeType: "audio/webm;codecs=opus" }
-          : {};
-      
-      studioMediaRecorder = new MediaRecorder(finalStream, options);
-      studioMediaRecorder.ondataavailable = (event) => {
-          
-          if (event.data.size > 0) {
-              studioChunks.push(event.data);
-          }
-      };
-      
-      studioMediaRecorder.onstop = () => {
-          studioRecordedBlob = new Blob(studioChunks, { type: "audio/webm" });
-          const audioURL = URL.createObjectURL(studioRecordedBlob);
-          $("voicePlayer").src = audioURL;
-          $("studioStatus").textContent = "Estado: grabación lista para escuchar o guardar";
-          
-          // Ocultar indicador dúo
-          const duoIndicator = $("duoIndicator");
-          if (duoIndicator) {
-              duoIndicator.style.display = "none";
-          }
-          stopDuoLevelMonitor();
-      };
-      
-      studioMediaRecorder.start();
-      
-      // Mostrar estado
-      const mic1Select = $("mic1Select");
-      const mic1Name = mic1Select ? mic1Select.options[mic1Select.selectedIndex]?.text : "Predeterminado";
-      
-      if (isDuo && mic2Id) {
-          const mic2Select = $("mic2Select");
-          const mic2Name = mic2Select ? mic2Select.options[mic2Select.selectedIndex]?.text : "Mic 2";
-          $("studioStatus").textContent = `Estado: 🔴 Grabando DÚO (${mic1Name} + ${mic2Name})...`;
-      } else {
-          $("studioStatus").textContent = `Estado: 🔴 Grabando con ${mic1Name}...`;
+      // Iniciar visualización de niveles
+      startDuoLevelMonitor();
+    }
+    const options = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+      ? { mimeType: "audio/webm;codecs=opus" }
+      : {};
+    
+    studioMediaRecorder = new MediaRecorder(finalStream, options);
+    studioMediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        studioChunks.push(event.data);
       }
+    };
+    
+    studioMediaRecorder.onstop = () => {
+      studioRecordedBlob = new Blob(studioChunks, { type: "audio/webm" });
+      const audioURL = URL.createObjectURL(studioRecordedBlob);
+      $("voicePlayer").src = audioURL;
+      $("studioStatus").textContent = "Estado: grabación lista para escuchar o guardar";
       
-      if (player && player.src) {
-          player.currentTime = 0;
-          player.play();
+      // Ocultar indicador dúo
+      const duoIndicator = $("duoIndicator");
+      if (duoIndicator) {
+        duoIndicator.style.display = "none";
       }
+      stopDuoLevelMonitor();
+    };
+    studioMediaRecorder.start();
+    
+    // Mostrar estado
+    const mic1Select = $("mic1Select");
+    const mic1Name = mic1Select ? mic1Select.options[mic1Select.selectedIndex]?.text : "Predeterminado";
+    
+    if (isDuo && mic2Id) {
+      const mic2Select = $("mic2Select");
+      const mic2Name = mic2Select ? mic2Select.options[mic2Select.selectedIndex]?.text : "Mic 2";
+      $("studioStatus").textContent = `Estado: 🔴 Grabando DÚO (${mic1Name} + ${mic2Name})...`;
+    } else {
+      $("studioStatus").textContent = `Estado: 🔴 Grabando con ${mic1Name}...`;
+    }
+    
+    if (player && player.src) {
+      player.currentTime = 0;
+      player.play();
+    }
   } catch (error) {
-      console.error(error);
-      $("studioStatus").textContent = "Estado: error al acceder al micrófono";
-      alert("❌ No se pudo acceder al micrófono. Verifica en Configuración.");
+    console.error(error);
+    $("studioStatus").textContent = "Estado: error al acceder al micrófono";
+    alert("❌ No se pudo acceder al micrófono. Verifica en Configuración.");
   }
 }
 
 function startDuoLevelMonitor() {
-    const level1 = $("duoMic1Level");
-    const level2 = $("duoMic2Level");
-    
-    function updateLevels() {
-        if (duoAnalyser1 && level1) {
-            const data1 = new Uint8Array(duoAnalyser1.frequencyBinCount);
-            duoAnalyser1.getByteFrequencyData(data1);
-            const avg1 = data1.reduce((a, b) => a + b, 0) / data1.length;
-            level1.style.width = Math.min(100, (avg1 / 128) * 100) + "%";
-        }
-        
-        if (duoAnalyser2 && level2) {
-            const data2 = new Uint8Array(duoAnalyser2.frequencyBinCount);
-            duoAnalyser2.getByteFrequencyData(data2);
-            const avg2 = data2.reduce((a, b) => a + b, 0) / data2.length;
-            level2.style.width = Math.min(100, (avg2 / 128) * 100) + "%";
-        }
-        
-        if (studioMediaRecorder && studioMediaRecorder.state === "recording") {
-            duoAnimationId = requestAnimationFrame(updateLevels);
-        }
+  const level1 = $("duoMic1Level");
+  const level2 = $("duoMic2Level");
+  function updateLevels() {
+    if (duoAnalyser1 && level1) {
+      const data1 = new Uint8Array(duoAnalyser1.frequencyBinCount);
+      duoAnalyser1.getByteFrequencyData(data1);
+      const avg1 = data1.reduce((a, b) => a + b, 0) / data1.length;
+      level1.style.width = Math.min(100, (avg1 / 128) * 100) + "%";
     }
-    updateLevels();
+    
+    if (duoAnalyser2 && level2) {
+      const data2 = new Uint8Array(duoAnalyser2.frequencyBinCount);
+      duoAnalyser2.getByteFrequencyData(data2);
+      const avg2 = data2.reduce((a, b) => a + b, 0) / data2.length;
+      level2.style.width = Math.min(100, (avg2 / 128) * 100) + "%";
+    }
+    
+    if (studioMediaRecorder && studioMediaRecorder.state === "recording") {
+      duoAnimationId = requestAnimationFrame(updateLevels);
+    }
+  }
+  updateLevels();
 }
 
 function stopDuoLevelMonitor() {
-    if (duoAnimationId) {
-        cancelAnimationFrame(duoAnimationId);
-        duoAnimationId = null;
-    }
-    
-    // Resetear barras
-    const level1 = $("duoMic1Level");
-    const level2 = $("duoMic2Level");
-    if (level1) level1.style.width = "0%";
-    if (level2) level2.style.width = "0%";
+  if (duoAnimationId) {
+    cancelAnimationFrame(duoAnimationId);
+    duoAnimationId = null;
+  }
+  
+  // Resetear barras
+  const level1 = $("duoMic1Level");
+  const level2 = $("duoMic2Level");
+  if (level1) level1.style.width = "0%";
+  if (level2) level2.style.width = "0%";
 }
 
 function stopStudioRecording() {
-    if (studioMediaRecorder && studioMediaRecorder.state !== "inactive") {
-        studioMediaRecorder.stop();
-    }
-    
-    // Detener Mic 1
-    if (studioStream) {
-        studioStream.getTracks().forEach(track => track.stop());
-    }
-    
-    // Detener Mic 2 (si existe)
-    if (studioStream2) {
-        studioStream2.getTracks().forEach(track => track.stop());
-        studioStream2 = null;
-    }
-    
-    // Cerrar contexto de audio dúo
-    if (duoAudioContext) {
-        duoAudioContext.close();
-        duoAudioContext = null;
-    }
-    stopDuoLevelMonitor();
-    
-    // Ocultar indicador
-    const duoIndicator = $("duoIndicator");
-    if (duoIndicator) {
-        duoIndicator.style.display = "none";
-    }
-    
-    const player = $("player");
-    if (player) {
-        player.pause();
-    }
+  if (studioMediaRecorder && studioMediaRecorder.state !== "inactive") {
+    studioMediaRecorder.stop();
+  }
+  
+  // Detener Mic 1
+  if (studioStream) {
+    studioStream.getTracks().forEach(track => track.stop());
+  }
+  
+  // Detener Mic 2 (si existe)
+  if (studioStream2) {
+    studioStream2.getTracks().forEach(track => track.stop());
+    studioStream2 = null;
+  }
+  
+  // Cerrar contexto de audio dúo
+  if (duoAudioContext) {
+    duoAudioContext.close();
+    duoAudioContext = null;
+  }
+  stopDuoLevelMonitor();
+  
+  // Ocultar indicador
+  const duoIndicator = $("duoIndicator");
+  if (duoIndicator) {
+    duoIndicator.style.display = "none";
+  }
+  const player = $("player");
+  if (player) {
+    player.pause();
+  }
 }
 
 function redoStudioRecording() {
-    studioChunks = [];
-    studioRecordedBlob = null;
-    $("voicePlayer").src = "";
-    $("studioStatus").textContent = "Estado: grabación eliminada. Lista para volver a grabar.";
+  studioChunks = [];
+  studioRecordedBlob = null;
+  $("voicePlayer").src = "";
+  $("studioStatus").textContent = "Estado: grabación eliminada. Lista para volver a grabar.";
 }
 
 function saveStudioRecording() {
-    if (!studioRecordedBlob) {
+  if (!studioRecordedBlob) {
     alert("⚠️ No hay grabación para guardar");
     return;
-    }
-    
-    const baseName = studioTrackFileName
-        ? `Voz - ${studioTrackFileName}`
-        : "Grabación de voz";
-    saveToLibrary(studioRecordedBlob, {
-        name: baseName,
-        type: "voz"
-    });
-    $("studioStatus").textContent = "Estado: grabación guardada en Biblioteca";
+  }
+  const baseName = studioTrackFileName
+    ? `Voz - ${studioTrackFileName}`
+    : "Grabación de voz";
+  saveToLibrary(studioRecordedBlob, {
+    name: baseName,
+    type: "voz"
+  });
+  $("studioStatus").textContent = "Estado: grabación guardada en Biblioteca";
 }
 
 // ==========================================
@@ -691,7 +682,7 @@ async function saveToLibrary(blob, options = {}) {
       transcription: options.transcription || [],
       metadata: options.metadata || {}
     });
-
+    
     await renderLibrary();
   } catch (error) {
     console.error(error);
@@ -702,19 +693,14 @@ async function saveToLibrary(blob, options = {}) {
 async function renderLibrary(filter = "todos") {
   const container = $("libraryList");
   if (!container) return;
-
   container.innerHTML = "<p>Cargando archivos...</p>";
-
   try {
     let library = await getAllLibraryItemsFromSupabase();
-
     let filteredItems = library;
     if (filter !== "todos") {
       filteredItems = library.filter(item => item.type === filter);
     }
-
     container.innerHTML = "";
-
     if (filteredItems.length === 0) {
       container.innerHTML = `<p>La carpeta '${filter}' está vacía.</p>`;
     } else {
@@ -722,17 +708,16 @@ async function renderLibrary(filter = "todos") {
         const div = document.createElement("div");
         div.className = "library-item card";
         div.style.marginBottom = "10px";
-
         div.innerHTML = `
-          <p><strong>${item.name}</strong></p>
-          <small>Tipo: ${item.type.toUpperCase()} | ${new Date(item.created_at).toLocaleString("es-ES")}</small>
-          <audio controls src="${item.file_url}" style="width:100%; margin: 10px 0;"></audio>
-          <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#e11d48;">🗑️ Eliminar</button>
+        <p><strong>${item.name}</strong></p>
+        <small>Tipo: ${item.type.toUpperCase()} | ${new Date(item.created_at).toLocaleString("es-ES")}</small>
+        <audio controls src="${item.file_url}" style="width:100%; margin: 10px 0;"></audio>
+        <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#e11d48;">🗑️ Eliminar</button>
         `;
         container.appendChild(div);
       });
     }
-
+    
     document.querySelectorAll(".delete-library-btn").forEach((btn) => {
       btn.addEventListener("click", async () => {
         const id = btn.dataset.id;
@@ -740,11 +725,11 @@ async function renderLibrary(filter = "todos") {
         renderLibrary(filter);
       });
     });
-
+    
     await loadVoiceOptionsInStudio();
     await loadTrackOptionsInStudio();
     await loadTrackOptionsInKaraoke();
-
+  
   } catch (error) {
     console.error(error);
     container.innerHTML = "<p>❌ Error al cargar la biblioteca.</p>";
@@ -768,18 +753,14 @@ async function saveManualFileToLibrary() {
   const nameInput = $("libraryFileName");
   const progress = $("uploadProgress");
   const btn = $("saveLibraryFileBtn");
-
   const file = fileInput.files[0];
   if (!file) return alert("⚠️ Selecciona un archivo.");
-
   // Mostrar barra de progreso
   progress.style.display = "block";
   progress.value = 10;
   btn.disabled = true;
-
   try {
     progress.value = 30; // Simulamos lectura
-    
     // Aquí ocurre el proceso real
     await addLibraryItem({
       name: nameInput.value.trim() || file.name,
@@ -788,18 +769,15 @@ async function saveManualFileToLibrary() {
       date: new Date().toLocaleString("es-ES"),
       transcription: []
     });
-
     progress.value = 80;
     await renderLibrary('todos');
-    
     progress.value = 100;
     alert("✅ ¡Archivo guardado exitosamente!");
-    
   } catch (error) {
     console.error(error);
     alert("❌ Error al guardar.");
   } finally {
-    // Resetear UI
+  // Resetear UI
     progress.style.display = "none";
     progress.value = 0;
     btn.disabled = false;
@@ -810,12 +788,9 @@ async function saveManualFileToLibrary() {
 async function loadTrackOptionsInStudio() {
   const select = $("studioTrackSelect");
   if (!select) return;
-
   select.innerHTML = `<option value="">Selecciona una pista desde Biblioteca</option>`;
-
   try {
     const tracks = await getLibraryItemsByTypeFromSupabase("pista");
-
     if (!tracks.length) {
       const option = document.createElement("option");
       option.value = "";
@@ -823,7 +798,6 @@ async function loadTrackOptionsInStudio() {
       select.appendChild(option);
       return;
     }
-
     tracks.forEach((item) => {
       const option = document.createElement("option");
       option.value = item.id;
@@ -839,24 +813,19 @@ async function loadSelectedTrackFromLibraryStudio() {
   const select = $("studioTrackSelect");
   const player = $("player");
   const status = $("studioStatus");
-
   if (!select || !player || !status) return;
-
   const selectedId = select.value;
-
   if (!selectedId) {
     alert("⚠️ Selecciona una pista");
     return;
   }
-
+  
   try {
     const item = await getLibraryItemByIdFromSupabase(selectedId);
-
     if (!item) {
       alert("⚠️ No se encontró la pista");
       return;
     }
-
     studioTrackFileName = item.name;
     player.src = item.file_url;
     status.textContent = `Estado: pista cargada desde Biblioteca (${item.name})`;
@@ -869,15 +838,12 @@ async function loadSelectedTrackFromLibraryStudio() {
 async function loadVoiceOptionsInStudio() {
   const select = $("voiceLibrarySelect");
   if (!select) return;
-
   select.innerHTML = `<option value="">Selecciona una voz guardada</option>`;
-
+  
   try {
     const voces = await getLibraryItemsByTypeFromSupabase("voz");
     const grabaciones = await getLibraryItemsByTypeFromSupabase("grabacion");
-
     const merged = [...voces, ...grabaciones];
-
     if (!merged.length) {
       const option = document.createElement("option");
       option.value = "";
@@ -885,7 +851,6 @@ async function loadVoiceOptionsInStudio() {
       select.appendChild(option);
       return;
     }
-
     merged.forEach((item) => {
       const option = document.createElement("option");
       option.value = item.id;
@@ -904,54 +869,41 @@ async function loadSelectedVoiceFromLibrary() {
   const lyricsText = $("lyricsText");
 
   if (!select || !player || !status) return;
-
   const selectedId = select.value;
-
   if (!selectedId) {
     alert("⚠️ Selecciona una voz");
     return;
   }
-
   try {
     const item = await getLibraryItemByIdFromSupabase(selectedId);
-
     if (!item) {
       alert("⚠️ No se encontró el archivo");
       return;
     }
-
     const response = await fetch(item.file_url);
     selectedVoiceBlob = await response.blob();
     selectedVoiceId = item.id;
-
     player.src = item.file_url;
     status.textContent = `Estado: voz seleccionada -> ${item.name}`;
-
     if (Array.isArray(item.transcription) && item.transcription.length > 0) {
       baseTranscriptionSegments = item.transcription.map(seg =>
         buildWordTimingFromSegment(seg)
-      );
-
-      transcriptionSegments = [...baseTranscriptionSegments];
-
-      renderKaraokeLyrics(transcriptionSegments);
-      cargarLetrasEnMonitor();
-
-      if (lyricsText) {
-        lyricsText.value = transcriptionSegments
-          .map(seg => seg.text || "")
-          .join("\n")
-          .trim();
-      }
-
+    );
+    transcriptionSegments = [...baseTranscriptionSegments];
+    renderKaraokeLyrics(transcriptionSegments);
+    cargarLetrasEnMonitor();
+    if (lyricsText) {
+      lyricsText.value = transcriptionSegments
+        .map(seg => seg.text || "")
+        .join("\n")
+        .trim();
+    }
       status.textContent = "Estado: Voz seleccionada (Letras cargadas de memoria ⚡)";
     } else {
       baseTranscriptionSegments = [];
       transcriptionSegments = [];
-
       renderKaraokeLyrics([]);
       cargarLetrasEnMonitor();
-
       if (lyricsText) lyricsText.value = "";
       status.textContent = `Estado: voz seleccionada -> ${item.name} (sin transcripción guardada)`;
     }
@@ -964,22 +916,18 @@ async function loadSelectedVoiceFromLibrary() {
 async function uploadFileToSupabase(fileOrBlob, fileName, mimeType = "application/octet-stream") {
   const safeName = `${Date.now()}_${fileName.replace(/\s+/g, "_")}`;
   const filePath = safeName;
-
   const { error: uploadError } = await supabaseClient.storage
     .from("library")
     .upload(filePath, fileOrBlob, {
       contentType: mimeType,
       upsert: false
     });
-
   if (uploadError) {
     throw uploadError;
   }
-
   const { data } = supabaseClient.storage
     .from("library")
     .getPublicUrl(filePath);
-
   return {
     filePath,
     fileUrl: data.publicUrl
@@ -997,11 +945,8 @@ async function saveLibraryItemToSupabase({ name, type, blob, transcription = [],
     : mimeType.includes("ogg")
     ? "ogg"
     : "bin";
-
   const fileName = `${name}.${extension}`;
-
   const { filePath, fileUrl } = await uploadFileToSupabase(blob, fileName, mimeType);
-
   const { error } = await supabaseClient
     .from("library_items")
     .insert([
@@ -1015,7 +960,6 @@ async function saveLibraryItemToSupabase({ name, type, blob, transcription = [],
         metadata
       }
     ]);
-
   if (error) {
     throw error;
   }
@@ -1026,11 +970,9 @@ async function getAllLibraryItemsFromSupabase() {
     .from("library_items")
     .select("*")
     .order("created_at", { ascending: false });
-
   if (error) {
     throw error;
   }
-
   return data || [];
 }
 
@@ -1040,11 +982,9 @@ async function getLibraryItemsByTypeFromSupabase(type) {
     .select("*")
     .eq("type", type)
     .order("created_at", { ascending: false });
-
   if (error) {
     throw error;
   }
-
   return data || [];
 }
 
@@ -1054,33 +994,27 @@ async function getLibraryItemByIdFromSupabase(id) {
     .select("*")
     .eq("id", id)
     .single();
-
   if (error) {
     throw error;
   }
-
   return data;
 }
 
 async function deleteLibraryItemFromSupabase(id) {
   // primero buscamos el item para saber qué archivo borrar
   const item = await getLibraryItemByIdFromSupabase(id);
-
   if (item?.file_path) {
     const { error: storageError } = await supabaseClient.storage
       .from("library")
       .remove([item.file_path]);
-
     if (storageError) {
       console.warn("No se pudo borrar el archivo del storage:", storageError.message);
     }
   }
-
   const { error } = await supabaseClient
     .from("library_items")
     .delete()
     .eq("id", id);
-
   if (error) {
     throw error;
   }
@@ -1113,16 +1047,13 @@ async function transcribeSelectedVoice() {
     const samplesPerChunk = CHUNK_SECONDS * sampleRate;
 
     let fullSegments = [];
-
     for (let start = 0; start < totalSamples; start += samplesPerChunk) {
       const end = Math.min(start + samplesPerChunk, totalSamples);
       const chunkNumber = Math.floor(start / samplesPerChunk) + 1;
       const totalChunks = Math.ceil(totalSamples / samplesPerChunk);
-
       if (status) {
         status.textContent = `Estado: Transcribiendo parte ${chunkNumber} de ${totalChunks}...`;
       }
-
       const wavBlob = audioBufferToWav(audioBuffer, start, end);
       const base64Audio = await blobToBase64(wavBlob);
 
@@ -1136,9 +1067,7 @@ async function transcribeSelectedVoice() {
         const errorText = await response.text();
         throw new Error(`Error ${response.status}: ${errorText}`);
       }
-
       const result = await response.json();
-
       const palabrasProhibidas = [
         "Amara",
         "Subtítulos",
@@ -1147,41 +1076,32 @@ async function transcribeSelectedVoice() {
         "Suscribete",
         "comunidad"
       ];
-
       const timeOffset = start / sampleRate;
-
       (result.segments || []).forEach((seg) => {
         const segText = (seg?.text || "").trim();
-
         if (!segText) return;
-
         const esFantasma = palabrasProhibidas.some((palabra) =>
           segText.toLowerCase().includes(palabra.toLowerCase())
         );
-
         if (esFantasma) return;
-
         const segmentWithOffset = {
           start: Number(seg.start || 0) + timeOffset,
           end: Number(seg.end || 0) + timeOffset,
           text: segText
         };
-
         fullSegments.push(buildWordTimingFromSegment(segmentWithOffset));
       });
     }
-
     baseTranscriptionSegments = fullSegments;
     transcriptionSegments = splitSegmentsIntoKaraokeLines(baseTranscriptionSegments, 6);
-
     renderKaraokeLyrics(transcriptionSegments);
     cargarLetrasEnMonitor();
-
+    
     if (lyricsText) {
       lyricsText.value = transcriptionSegments.map(line => line.text).join("\n");
     }
-
-     // --- AQUÍ ESTÁ EL GUARDADO AUTOMÁTICO EN BIBLIOTECA ---
+    
+    // --- AQUÍ ESTÁ EL GUARDADO AUTOMÁTICO EN BIBLIOTECA ---
     if (selectedVoiceId) {
       try {
         await updateLibraryItem(selectedVoiceId, {
@@ -1211,7 +1131,6 @@ function audioBufferToWav(buffer, startSample, endSample) {
   const wavBuffer = new ArrayBuffer(44 + length * 2);
   const view = new DataView(wavBuffer);
   const sampleRate = buffer.sampleRate;
-
   const writeString = (viewObj, offset, string) => {
     for (let i = 0; i < string.length; i++) {
       viewObj.setUint8(offset + i, string.charCodeAt(i));
@@ -1410,14 +1329,12 @@ async function analyzePitchForSegments(audioBlob, segments) {
 
 function detectPitchFromSamples(samples, sampleRate) {
   if (!samples || samples.length < 256) return -1;
-  
   // Calcular RMS para verificar si hay señal
   let rms = 0;
   for (let i = 0; i < samples.length; i++) {
     rms += samples[i] * samples[i];
   }
   rms = Math.sqrt(rms / samples.length);
-  
   if (rms < 0.01) return -1; // Silencio
   
   // Autocorrelación simplificada
