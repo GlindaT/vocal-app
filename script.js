@@ -2905,93 +2905,106 @@ function drawKaraokeMonitor(adjustedMidi) {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
 
-    // 1. Limpieza total
+    // Limpieza
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (!transcriptionSegments || transcriptionSegments.length === 0) {
-        ctx.fillStyle = "#666";
-        ctx.textAlign = "center";
-        ctx.fillText("Carga una canción para empezar", canvas.width / 2, canvas.height / 2);
-        return;
-    }
+    if (!transcriptionSegments || transcriptionSegments.length === 0) return;
 
-    // 2. Cálculo dinámico del rango (Para que las notas no queden "arriba")
-    // Buscamos el min y max de TODA la canción para centrar la vista
+    // --- 1. CÁLCULO DE ESCALA (Mantenemos tu lógica de rango) ---
+    // Usamos un margen pequeño alrededor de las notas de la canción para que no se vean diminutas
     const allMidis = transcriptionSegments.map(s => s.midi).filter(m => m > 0);
-    const songMidiMin = Math.min(...allMidis) - 3; // Margen de 3 notas abajo
-    const songMidiMax = Math.max(...allMidis) + 3; // Margen de 3 notas arriba
-    const songMidiRange = songMidiMax - songMidiMin;
+    const viewMidiMin = Math.min(...allMidis) - 5; 
+    const viewMidiMax = Math.max(...allMidis) + 5;
+    const midiRange = viewMidiMax - viewMidiMin;
 
-    const pentagramTop = 40;
-    const pentagramBottom = canvas.height - 80;
-    const pentagramHeight = pentagramBottom - pentagramTop;
+    const topMargin = 50;
+    const bottomMargin = 100; // Espacio para la letra grande abajo
+    const drawHeight = canvas.height - topMargin - bottomMargin;
 
-    // Función de conversión LOCAL
-    const midiToY = (m) => {
-        const val = Math.max(songMidiMin, Math.min(songMidiMax, m));
-        const normalized = (songMidiMax - val) / songMidiRange;
-        return pentagramTop + (normalized * pentagramHeight);
+    const getNoteY = (m) => {
+        const normalized = (viewMidiMax - m) / midiRange;
+        return topMargin + (normalized * drawHeight);
     };
 
-    // 3. Dibujar Notas Laterales (Indicadores)
-    ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
-    ctx.font = "10px monospace";
+    // --- 2. DIBUJAR PENTAGRAMA Y ESCALA LATERAL ---
     ctx.textAlign = "left";
-    for (let m = songMidiMin; m <= songMidiMax; m++) {
-        const y = midiToY(m);
-        if (m % 12 === 0) { // Solo marcar Do (C) para no saturar
-            ctx.fillText("C" + (Math.floor(m / 12) - 1), 5, y + 4);
-            ctx.strokeStyle = "rgba(255,255,255,0.1)";
-            ctx.beginPath(); ctx.moveTo(30, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+    ctx.textBaseline = "middle";
+    for (let m = viewMidiMin; m <= viewMidiMax; m++) {
+        const y = getNoteY(m);
+        
+        // Dibujamos líneas para cada nota (como tenías antes)
+        ctx.strokeStyle = (m % 12 === 0) ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.05)";
+        ctx.beginPath();
+        ctx.moveTo(50, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+
+        // Escala de notas a la izquierda
+        if (m % 12 === 0 || m % 12 === 4 || m % 12 === 7) { // C, E, G
+            ctx.fillStyle = "rgba(255,255,255,0.5)";
+            ctx.font = "10px Arial";
+            const noteNames = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+            const name = noteNames[m % 12] + (Math.floor(m / 12) - 1);
+            ctx.fillText(name, 10, y);
         }
     }
 
-    // 4. Dibujar Barras de Notas y LETRAS
-    const pixelsPerSecond = (canvas.width - 60) / 5; // Ventana de 5 segundos
-    const lineX = 60; 
+    // --- 3. DIBUJAR BARRAS Y LETRAS ---
+    const pixelsPerSecond = 150; 
+    const timelineX = 100; // Línea roja de tiempo
+
+    let currentLyric = ""; // Para la letra de abajo
 
     transcriptionSegments.forEach(seg => {
-        if (seg.start > currentTime + 5 || seg.end < currentTime - 1) return;
-
-        const x = lineX + (seg.start - currentTime) * pixelsPerSecond;
+        const x = timelineX + (seg.start - currentTime) * pixelsPerSecond;
         const w = (seg.end - seg.start) * pixelsPerSecond;
-        const y = midiToY(seg.midi);
-        const h = 18; // Grosor de la barra
+        const y = getNoteY(seg.midi);
+        
+        if (x + w < 0 || x > canvas.width) return;
 
         const isActive = currentTime >= seg.start && currentTime <= seg.end;
-        
-        // Color de la barra
-        ctx.fillStyle = isActive ? "#3b82f6" : "#1e3a8a";
+        if (isActive) currentLyric = seg.text; // Capturamos la palabra actual
+
+        // Dibujar barra
+        ctx.fillStyle = isActive ? "#3b82f6" : "rgba(59, 130, 246, 0.4)";
         ctx.beginPath();
-        ctx.roundRect(x, y - h/2, Math.max(w, 5), h, 4);
+        ctx.roundRect(x, y - 10, w, 20, 5);
         ctx.fill();
 
-        // DIBUJAR TEXTO DENTRO O DEBAJO DE LA BARRA
+        // Letra sobre la barra
         ctx.fillStyle = "white";
-        ctx.font = "bold 11px Arial";
+        ctx.font = "bold 12px Arial";
         ctx.textAlign = "center";
-        // Si la barra es muy pequeña, ponemos el texto arriba
-        const textY = (w < 20) ? y - 12 : y + 4; 
-        ctx.fillText(seg.text || "", x + w/2, textY);
+        ctx.fillText(seg.text, x + w / 2, y - 15);
     });
 
-    // 5. Línea de Tiempo
-    ctx.strokeStyle = "#ef4444";
-    ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(lineX, 20); ctx.lineTo(lineX, canvas.height - 60); ctx.stroke();
-
-    // 6. Voz del Usuario (Punto Amarillo)
-    if (currentFreq > 0) {
+    // --- 4. VOZ DEL USUARIO (PUNTO AMARILLO) ---
+    if (typeof currentFreq !== 'undefined' && currentFreq > 0) {
         const userMidi = 69 + 12 * Math.log2(currentFreq / 440);
-        const userY = midiToY(userMidi);
+        const userY = getNoteY(userMidi);
 
-        ctx.shadowBlur = 10; ctx.shadowColor = "yellow";
         ctx.fillStyle = "yellow";
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = "yellow";
         ctx.beginPath();
-        ctx.arc(lineX, userY, 6, 0, Math.PI * 2);
+        ctx.arc(timelineX, userY, 8, 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
     }
+
+    // --- 5. LÍNEA ROJA DE TIEMPO ---
+    ctx.strokeStyle = "red";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(timelineX, topMargin);
+    ctx.lineTo(timelineX, canvas.height - bottomMargin);
+    ctx.stroke();
+
+    // --- 6. LETRA GRANDE ABAJO (PENTAGRAMA) ---
+    ctx.fillStyle = "white";
+    ctx.font = "bold 40px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(currentLyric.toUpperCase(), canvas.width / 2, canvas.height - 40);
 }
 // ==========================================
 // DETECCIÓN DE PITCH PARA KARAOKE
