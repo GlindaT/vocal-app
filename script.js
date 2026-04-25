@@ -3241,7 +3241,9 @@ function drawKaraokeMonitor(adjustedMidi) {
     ctx.fillText("Próximo: " + (nextSegment.text || ""), canvas.width / 2, canvas.height - 25);
     }
 }
-
+function calculateMidi(frequency) {
+    return Math.round(69 + 12 * Math.log2(frequency / 440));
+}
 // ==========================================
 // DETECCIÓN DE PITCH PARA KARAOKE
 // ==========================================
