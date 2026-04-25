@@ -1973,13 +1973,6 @@ async function mixKaraoke() {
       trackBuffer.length,
       trackBuffer.sampleRate
     );
-    const trackGain = offlineCtx.createGain();
-    trackGain.gain.value = 0.4;
-
-    const trackSource = offlineCtx.createBufferSource();
-    trackSource.buffer = trackBuffer;
-    trackSource.connect(trackGain);
-    trackGain.connect(offlineCtx.destination);
     
     let trackBlob = karaokeSelectedTrackBlob;
     let trackName = karaokeSelectedTrackName || "Karaoke";
