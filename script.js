@@ -1016,6 +1016,20 @@ async function deleteLibraryItemFromSupabase(id) {
 // ==========================================
 // TRANSCRIPCIÓN CON TÉCNICA DE CHUNKING
 // ==========================================
+async function downsampleAudioBuffer(buffer, targetSampleRate = 16000) {
+  const offlineCtx = new OfflineAudioContext(
+    1, // Forzamos a 1 solo canal (Mono)
+    Math.ceil(buffer.duration * targetSampleRate),
+    targetSampleRate
+  );
+
+  const source = offlineCtx.createBufferSource();
+  source.buffer = buffer;
+  source.connect(offlineCtx.destination);
+  source.start();
+
+  return await offlineCtx.startRendering();
+}
 async function transcribeSelectedVoice() {
   if (!selectedVoiceBlob) {
     alert("⚠️ Primero selecciona y carga una voz desde Biblioteca");
