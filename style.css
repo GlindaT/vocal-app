@@ -553,13 +553,17 @@ input[type="text"] {
 }
 
 #karaokeCanvas {
-    background: #000000; 
+    background-color: #000 !important;
     display: block;
-    width: 100%;
-    height: 300px; /* Mantén la altura que prefieras */
-    border-radius: 8px;
-    border: 2px solid var(--border);
-    image-rendering: crisp-edges;
+    width: 100% !important;
+    height: auto;
+    image-rendering: crisp-edges; /* Para que las notas se vean nítidas */
+}
+
+/* Aseguramos que el contenido general scrollee si hay muchas canciones */
+.content {
+    overflow-y: auto !important;
+    padding-bottom: 100px;
 }
 /* ==========================================
    SISTEMA DE TEMAS GLOBALES
