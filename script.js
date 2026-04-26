@@ -1938,9 +1938,7 @@ function syncKaraokeMonitor(currentTime) {
     words.forEach(word => {
       const wordStart = parseFloat(word.dataset.start);
       const wordEnd = parseFloat(word.dataset.end);
-
       word.classList.remove("active-word", "past-word");
-
       if (currentTime >= wordStart && currentTime <= wordEnd) {
         word.classList.add("active-word");
       } else if (currentTime > wordEnd) {
@@ -1949,16 +1947,17 @@ function syncKaraokeMonitor(currentTime) {
     });
   });
 
-  if (activeLine && activeLine !== lastActiveLine && autoScrollEnabled) {
+  if (activeLine && activeLine !== lastActiveLine && (typeof autoScrollEnabled !== 'undefined' && autoScrollEnabled)) {
     activeLine.scrollIntoView({ behavior: "smooth", block: "center" });
     lastActiveLine = activeLine;
   }
 }
 
+// Fíjate que aquí cerramos bien la anterior y empezamos la nueva
 async function mixKaraoke() {
-  const trackEl = $("karaokeTrack"); // Ahora definido al principio
-  const btn = $("karaokeMixBtn");
-  const resultDiv = $("karaokeMixResult");
+  const trackEl = document.getElementById("karaokeTrack");
+  const btn = document.getElementById("karaokeMixBtn");
+  const resultDiv = document.getElementById("karaokeMixResult");
 
   if ((!karaokeSelectedTrackBlob && (!trackEl || !trackEl.src)) || !karaokeRecordedBlob) {
     alert("⚠️ Faltan ingredientes: Asegúrate de cargar una pista instrumental y grabar tu voz primero.");
