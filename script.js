@@ -1956,18 +1956,67 @@ function syncKaraokeMonitor(currentTime) {
 }
 
 async function mixKaraoke() {
-  if ((!karaokeSelectedTrackBlob && !trackEl?.src) || !karaokeRecordedBlob) {
-    alert("⚠️ Faltan ingredientes: Asegúrate de cargar una pista instrumental y grabar tu voz primero.");
-    return;
-  }
-  const trackEl = $("karaokeTrack");
+  const trackEl = $("karaokeTrack"); // Ahora definido al principio
   const btn = $("karaokeMixBtn");
   const resultDiv = $("karaokeMixResult");
 
-  btn.textContent = "🎧 Mezclando audios... ⏳";
-  btn.disabled = true;
-  resultDiv.innerHTML = "<p style='color: var(--text-muted);'>Uniendo la pista y tu voz. Esto puede tardar unos segundos...</p>";
+  if ((!karaokeSelectedTrackBlob && (!trackEl || !trackEl.src)) || !karaokeRecordedBlob) {
+    alert("⚠️ Faltan ingredientes: Asegúrate de cargar una pista instrumental y grabar tu voz primero.");
+    return;
+  }
 
+  try {
+    btn.textContent = "🎧 Mezclando audios... ⏳";
+    btn.disabled = true;
+    resultDiv.innerHTML = "<p style='color: var(--accent);'>Uniendo la pista y tu voz. Esto puede tardar unos segundos...</p>";
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // 1. Cargar ambos audios en paralelo
+    const [trackBuffer, voiceBuffer] = await Promise.all([
+      fetch(trackEl.src).then(r => r.arrayBuffer()).then(ab => audioCtx.decodeAudioData(ab)),
+      karaokeRecordedBlob.arrayBuffer().then(ab => audioCtx.decodeAudioData(ab))
+    ]);
+
+    // 2. Crear un buffer para la mezcla (usamos la duración de la pista)
+    const duration = Math.max(trackBuffer.duration, voiceBuffer.duration);
+    const mixedBuffer = audioCtx.createBuffer(2, duration * audioCtx.sampleRate, audioCtx.sampleRate);
+
+    // 3. Mezclar canales (L y R)
+    for (let channel = 0; channel < 2; channel++) {
+      const outputData = mixedBuffer.getChannelData(channel);
+      
+      // Añadir Pista (si es mono, usamos el canal 0 para ambos)
+      const trackData = trackBuffer.getChannelData(channel < trackBuffer.numberOfChannels ? channel : 0);
+      for (let i = 0; i < trackData.length; i++) outputData[i] += trackData[i];
+
+      // Añadir Voz (ajustar volumen de la voz si quieres, ej: trackData[i] + (voiceData[i] * 1.2))
+      const voiceData = voiceBuffer.getChannelData(channel < voiceBuffer.numberOfChannels ? channel : 0);
+      for (let i = 0; i < voiceData.length; i++) outputData[i] += voiceData[i];
+    }
+
+    // 4. Convertir a WAV (usando tu función audioBufferToWav)
+    const mixedBlob = audioBufferToWav(mixedBuffer, 0, mixedBuffer.length);
+    const url = URL.createObjectURL(mixedBlob);
+
+    // 5. Mostrar resultado
+    resultDiv.innerHTML = `
+      <div class="card" style="border: 1px solid var(--accent); margin-top: 15px;">
+        <p>✅ ¡Mezcla lista!</p>
+        <audio src="${url}" controls style="width: 100%;"></audio>
+        <br><br>
+        <a href="${url}" download="mi_karaoke.wav" class="btn-primary" style="text-decoration:none; padding: 10px 20px; display:inline-block;">Descargar Mezcla 📥</a>
+      </div>
+    `;
+
+  } catch (error) {
+    console.error("Error en la mezcla:", error);
+    alert("❌ No se pudo realizar la mezcla: " + error.message);
+  } finally {
+    btn.textContent = "🎙️ Mezclar Audios";
+    btn.disabled = false;
+  }
+}
   try {
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const trackArrayBuffer = await trackBlob.arrayBuffer();
