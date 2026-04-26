@@ -3353,3 +3353,17 @@ function audioBufferToWav(buffer, start, end) {
 
   return new Blob([wavBuffer], { type: 'audio/wav' });
 }
+
+function ajustarTamanoCanvas() {
+  const canvas = document.getElementById('karaokeCanvas');
+  if (!canvas) return;
+
+  // Ajusta el ancho interno del canvas al ancho de su contenedor visual
+  const container = canvas.parentElement;
+  canvas.width = container.clientWidth;
+  
+  // Puedes mantener una altura fija o hacerla proporcional
+  canvas.height = 450; 
+
+  console.log("Canvas ajustado a:", canvas.width, "x", canvas.height);
+}
