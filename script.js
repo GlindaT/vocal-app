@@ -1045,7 +1045,6 @@ async function transcribeSelectedVoice() {
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const arrayBuffer = await selectedVoiceBlob.arrayBuffer();
     
-    // CAMBIO: Añadimos un manejo específico para cuando el audio no se puede decodificar
     let audioBuffer;
     try {
         audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
@@ -1054,9 +1053,10 @@ async function transcribeSelectedVoice() {
     }
 
     const CHUNK_SECONDS = 25;
-    const sampleRate = audioBuffer.sampleRate;
     const totalSamples = audioBuffer.length;
-    const samplesPerChunk = CHUNK_SECONDS * sampleRate;
+    // IMPORTANTE: El sampleRate original sirve para calcular dónde cortar
+    const originalSampleRate = audioBuffer.sampleRate; 
+    const samplesPerChunk = CHUNK_SECONDS * originalSampleRate;
 
     let fullSegments = [];
     
@@ -1066,9 +1066,25 @@ async function transcribeSelectedVoice() {
       const totalChunks = Math.ceil(totalSamples / samplesPerChunk);
       
       if (status) {
-        status.textContent = `Estado: Transcribiendo parte ${chunkNumber} de ${totalChunks}...`;
+        status.textContent = `Estado: Procesando parte ${chunkNumber} de ${totalChunks}...`;
       }
-      const wavBlob = audioBufferToWav(audioBuffer, start, end);
+
+      // --- PASO 1: Extraer el trozo original ---
+      // Creamos un buffer temporal para este trozo para poder "adelgazarlo"
+      const chunkDuration = (end - start) / originalSampleRate;
+      const tempBuffer = audioCtx.createBuffer(audioBuffer.numberOfChannels, end - start, originalSampleRate);
+      
+      for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+        tempBuffer.copyToChannel(audioBuffer.getChannelData(channel).subarray(start, end), channel);
+      }
+
+      // --- PASO 2: ADELGAZAR EL AUDIO (Downsample a 16kHz y Mono) ---
+      // Esto es lo que evita el error 413
+      const lightBuffer = await downsampleAudioBuffer(tempBuffer, 16000);
+
+      // --- PASO 3: Convertir el buffer ligero a WAV ---
+      // Nota: Usamos 0 y lightBuffer.length porque es un buffer nuevo
+      const wavBlob = audioBufferToWav(lightBuffer, 0, lightBuffer.length);
       const base64Audio = await blobToBase64(wavBlob);
 
       const response = await fetch("/api/transcribe", {
@@ -1081,25 +1097,20 @@ async function transcribeSelectedVoice() {
         const errorText = await response.text();
         throw new Error(`Error ${response.status}: ${errorText}`);
       }
+
       const result = await response.json();
-      const palabrasProhibidas = [
-        "Amara",
-        "Subtítulos",
-        "subtítulos",
-        "Almorzo",
-        "Suscribete",
-        "comunidad"
-      ];
-      const timeOffset = start / sampleRate;
+      const palabrasProhibidas = ["Amara", "Subtítulos", "subtítulos", "Almorzo", "Suscribete", "comunidad"];
+      const timeOffset = start / originalSampleRate; // El offset se basa en el tiempo original
       
       (result.segments || []).forEach((seg) => {
         const segText = (seg?.text || "").trim();
-        
         if (!segText) return;
+
         const esFantasma = palabrasProhibidas.some((palabra) =>
           segText.toLowerCase().includes(palabra.toLowerCase())
         );
         if (esFantasma) return;
+
         const segmentWithOffset = {
           start: Number(seg.start || 0) + timeOffset,
           end: Number(seg.end || 0) + timeOffset,
@@ -1108,6 +1119,8 @@ async function transcribeSelectedVoice() {
         fullSegments.push(buildWordTimingFromSegment(segmentWithOffset));
       });
     }
+
+    // --- RESTO DEL CÓDIGO (Guardado y Renderizado) ---
     baseTranscriptionSegments = fullSegments;
     transcriptionSegments = splitSegmentsIntoKaraokeLines(baseTranscriptionSegments, 6);
     renderKaraokeLyrics(transcriptionSegments);
@@ -1117,11 +1130,10 @@ async function transcribeSelectedVoice() {
       lyricsText.value = transcriptionSegments.map(line => line.text).join("\n");
     }
     
-    // --- AQUÍ ESTÁ EL GUARDADO AUTOMÁTICO EN BIBLIOTECA ---
     if (selectedVoiceId) {
       try {
         await updateLibraryItem(selectedVoiceId, {
-          transcription: baseTranscriptionSegments // Guardamos los tiempos y textos
+          transcription: baseTranscriptionSegments 
         });
         console.log("✅ Transcripción guardada en Biblioteca");
       } catch (err) {
@@ -1134,7 +1146,7 @@ async function transcribeSelectedVoice() {
     }
   } catch (error) {
     console.error(error);
-    alert("❌ Error al transcribir el audio.");
+    alert("❌ Error al transcribir: " + error.message);
     if (status) status.textContent = "Estado: Error en la transcripción";
   }
 }
