@@ -176,28 +176,26 @@ function getLibraryItemById(id) {
 // ==========================================
 
 function showTab(tabId) {
-  document.querySelectorAll(".tab").forEach(tab => {
-    tab.classList.remove("active");
+  // Ocultar todas
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.remove('active');
+    t.style.display = 'none';
   });
 
-  const target = $(tabId);
-  if (target) target.classList.add("active");
-
-  document.querySelectorAll(".sidebar button").forEach(btn => {
-    btn.classList.remove("active");
-  });
-
-  const btnMap = {
-    afinador: "btnAfinador",
-    estudio: "btnEstudio",
-    biblioteca: "btnBiblioteca",
-    karaoke: "btnKaraoke",
-    splitter: "btnSplitter",
-    config: "btnConfig"
-  };
-
-  const activeBtn = $(btnMap[tabId]);
-  if (activeBtn) activeBtn.classList.add("active");
+  // Mostrar la elegida
+  const activeTab = document.getElementById(tabId);
+  if (activeTab) {
+    activeTab.classList.add('active');
+    activeTab.style.display = 'block';
+    
+    // Si entramos a karaoke, refrescamos el tamaño del canvas
+    if (tabId === 'karaoke') {
+       ajustarTamanoCanvas(); // Si tienes una función así, llámala aquí
+    }
+  }
+  
+  // Forzar que la página vuelva arriba al cambiar de pestaña
+  window.scrollTo(0, 0);
 }
 
 // ==========================================
