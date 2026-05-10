@@ -1,26 +1,39 @@
-// Añadir al inicio del archivo para asegurar que la DB cargue
+// ==========================================
+// INICIALIZACIÓN DE EVENTOS
+// ==========================================
+
+function initKaraokeListeners() {
+    const track = $("karaokeTrack");
+    if (track) {
+        // Al mover la barra de tiempo
+        track.addEventListener('seeked', () => {
+            drawKaraokeMonitor(track.currentTime, 0);
+        });
+        
+        // Al actualizar el tiempo (para sincronización continua)
+        track.addEventListener('timeupdate', () => {
+            // Pasamos el tiempo actual al monitor
+            // Nota: El pitch lo manejaremos por separado con el loop de audio
+            drawKaraokeMonitor(track.currentTime, 0);
+        });
+    }
+}
+
+// Llamar a esta función dentro del DOMContentLoaded
 window.addEventListener('DOMContentLoaded', async () => {
     try {
         await initDB();
         console.log("Database Ready");
+        
+        // Inicializar listeners del reproductor
+        initKaraokeListeners();
+        
         // Cargar vistas iniciales
         renderLibrary();
     } catch (err) {
         console.error(err);
     }
 });
-
-// Reutilizar el buffer para el afinador
-const pitchBuffer = new Float32Array(2048);
-
-// Agrega esto en tu función de inicialización de la página (donde cargas el DOM)
-const track = $("karaokeTrack");
-if (track) {
-    track.addEventListener('seeked', () => {
-        // Al mover la barra de tiempo, redibujamos inmediatamente
-        drawKaraokeMonitor(track.currentTime, 0);
-    });
-}
 
 // ==========================================
 // CONFIG GLOBAL
@@ -3349,7 +3362,7 @@ async function loadKaraokeSong(id) {
     const track = $("karaokeTrack");
     if (track) {
       // IMPORTANTE: Revocar URL anterior para no saturar la memoria
-      if (track.src.startsWith("blob:")) URL.revokeObjectURL(track.src);
+      if (track.src && track.src.startsWith("blob:")) URL.revokeObjectURL(track.src);
 
       if (song.file_url) {
         track.src = song.file_url;
@@ -3360,16 +3373,21 @@ async function loadKaraokeSong(id) {
       track.volume = 0.4;
     }
 
-    / Sustituye la parte de carga de letras en loadKaraokeSong por esto:
-if (Array.isArray(song.transcription) && song.transcription.length > 0) {
-    transcriptionSegments = song.transcription; // Ya es un array
-    baseTranscriptionSegments = [...song.transcription];
-    cargarLetrasEnMonitor();
-    
-    // FORZAR DIBUJO INICIAL
-    const canvas = $("karaokeCanvas");
-    if (canvas) drawKaraokeMonitor(0, 0); 
-}
+    // Lógica corregida para carga de letras
+    if (Array.isArray(song.transcription) && song.transcription.length > 0) {
+        transcriptionSegments = song.transcription; 
+        baseTranscriptionSegments = [...song.transcription];
+        cargarLetrasEnMonitor();
+        
+        // FORZAR DIBUJO INICIAL
+        const canvas = $("karaokeCanvas");
+        if (canvas) drawKaraokeMonitor(0, 0); 
+    } else {
+        // Limpiamos si no hay letras
+        transcriptionSegments = [];
+        baseTranscriptionSegments = [];
+        cargarLetrasEnMonitor();
+    }
 
     const title = song.metadata?.title || song.name;
     if ($("karaokeStatus")) {
