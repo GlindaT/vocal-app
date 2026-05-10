@@ -1538,10 +1538,10 @@ function updateKaraokeHighlight(currentTime) {
 
     line.classList.remove("active", "past", "upcoming");
 
-    if (currentTime >= seg.start - 0.1 && currentTime <= seg.end + 0.1) {
+    if (currentTime >= start - 0.1 && currentTime <= end + 0.1) {
       line.classList.add("active");
       activeLine = line;
-    } else if (currentTime >= seg.start - 0.1 && currentTime <= seg.end + 0.1) {
+    } else if (currentTime > end + 0.1) { // El margen aquí ayuda a marcar el 'past'
       line.classList.add("past");
     } else {
       line.classList.add("upcoming");
@@ -1554,9 +1554,9 @@ function updateKaraokeHighlight(currentTime) {
 
       word.classList.remove("active-word", "past-word");
 
-      if (currentTime >= wordStart && currentTime <= wordEnd) {
+      if (currentTime >= wordStart - 0.1 && currentTime <= wordEnd + 0.1) {
         word.classList.add("active-word");
-      } else if (currentTime > wordEnd) {
+      } else if (currentTime > wordEnd + 0.1) {
         word.classList.add("past-word");
       }
     });
@@ -1952,10 +1952,10 @@ function syncKaraokeMonitor(currentTime) {
 
     line.classList.remove("active", "past");
 
-    if (currentTime >= seg.start - 0.1 && currentTime <= seg.end + 0.1) {
+    if (currentTime >= start - 0.1 && currentTime <= end + 0.1) {
       line.classList.add("active");
       activeLine = line;
-    } else >= seg.start - 0.1 && currentTime <= seg.end + 0.1) {
+    } else if (currentTime > end + 0.1) { // El margen aquí ayuda a marcar el 'past'
       line.classList.add("past");
     }
 
@@ -1964,9 +1964,9 @@ function syncKaraokeMonitor(currentTime) {
       const wordStart = parseFloat(word.dataset.start);
       const wordEnd = parseFloat(word.dataset.end);
       word.classList.remove("active-word", "past-word");
-      if (currentTime >= wordStart && currentTime <= wordEnd) {
+      if (currentTime >= wordStart - 0.1 && currentTime <= wordEnd + 0.1) {
         word.classList.add("active-word");
-      } else if (currentTime > wordEnd) {
+      } else if (currentTime > wordEnd + 0.1) {
         word.classList.add("past-word");
       }
     });
