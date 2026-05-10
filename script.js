@@ -2699,6 +2699,7 @@ function startTapSync() {
   // Reproducir audio desde el inicio
   voicePlayer.currentTime = 0;
   voicePlayer.play();
+  voicePlayer.onplay = () => console.log("Audio sonando, currentTime:", voicePlayer.currentTime);
   
   // Activar listener de teclado
   document.addEventListener("keydown", handleTapSyncKeypress);
@@ -2804,14 +2805,14 @@ async function applyTapSync() {
   const totalDuration = voicePlayer ? voicePlayer.duration : 0;
   const status = $("selectedVoiceStatus");
   
-  // Mostrar estado
-  if (status) status.textContent = "Estado: Aplicando tiempos y analizando notas...";
+  status.textContent = "Estado: Aplicando tiempos...";
   
   const newSegments = [];
   
   for (let i = 0; i < tapSyncLines.length; i++) {
-    const start = tapSyncTimestamps[i] || 0;
-    let end = (i < tapSyncTimestamps.length - 1) ? tapSyncTimestamps[i + 1] : (totalDuration || start + 3);
+    const start = tapSyncTimestamps[i];
+    // Aseguramos que el end no pase de la duración total
+    let end = (i < tapSyncTimestamps.length - 1) ? tapSyncTimestamps[i + 1] : Math.min(start + 3, totalDuration);
     
     newSegments.push(buildWordTimingFromSegment({
       start: start,
@@ -2819,38 +2820,21 @@ async function applyTapSync() {
       text: tapSyncLines[i]
     }));
   }
-  
-  // Analizar pitch si tenemos el blob de audio
-  let analyzedSegments = newSegments;
-  if (selectedVoiceBlob) {
-    if (status) status.textContent = "Estado: Analizando notas musicales... 🎵";
-    analyzedSegments = await analyzePitchForSegments(selectedVoiceBlob, newSegments);
-  }
-  
-  baseTranscriptionSegments = analyzedSegments;
-  transcriptionSegments = analyzedSegments;
-  
-  renderKaraokeLyrics(transcriptionSegments);
-  cargarLetrasEnMonitor();
+
+  // ¡IMPORTANTE! Guardar los nuevos segmentos en la base de datos
+  transcriptionSegments = newSegments;
+  baseTranscriptionSegments = [...newSegments];
   
   if (selectedVoiceId) {
-    updateLibraryItem(selectedVoiceId, { transcription: baseTranscriptionSegments })
-      .then(() => console.log("✅ Guardado en Biblioteca"))
-      .catch(err => console.error("Error:", err));
+    await updateLibraryItem(selectedVoiceId, { transcription: newSegments });
+    status.textContent = "Estado: ¡Sincronización guardada con éxito! ✅";
   }
-  
-  $("startTapSyncBtn").style.display = "inline-block";
-  $("tapSyncResult").style.display = "none";
-  
-  tapSyncLines = [];
-  tapSyncTimestamps = [];
-  tapSyncCurrentIndex = 0;
-  
-  if (status) status.textContent = "Estado: ✅ Sincronización y notas aplicadas";
-  
-  alert("✅ ¡Tiempos y notas aplicados! Reproduce para verificar.");
-}
 
+  renderKaraokeLyrics(transcriptionSegments);
+  cargarLetrasEnMonitor();
+  $("tapSyncResult").style.display = "none";
+  $("startTapSyncBtn").style.display = "inline-block";
+}
 
 function redoTapSync() {
   $("tapSyncResult").style.display = "none";
