@@ -2228,7 +2228,7 @@ async function splitAudio() {
     statusText.textContent = "2/4 🚀 Iniciando Inteligencia Artificial...";
     detailText.textContent = "Despertando al modelo de alta calidad MDX23...";
 
-    const startResponse = await fetch("/api/split", {
+    const startResponse = await fetch("https://vocal-app-seven.vercel.app/api/split", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ fileUrl: directUrl })
