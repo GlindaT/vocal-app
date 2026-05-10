@@ -2661,6 +2661,16 @@ function startTapSync() {
   const lyricsText = $("lyricsText");
   const voicePlayer = $("selectedVoicePlayer");
   
+  // Verificación de elementos críticos
+  const startBtn = $("startTapSyncBtn");
+  const cancelBtn = $("cancelTapSyncBtn");
+  const activeBox = $("tapSyncActive");
+  const resultBox = $("tapSyncResult");
+
+  if (!startBtn) console.error("Falta el botón: startTapSyncBtn");
+  if (!cancelBtn) console.error("Falta el botón: cancelTapSyncBtn");
+  // ... (añade más si quieres)
+
   if (!lyricsText || !lyricsText.value.trim()) {
     alert("⚠️ Primero escribe o corrige la letra en el área de texto.");
     return;
@@ -2671,40 +2681,29 @@ function startTapSync() {
     return;
   }
   
-  // Obtener líneas de la letra
-  tapSyncLines = lyricsText.value
-    .split("\n")
-    .map(line => line.trim())
-    .filter(line => line.length > 0);
+  tapSyncLines = lyricsText.value.split("\n").map(l => l.trim()).filter(l => l.length > 0);
   
   if (tapSyncLines.length === 0) {
     alert("⚠️ No hay líneas de texto para sincronizar.");
     return;
   }
   
-  // Reiniciar variables
   tapSyncTimestamps = [];
   tapSyncCurrentIndex = 0;
   tapSyncMode = true;
   
-  // Mostrar/ocultar elementos
-  $("startTapSyncBtn").style.display = "none";
-  $("cancelTapSyncBtn").style.display = "inline-block";
-  $("tapSyncActive").style.display = "block";
-  $("tapSyncResult").style.display = "none";
+  // Uso seguro de estilos
+  if (startBtn) startBtn.style.display = "none";
+  if (cancelBtn) cancelBtn.style.display = "inline-block";
+  if (activeBox) activeBox.style.display = "block";
+  if (resultBox) resultBox.style.display = "none";
   
-  // Mostrar primera línea
   updateTapSyncDisplay();
-  
-  // Reproducir audio desde el inicio
   voicePlayer.currentTime = 0;
-  voicePlayer.play();
-  voicePlayer.onplay = () => console.log("Audio sonando, currentTime:", voicePlayer.currentTime);
+  voicePlayer.play().catch(e => console.error("Error al reproducir:", e));
   
-  // Activar listener de teclado
   document.addEventListener("keydown", handleTapSyncKeypress);
-  
-  console.log("🎯 Sincronización iniciada. Líneas:", tapSyncLines.length);
+  console.log("🎯 Sincronización iniciada.");
 }
 
 function handleTapSyncKeypress(e) {
