@@ -2072,7 +2072,7 @@ async function mixKaraoke() {
     trackSource.start(0);
     voiceSource.start(0);
 
-    const renderedBuffer = await offlineCtx.startRendering();
+   
     const finalWavBlob = exportStereoWav(renderedBuffer);
     const finalUrl = URL.createObjectURL(finalWavBlob);
     
