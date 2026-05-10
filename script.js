@@ -2297,7 +2297,6 @@ async function splitAudio() {
                     console.log("Blob creado:", blobPista);
                     
                     const renderedBuffer = await offlineCtx.startRendering();
-                    const blobPista = exportStereoWav(renderedBuffer);
                     await saveToLibrary(blobVoz, { name: `Voz - ${file.name}`, type: "voz" });
                     await saveToLibrary(blobPista, { name: `Pista - ${file.name}`, type: "pista" });
                     
