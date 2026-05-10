@@ -374,39 +374,38 @@ let selectedVoiceId = null;
 function cargarAudioEstudio(e) {
   const file = e.target.files[0];
   if (!file) return;
-
+  
   studioTrackFileName = file.name;
-
+  
   // Liberar la memoria del audio anterior si existía uno
   if ($("player").src && $("player").src.startsWith("blob:")) {
     URL.revokeObjectURL($("player").src);
   }
-
+  
   const url = URL.createObjectURL(file);
   $("player").src = url;
   $("studioStatus").textContent = `Estado: pista cargada (${file.name})`;
-}
-
-// Asegúrate de asignar el evento cuando se selecciona un archivo
-const voiceFileInput = document.getElementById("voiceFileInput");
-if (voiceFileInput) {
+  
+  // Asegúrate de asignar el evento cuando se selecciona un archivo
+  const voiceFileInput = document.getElementById("voiceFileInput");
+  if (voiceFileInput) {
     voiceFileInput.addEventListener("change", function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        // Cargar en el reproductor de voz de la interfaz (voicePlayer)
-        const voicePlayer = document.getElementById("voicePlayer"); // Asegúrate que este sea el ID de tu audio
-        if (voicePlayer) {
-            if (voicePlayer.src && voicePlayer.src.startsWith("blob:")) {
-                URL.revokeObjectURL(voicePlayer.src);
-            }
-            voicePlayer.src = URL.createObjectURL(file);
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      // Cargar en el reproductor de voz de la interfaz (voicePlayer)
+      const voicePlayer = document.getElementById("voicePlayer"); // Asegúrate que este sea el ID de tu audio
+      if (voicePlayer) {
+        if (voicePlayer.src && voicePlayer.src.startsWith("blob:")) {
+          URL.revokeObjectURL(voicePlayer.src);
         }
-
-        // Guardar referencia para que el botón "Transcribir con Whisper" la encuentre
-        selectedVoiceBlob = file; 
-        document.getElementById("selectedVoiceStatus").textContent = `Estado: Voz subida (${file.name})`;
+        voicePlayer.src = URL.createObjectURL(file);
+      }
+      // Guardar referencia para que el botón "Transcribir con Whisper" la encuentre
+      selectedVoiceBlob = file; 
+      document.getElementById("selectedVoiceStatus").textContent = `Estado: Voz subida (${file.name})`;
     });
+  }
 }
 
 function playTrack() {
@@ -679,7 +678,6 @@ async function saveToLibrary(blob, options = {}) {
       date: new Date().toLocaleString("es-ES"),
       transcription: options.transcription || []
     });
-    
     await renderLibrary();
   } catch (error) {
     console.error(error);
@@ -750,34 +748,33 @@ async function deleteLibraryItem(id) {
 }
 
 async function saveManualFileToLibrary() {
-    const fileInput = $("libraryFileInput");
-    const typeSelect = $("libraryFileType");
-    const nameInput = $("libraryFileName");
-    const file = fileInput?.files[0];
-
-    if (!file) return alert("⚠️ Selecciona un archivo.");
-
-    try {
-        $("uploadProgress").style.display = "block";
-        
-        // Usamos la función de Supabase para que sea consistente con renderLibrary
-        await saveLibraryItemToSupabase({
-            name: nameInput.value.trim() || file.name,
-            type: typeSelect.value,
-            blob: file, // Nombre de propiedad corregido para que coincida con la definición
-            transcription: []
-        });
-
-        alert("✅ ¡Archivo guardado en la nube!");
-        await renderLibrary('todos');
-    } catch (error) {
-        console.error(error);
-        alert("❌ Error al guardar: " + error.message);
-    } finally {
-        $("uploadProgress").style.display = "none";
-        fileInput.value = "";
-    }
+  const fileInput = $("libraryFileInput");
+  const typeSelect = $("libraryFileType");
+  const nameInput = $("libraryFileName");
+  const file = fileInput?.files[0];
+  
+  if (!file) return alert("⚠️ Selecciona un archivo.");
+  try {
+    $("uploadProgress").style.display = "block";
+    // Usamos la función de Supabase para que sea consistente con renderLibrary
+    await saveLibraryItemToSupabase({
+      name: nameInput.value.trim() || file.name,
+      type: typeSelect.value,
+      blob: file, // Nombre de propiedad corregido para que coincida con la definición
+      transcription: []
+    });
+    
+    alert("✅ ¡Archivo guardado en la nube!");
+    await renderLibrary('todos');
+  } catch (error) {
+    console.error(error);
+    alert("❌ Error al guardar: " + error.message);
+  } finally {
+    $("uploadProgress").style.display = "none";
+    fileInput.value = "";
+  }
 }
+
 async function loadTrackOptionsInStudio() {
   const select = $("studioTrackSelect");
   if (!select) return;
