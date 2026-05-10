@@ -1993,6 +1993,11 @@ function syncKaraokeMonitor(currentTime) {
   }
 }
 
+
+console.log("Preparando exportación de audio...");
+const blobPista = exportStereoWav(renderedBuffer); 
+console.log("Blob creado:", blobPista);
+
 // Fíjate que aquí cerramos bien la anterior y empezamos la nueva
 async function mixKaraoke() {
   const trackEl = document.getElementById("karaokeTrack");
@@ -2143,9 +2148,6 @@ async function mixKaraoke() {
   }
 }
 
-console.log("Preparando exportación de audio...");
-const blobPista = exportStereoWav(renderedBuffer); 
-console.log("Blob creado:", blobPista);
 
 function exportStereoWav(buffer) {
   const numOfChan = buffer.numberOfChannels;
