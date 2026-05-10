@@ -1024,41 +1024,39 @@ async function deleteLibraryItemFromSupabase(id) {
 // TRANSCRIPCIÓN CON TÉCNICA DE CHUNKING
 // ==========================================
 async function downsampleAudioBuffer(buffer, targetSampleRate = 16000) {
-  const offlineCtx = new OfflineAudioContext(
-    1, // Forzamos a 1 solo canal (Mono)
-    Math.ceil(buffer.duration * targetSampleRate),
-    targetSampleRate
+  const offlineCtx = new OfflineAudioContext(1, 
+  // Forzamos a 1 solo canal (Mono)
+  Math.ceil(buffer.duration * targetSampleRate),
+  targetSampleRate
   );
-
+  
   const source = offlineCtx.createBufferSource();
   source.buffer = buffer;
   source.connect(offlineCtx.destination);
   source.start();
-
   return await offlineCtx.startRendering();
 }
+
 async function transcribeSelectedVoice() {
   if (!selectedVoiceBlob) {
     alert("⚠️ Primero selecciona y carga una voz desde Biblioteca");
     return;
   }
-
   const status = $("selectedVoiceStatus");
   const lyricsText = $("lyricsText");
-
+  
   try {
     if (status) status.textContent = "Estado: Preparando audio...";
-
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const arrayBuffer = await selectedVoiceBlob.arrayBuffer();
     
     let audioBuffer;
     try {
-        audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+      audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
     } catch (decodeError) {
-        throw new Error("El formato de audio no es compatible o está corrupto.");
+      throw new Error("El formato de audio no es compatible o está corrupto.");
     }
-
+    
     const CHUNK_SECONDS = 25;
     const totalSamples = audioBuffer.length;
       
@@ -1067,7 +1065,6 @@ async function transcribeSelectedVoice() {
     const samplesPerChunk = CHUNK_SECONDS * originalSampleRate;
 
     let fullSegments = [];
-    
     for (let start = 0; start < totalSamples; start += samplesPerChunk) {
       const end = Math.min(start + samplesPerChunk, totalSamples);
       const chunkNumber = Math.floor(start / samplesPerChunk) + 1;
@@ -1076,7 +1073,7 @@ async function transcribeSelectedVoice() {
       if (status) {
         status.textContent = `Estado: Procesando parte ${chunkNumber} de ${totalChunks}...`;
       }
-
+      
       // --- PASO 1: Extraer el trozo original ---
       // Creamos un buffer temporal para este trozo para poder "adelgazarlo"
       const chunkDuration = (end - start) / originalSampleRate;
@@ -2594,11 +2591,9 @@ function showSaveNotification() {
 async function applyCorrectedLyrics() {
   const lyricsText = $("lyricsText");
   const status = $("selectedVoiceStatus");
-
   if (!lyricsText) return;
-
+  
   const correctedText = lyricsText.value.trim();
-
   if (!correctedText) {
     alert("⚠️ No hay texto corregido para aplicar.");
     return;
@@ -2608,7 +2603,7 @@ async function applyCorrectedLyrics() {
     alert("⚠️ Primero transcribe una voz antes de corregir la letra.");
     return;
   }
-
+  
   const rebuiltSegments = buildSegmentsFromMultilineLyrics(
     correctedText,
     baseTranscriptionSegments
@@ -2627,18 +2622,18 @@ async function applyCorrectedLyrics() {
 
   renderKaraokeLyrics(transcriptionSegments);
   cargarLetrasEnMonitor();
-
+  
   lyricsText.value = transcriptionSegments
     .map(seg => seg.text || "")
     .join("\n")
     .trim();
-
+  
   if (selectedVoiceId) {
     try {
       await updateLibraryItem(selectedVoiceId, {
         transcription: baseTranscriptionSegments
       });
-
+      
       if (status) {
         status.textContent = "Estado: letra corregida aplicada y guardada ✅";
       }
