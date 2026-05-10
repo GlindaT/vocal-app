@@ -2012,9 +2012,7 @@ async function mixKaraoke() {
         <br><br>
         <a href="${url}" download="mi_karaoke.wav" class="btn-primary" style="text-decoration:none; padding: 10px 20px; display:inline-block;">Descargar Mezcla 📥</a>
       </div>
-    `;
-
-  } catch (error) {
+    `;} catch (error) {
     console.error("Error en la mezcla:", error);
     alert("❌ No se pudo realizar la mezcla: " + error.message);
   } finally {
@@ -2028,6 +2026,7 @@ async function mixKaraoke() {
     const trackBuffer = await audioCtx.decodeAudioData(trackArrayBuffer);
     const voiceArrayBuffer = await karaokeRecordedBlob.arrayBuffer();
     const voiceBuffer = await audioCtx.decodeAudioData(voiceArrayBuffer);
+    const renderedBuffer = await offlineCtx.startRendering();
 
     const offlineCtx = new OfflineAudioContext(
       trackBuffer.numberOfChannels,
@@ -2076,7 +2075,7 @@ async function mixKaraoke() {
     const renderedBuffer = await offlineCtx.startRendering();
     const finalWavBlob = exportStereoWav(renderedBuffer);
     const finalUrl = URL.createObjectURL(finalWavBlob);
-
+    
     resultDiv.innerHTML = `
       <h4 style="color: #22c55e;">✅ ¡Mezcla completada!</h4>
       <audio controls src="${finalUrl}" style="width: 100%; margin-bottom: 15px; border-radius: 8px;"></audio>
@@ -2253,7 +2252,7 @@ async function splitAudio() {
           console.log("Preparando exportación de audio...");
           const blobPista = exportStereoWav(renderedBuffer);
           console.log("Blob creado:", blobPista);
-          const renderedBuffer = await offlineCtx.startRendering();
+          
           await saveToLibrary(blobVoz, { name: `Voz - ${file.name}`, type: "voz" });
           await saveToLibrary(blobPista, { name: `Pista - ${file.name}`, type: "pista" });
           statusText.textContent = "🎉 ¡Separación perfecta!";
@@ -2295,13 +2294,13 @@ function showResult(url) {
     document.getElementById("splitter").appendChild(container);
   }
   container.innerHTML = `
-  <p>✅ API respondió correctamente</p>
-  <audio controls src="${url}"></audio>
-  <br><br>
-  <a href="${url}" download="resultado.mp3">
-  <button>Descargar</button>
-  </a>
-  `;
+    <p>✅ API respondió correctamente</p>
+    <audio controls src="${url}"></audio>
+    <br><br>
+      <a href="${url}" download="resultado.mp3">
+        <button>Descargar</button>
+      </a>
+      `;
 }
 
 // ==========================================
