@@ -1538,10 +1538,10 @@ function updateKaraokeHighlight(currentTime) {
 
     line.classList.remove("active", "past", "upcoming");
 
-    if (currentTime >= start && currentTime <= end) {
+    if (currentTime >= seg.start - 0.1 && currentTime <= seg.end + 0.1) {
       line.classList.add("active");
       activeLine = line;
-    } else if (currentTime > end) {
+    } else if (currentTime >= seg.start - 0.1 && currentTime <= seg.end + 0.1) {
       line.classList.add("past");
     } else {
       line.classList.add("upcoming");
@@ -1952,10 +1952,10 @@ function syncKaraokeMonitor(currentTime) {
 
     line.classList.remove("active", "past");
 
-    if (currentTime >= start && currentTime <= end) {
+    if (currentTime >= seg.start - 0.1 && currentTime <= seg.end + 0.1) {
       line.classList.add("active");
       activeLine = line;
-    } else if (currentTime > end) {
+    } else >= seg.start - 0.1 && currentTime <= seg.end + 0.1) {
       line.classList.add("past");
     }
 
@@ -2878,129 +2878,127 @@ function redoTapSync() {
 // INIT
 // ==========================================
 
-initSettings();
-if (typeof document !== 'undefined') {
-    document.addEventListener("DOMContentLoaded", async () => {
-        try {
-            // 1. Inicialización de Datos
-            await initDB();
-            console.log("Database Ready");
-            initKaraokeListeners();
-            function initKaraokeListeners() {
-                const track = $("karaokeTrack");
-                if (track) {
-                    // Al mover la barra de tiempo
-                    track.addEventListener('seeked', () => {
-                        drawKaraokeMonitor(track.currentTime, 0);
-                    });
-                    // Al actualizar el tiempo (para sincronización continua)
-                    track.addEventListener('timeupdate', () => {
-                        // Pasamos el tiempo actual al monitor
-                        // Nota: El pitch lo manejaremos por separado con el loop de audio
-                        drawKaraokeMonitor(track.currentTime, 0);
-                    });
-                }
+window.addEventListener('DOMContentLoaded', async () => {
+    try {
+      // 1. Inicialización de Datos
+      await initDB();
+      console.log("Database Ready");
+      
+      // Definimos la función
+      function initKaraokeListeners() {
+        const track = $("karaokeTrack");
+        if (track) {
+          track.addEventListener('seeked', () => {
+            drawKaraokeMonitor(track.currentTime, 0);
+          });
+          
+          track.addEventListener('timeupdate', () => {
+            if (typeof syncKaraokeMonitor === "function") {
+              syncKaraokeMonitor(track.currentTime);
             }
-            await renderLibrary('todos');
-            await loadTrackOptionsInStudio();
-            await loadTrackOptionsInKaraoke();
-            
-            // 2. Temas y Configuración Visual
-            function applyKaraokeTheme() {
-                const theme = localStorage.getItem("vocalApp_stage") || "clasico";
-                const monitor = $("karaokeLiveLyrics");
-                if (monitor) {
-                    monitor.className = "karaoke-lyrics theme-" + theme;
-                }
-            }
-            applyKaraokeTheme();
-
-            // 3. Navegación Principal
-            const tabs = ["Afinador", "Estudio", "Biblioteca", "Karaoke", "Splitter", "Config"];
-            tabs.forEach(tab => {
-                safeAdd(`btn${tab}`, "click", () => showTab(tab.toLowerCase()));
-            });
-            
-            // 4. Asignación de Eventos (Botones)
-            safeAdd("karaokeStage", "change", (e) => {
-                saveSetting("vocalApp_stage", e.target);
-            });
-            
-            // Afinador / Grabación
-            safeAdd("recordBtn", "click", toggleRecording);
-            
-            // Estudio
-            safeAdd("audioFile", "change", cargarAudioEstudio);
-            safeAdd("refreshStudioTrackListBtn", "click", loadTrackOptionsInStudio);
-            safeAdd("loadStudioTrackBtn", "click", loadSelectedTrackFromLibraryStudio);
-            safeAdd("playTrackBtn", "click", playTrack);
-            safeAdd("pauseTrackBtn", "click", pauseTrack);
-            safeAdd("stopTrackBtn", "click", stopTrack);
-            safeAdd("startStudioRecBtn", "click", startStudioRecording);
-            safeAdd("stopStudioRecBtn", "click", stopStudioRecording);
-            safeAdd("redoStudioRecBtn", "click", redoStudioRecording);
-            safeAdd("saveStudioRecBtn", "click", saveStudioRecording);
-            safeAdd("refreshVoiceListBtn", "click", loadVoiceOptionsInStudio);
-            safeAdd("loadSelectedVoiceBtn", "click", loadSelectedVoiceFromLibrary);
-            safeAdd("transcribeVoiceBtn", "click", transcribeSelectedVoice);
-            safeAdd("applyCorrectedLyricsBtn", "click", applyCorrectedLyrics);
-            
-            // Sincronización Manual (Tap)
-            safeAdd("startTapSyncBtn", "click", startTapSync);
-            safeAdd("cancelTapSyncBtn", "click", cancelTapSync);
-            safeAdd("tapBeatBtn", "click", recordTap);
-            safeAdd("applyTapSyncBtn", "click", applyTapSync);
-            safeAdd("redoTapSyncBtn", "click", redoTapSync);
-            safeAdd("splitBtn", "click", splitAudio);
-            safeAdd("stopTapSyncBtn", "click", stopTapSync);
-            
-            // Biblioteca y Karaoke
-            safeAdd("saveLibraryFileBtn", "click", saveManualFileToLibrary);
-            safeAdd("karaokeTrackFile", "change", cargarPistaKaraoke);
-            safeAdd("karaokeStartBtn", "click", startKaraokeRecording);
-            safeAdd("karaokeStopBtn", "click", stopKaraokeRecording);
-            safeAdd("karaokeRestartBtn", "click", restartKaraokeRecording);
-            safeAdd("karaokeMixBtn", "click", mixKaraoke);
-            safeAdd("refreshKaraokeTrackBtn", "click", loadTrackOptionsInKaraoke);
-            safeAdd("loadKaraokeTrackBtn", "click", loadSelectedTrackFromLibraryKaraoke);
-            
-            // 5. Sincronización de Reproductores (Loop de Dibujo)
-            const kTrack = $("karaokeTrack");
-            if (kTrack) {
-                kTrack.addEventListener("timeupdate", () => {
-                    const currentTime = kTrack.currentTime;
-                    // Esto actualiza las letras de texto
-                    if (typeof syncKaraokeMonitor === "function") syncKaraokeMonitor(currentTime);
-                    // Esto actualiza el canvas con las notas (frecuencia actual 0 si no se detecta)
-                    if (typeof drawKaraokeMonitor === "function") drawKaraokeMonitor(currentTime, 0);
-                });
-            }
-            
-            const player = $("player");
-            if (player) {
-                player.addEventListener("timeupdate", () => {
-                    if (typeof updateKaraokeHighlight === "function") updateKaraokeHighlight(player.currentTime);
-                });
-            }
-            
-            // 6. Micrófonos y Configuración final
-            safeAdd("refreshMicsBtn", "click", loadAvailableMics);
-            safeAdd("testMic1Btn", "click", () => testMicrophone(1));
-            safeAdd("testMic2Btn", "click", () => testMicrophone(2));
-            safeAdd("mic1Select", "change", () => saveMicSelection(1));
-            safeAdd("mic2Select", "change", () => saveMicSelection(2));
-            safeAdd("micCount", "change", toggleMic2Visibility);
-            
-            // Cargas iniciales
-            loadAvailableMics();
-            toggleMic2Visibility();
-            loadKaraokeCatalog();
-            loadMyKaraokeSongs();
-            renderLibrary();
-        } catch (error) {
-            console.error("Error en la inicialización:", error);
+          });
         }
-    });
+      }
+      
+      // ¡AQUÍ ESTÁ LA CLAVE! Llamamos a la función para que se active
+      initKaraokeListeners();
+      
+      await renderLibrary('todos');
+      await loadTrackOptionsInStudio();
+      await loadTrackOptionsInKaraoke();
+      
+      // 2. Temas y Configuración Visual
+      function applyKaraokeTheme() {
+        const theme = localStorage.getItem("vocalApp_stage") || "clasico";
+        const monitor = $("karaokeLiveLyrics");
+        if (monitor) {
+          monitor.className = "karaoke-lyrics theme-" + theme;
+        }
+      }
+      applyKaraokeTheme();
+      
+      // 3. Navegación Principal
+      const tabs = ["Afinador", "Estudio", "Biblioteca", "Karaoke", "Splitter", "Config"];
+      tabs.forEach(tab => {
+        safeAdd(`btn${tab}`, "click", () => showTab(tab.toLowerCase()));
+      });
+      
+      // 4. Asignación de Eventos (Botones)
+      safeAdd("karaokeStage", "change", (e) => {
+        saveSetting("vocalApp_stage", e.target);
+      });
+      // Afinador / Grabación
+      safeAdd("recordBtn", "click", toggleRecording);
+      // Estudio
+      safeAdd("audioFile", "change", cargarAudioEstudio);
+      safeAdd("refreshStudioTrackListBtn", "click", loadTrackOptionsInStudio);
+      safeAdd("loadStudioTrackBtn", "click", loadSelectedTrackFromLibraryStudio);
+      safeAdd("playTrackBtn", "click", playTrack);
+      safeAdd("pauseTrackBtn", "click", pauseTrack);
+      safeAdd("stopTrackBtn", "click", stopTrack);
+      safeAdd("startStudioRecBtn", "click", startStudioRecording);
+      safeAdd("stopStudioRecBtn", "click", stopStudioRecording);
+      safeAdd("redoStudioRecBtn", "click", redoStudioRecording);
+      safeAdd("saveStudioRecBtn", "click", saveStudioRecording);
+      safeAdd("refreshVoiceListBtn", "click", loadVoiceOptionsInStudio);
+      safeAdd("loadSelectedVoiceBtn", "click", loadSelectedVoiceFromLibrary);
+      safeAdd("transcribeVoiceBtn", "click", transcribeSelectedVoice);
+      safeAdd("applyCorrectedLyricsBtn", "click", applyCorrectedLyrics);
+      
+      // Sincronización Manual (Tap)
+      safeAdd("startTapSyncBtn", "click", startTapSync);
+      safeAdd("cancelTapSyncBtn", "click", cancelTapSync);
+      safeAdd("tapBeatBtn", "click", recordTap);
+      safeAdd("applyTapSyncBtn", "click", applyTapSync);
+      safeAdd("redoTapSyncBtn", "click", redoTapSync);
+      safeAdd("splitBtn", "click", splitAudio);
+      safeAdd("stopTapSyncBtn", "click", stopTapSync);
+      
+      // Biblioteca y Karaoke
+      safeAdd("saveLibraryFileBtn", "click", saveManualFileToLibrary);
+      safeAdd("karaokeTrackFile", "change", cargarPistaKaraoke);
+      safeAdd("karaokeStartBtn", "click", startKaraokeRecording);
+      safeAdd("karaokeStopBtn", "click", stopKaraokeRecording);
+      safeAdd("karaokeRestartBtn", "click", restartKaraokeRecording);
+      safeAdd("karaokeMixBtn", "click", mixKaraoke);
+      safeAdd("refreshKaraokeTrackBtn", "click", loadTrackOptionsInKaraoke);
+      safeAdd("loadKaraokeTrackBtn", "click", loadSelectedTrackFromLibraryKaraoke);
+      
+      // 5. Sincronización de Reproductores (Loop de Dibujo)
+      const kTrack = $("karaokeTrack");
+      if (kTrack) {
+        kTrack.addEventListener("timeupdate", () => {
+          const currentTime = kTrack.currentTime;
+          // Esto actualiza las letras de texto
+          if (typeof syncKaraokeMonitor === "function") syncKaraokeMonitor(currentTime);
+          // Esto actualiza el canvas con las notas (frecuencia actual 0 si no se detecta)
+          if (typeof drawKaraokeMonitor === "function") drawKaraokeMonitor(currentTime, 0);
+        });
+      }
+      const player = $("player");
+      if (player) {
+        player.addEventListener("timeupdate", () => {
+          if (typeof updateKaraokeHighlight === "function") updateKaraokeHighlight(player.currentTime);
+        });
+      }
+      // 6. Micrófonos y Configuración final
+      safeAdd("refreshMicsBtn", "click", loadAvailableMics);
+      safeAdd("testMic1Btn", "click", () => testMicrophone(1));
+      safeAdd("testMic2Btn", "click", () => testMicrophone(2));
+      safeAdd("mic1Select", "change", () => saveMicSelection(1));
+      safeAdd("mic2Select", "change", () => saveMicSelection(2));
+      safeAdd("micCount", "change", toggleMic2Visibility);
+      
+      // Cargas iniciales
+      loadAvailableMics();
+      toggleMic2Visibility();
+      loadKaraokeCatalog();
+      loadMyKaraokeSongs();
+      renderLibrary();
+    } catch (error) {
+      console.error("Error en la inicialización:", error);
+    }
+  });
 }
 
 // ==========================================
@@ -3141,24 +3139,20 @@ async function startKaraokePitchDetection() {
   mic.connect(analyser);
 
   function loop() {
-        const track = $("karaokeTrack");
-        const currentTime = track ? track.currentTime : 0;
+    const track = $("karaokeTrack");
+    if (!track) return;
 
-        const buffer = new Float32Array(analyser.fftSize);
-        analyser.getFloatTimeDomainData(buffer);
-        const pitch = autoCorrelate(buffer, audioCtx.sampleRate);
+    const currentTime = track.currentTime;
+    const buffer = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(buffer);
+    const pitch = autoCorrelate(buffer, audioCtx.sampleRate);
 
-        drawKaraokeMonitor(currentTime, pitch);
+    // AQUÍ ES DONDE SE DIBUJA CON EL PITCH REAL
+    drawKaraokeMonitor(currentTime, pitch);
 
-        // Si la pista terminó, paramos
-        if (track && track.ended) return;
-
-        // Seguimos el loop mientras se graba
-        if (track && !track.paused && !track.ended) {
-            requestAnimationFrame(loop);
-        }
-  }
-    loop();
+    if (track && !track.paused && !track.ended) {
+        requestAnimationFrame(loop);
+    }
 }
     
 // ==========================================
