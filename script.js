@@ -2990,9 +2990,10 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Cargas iniciales
   loadAvailableMics();
   toggleMic2Visibility();
-  loadKaraokeCatalog();
-  loadMyKaraokeSongs();
-  renderLibrary();
+  // CARGAS PROTEGIDAS: Si una falla, no detiene a las demás
+  loadKaraokeCatalog().catch(err => console.error("Fallo catálogo:", err));
+  loadMyKaraokeSongs().catch(err => console.error("Fallo mis canciones:", err));
+  renderLibrary().catch(err => console.error("Fallo render biblioteca:", err));
 } catch (error) {
   console.error("Error en la inicialización:", error);
   }
