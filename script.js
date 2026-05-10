@@ -755,7 +755,8 @@ async function saveManualFileToLibrary() {
   
   if (!file) return alert("⚠️ Selecciona un archivo.");
   try {
-    $("uploadProgress").style.display = "block";
+    const progress = $("uploadProgress");
+    if (progress) progress.style.display = "block";
     // Usamos la función de Supabase para que sea consistente con renderLibrary
     await saveLibraryItemToSupabase({
       name: nameInput.value.trim() || file.name,
@@ -770,7 +771,9 @@ async function saveManualFileToLibrary() {
     console.error(error);
     alert("❌ Error al guardar: " + error.message);
   } finally {
-    $("uploadProgress").style.display = "none";
+    // --- CAMBIO AQUÍ: Verificamos de nuevo ---
+    const progress = $("uploadProgress");
+    if (progress) progress.style.display = "none";
     fileInput.value = "";
   }
 }
