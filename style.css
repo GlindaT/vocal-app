@@ -835,8 +835,8 @@ progress::-webkit-progress-value {
 
 /* --- Ajuste de visibilidad para el monitor --- */
 #karaokeLiveLyrics {
-    display: block !important; /* Forzamos que se vea si el JS lo activa */
-    min-height: 200px;
+   display: block !important; /* Forzamos que se vea si el JS lo activa */
+   min-height: 200px;
 }
 
 /* --- Unificación de Temas de Escenario (JS -> CSS) --- */
@@ -877,20 +877,20 @@ progress::-webkit-progress-value {
 
 /* Obligar al monitor de letras a no flotar */
 #karaokeLiveLyricsContainer {
-    display: none; /* Por defecto escondido */
-    position: relative !important; 
-    width: 100% !important;
-    max-height: 150px !important; /* Altura controlada */
-    overflow: hidden !important;
-    background: rgba(0, 0, 0, 0.8) !important;
-    z-index: 10 !important;
-    margin-top: 10px;
+   display: none; /* Por defecto escondido */
+   position: relative !important; 
+   width: 100% !important;
+   max-height: 150px !important; /* Altura controlada */
+   overflow: hidden !important;
+   background: rgba(0, 0, 0, 0.8) !important;
+   z-index: 10 !important;
+   margin-top: 10px;
 }
 
 /* Ajuste de las letras dentro del monitor */
 #karaokeLiveLyrics {
     height: 120px !important;
-    font-size: 20px !important; /* Tamaño legible pero no gigante */
+    font-size: 30px !important; /* Tamaño legible pero no gigante */
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -898,8 +898,8 @@ progress::-webkit-progress-value {
 
 /* Asegurar que el Pentagrama sea visible */
 #karaokeCanvas {
-    display: block !important;
-    width: 100% !important;
-    height: 450px !important; /* Dale una buena altura ahora que no hay letras abajo */
-    background: #000;
+   display: block !important;
+   width: 100% !important;
+   height: 450px !important; /* Dale una buena altura ahora que no hay letras abajo */
+   background: #000;
 }
