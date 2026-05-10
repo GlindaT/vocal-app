@@ -1076,6 +1076,7 @@ async function transcribeSelectedVoice() {
 
     const CHUNK_SECONDS = 25;
     const totalSamples = audioBuffer.length;
+      
     // IMPORTANTE: El sampleRate original sirve para calcular dónde cortar
     const originalSampleRate = audioBuffer.sampleRate; 
     const samplesPerChunk = CHUNK_SECONDS * originalSampleRate;
@@ -1498,10 +1499,13 @@ function buildSegmentsFromMultilineLyrics(text, baseSegments) {
   });
 }
 
+// Variable global para cachear las líneas
+let cachedKaraokeLines = [];
+
 function renderKaraokeLyrics(segments) {
   const container = $("karaokeLyrics");
   if (!container) return;
-
+    
   console.log("renderKaraokeLyrics -> segmentos:", segments);
 
   container.innerHTML = "";
@@ -1535,10 +1539,13 @@ function renderKaraokeLyrics(segments) {
 
     container.appendChild(line);
   });
+    // ¡AQUÍ ESTÁ LA CLAVE! Guardamos la referencia para no buscarla en cada frame
+    cachedKaraokeLines = Array.from(document.querySelectorAll(".karaoke-line"));
 }
 
 function updateKaraokeHighlight(currentTime) {
-  const lines = document.querySelectorAll(".karaoke-line");
+  // Usamos el caché en lugar de volver a consultar el DOM
+  const lines = cachedKaraokeLines;
   if (!lines.length) return;
 
   let activeLine = null;
