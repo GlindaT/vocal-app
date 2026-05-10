@@ -2036,9 +2036,7 @@ async function mixKaraoke() {
     btn.textContent = "🎙️ Mezclar Audios";
     btn.disabled = false;
   }
-}
-
-try {
+  try {
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const trackArrayBuffer = await trackBlob.arrayBuffer();
     const trackBuffer = await audioCtx.decodeAudioData(trackArrayBuffer);
