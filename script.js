@@ -2142,6 +2142,11 @@ async function mixKaraoke() {
     btn.disabled = false;
   }
 }
+
+console.log("Preparando exportación de audio...");
+const blobPista = exportStereoWav(renderedBuffer); 
+console.log("Blob creado:", blobPista);
+
 function exportStereoWav(buffer) {
   const numOfChan = buffer.numberOfChannels;
   const length = buffer.length * numOfChan * 2 + 44;
