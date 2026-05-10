@@ -445,7 +445,6 @@ async function startStudioRecording() {
     const player = $("player");
     const micCount = $("micCount");
     const isDuo = micCount && micCount.value === "2";
-      
     studioChunks = [];
     studioRecordedBlob = null;
     $("voicePlayer").src = "";
@@ -462,7 +461,6 @@ async function startStudioRecording() {
       channelCount: 1,
       sampleRate: 48000
     };
-    
     if (mic1Id) {
       audioConstraints1.deviceId = { exact: mic1Id };
     }
@@ -523,14 +521,12 @@ async function startStudioRecording() {
     const options = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
       ? { mimeType: "audio/webm;codecs=opus" }
       : {};
-    
     studioMediaRecorder = new MediaRecorder(finalStream, options);
     studioMediaRecorder.ondataavailable = (event) => {
       if (event.data.size > 0) {
         studioChunks.push(event.data);
       }
     };
-    
     studioMediaRecorder.onstop = () => {
       studioRecordedBlob = new Blob(studioChunks, { type: "audio/webm" });
       const audioURL = URL.createObjectURL(studioRecordedBlob);
@@ -670,6 +666,7 @@ function saveStudioRecording() {
 
 async function saveToLibrary(blob, options = {}) {
   try {
+    
     // CAMBIO: Enviamos 'blob' en lugar de 'audioBlob' para que coincida con la definición de la función
     await saveLibraryItemToSupabase({
       name: options.name || "Audio",
@@ -944,7 +941,7 @@ async function saveLibraryItemToSupabase({ name, type, blob, transcription = [],
     ? "webm"
     : mimeType.includes("ogg")
     ? "ogg"
-    : "bin";
+    : "bin"
   const fileName = `${name}.${extension}`;
   const { filePath, fileUrl } = await uploadFileToSupabase(blob, fileName, mimeType);
   const { error } = await supabaseClient
@@ -2031,7 +2028,8 @@ async function mixKaraoke() {
         <br><br>
         <a href="${url}" download="mi_karaoke.wav" class="btn-primary" style="text-decoration:none; padding: 10px 20px; display:inline-block;">Descargar Mezcla 📥</a>
       </div>
-    `;} catch (error) {
+    `;
+  } catch (error) {
     console.error("Error en la mezcla:", error);
     alert("❌ No se pudo realizar la mezcla: " + error.message);
   } finally {
