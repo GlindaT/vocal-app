@@ -2249,6 +2249,7 @@ async function splitAudio() {
             source.connect(offlineCtx.destination);
             source.start(0);
           });
+          const renderedBuffer = await offlineCtx.startRendering();
           console.log("Preparando exportación de audio...");
           const blobPista = exportStereoWav(renderedBuffer);
           console.log("Blob creado:", blobPista);
