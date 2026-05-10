@@ -1608,14 +1608,25 @@ function cargarPistaKaraoke(e) {
   const file = e.target.files[0];
   if (!file) return;
 
+  // 1. Liberar memoria si ya había una pista cargada
+  const track = $("karaokeTrack");
+  if (track.src && track.src.startsWith("blob:")) {
+    URL.revokeObjectURL(track.src);
+  }
+
   karaokeSelectedTrackBlob = file;
   karaokeSelectedTrackName = file.name;
 
-  const track = $("karaokeTrack");
-  track.src = URL.createObjectURL(file);
+  // 2. Usar un Blob con tipo explícito para evitar problemas de caché
+  const blob = new Blob([file], { type: 'audio/mpeg' });
+  track.src = URL.createObjectURL(blob);
+  
   track.volume = 0.4;
 
   $("karaokeStatus").textContent = "Estado: Pista lista. ¡Presiona Iniciar Grabación!";
+  
+  // Limpiamos letras anteriores para que no se mezclen
+  transcriptionSegments = [];
   cargarLetrasEnMonitor();
 }
 
