@@ -2173,6 +2173,10 @@ async function splitAudio() {
   const statusBox = $("splitterStatusBox");
   const statusText = $("splitterStatusText");
   const detailText = $("splitterDetailText");
+
+  if (statusBox) statusBox.style.display = "block";
+  if (statusText) statusText.textContent = "1/4 📦 Subiendo canción...";
+  if (detailText) detailText.textContent = "Enviando al casillero temporal seguro...";
   
   btn.disabled = true;
   statusBox.style.display = "block";
