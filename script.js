@@ -6,7 +6,7 @@ const state = {
   instrumentalUrl: null,
   letraLrc: "",
   isRecording: false
-};
+}
 
 let db = null;
 let pitchHistory = [];
@@ -2899,6 +2899,7 @@ window.addEventListener('DOMContentLoaded', async () => {
           });
         }
       }
+    }
       
       // ¡AQUÍ ESTÁ LA CLAVE! Llamamos a la función para que se active
       initKaraokeListeners();
@@ -2997,7 +2998,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       renderLibrary();
     } catch (error) {
       console.error("Error en la inicialización:", error);
-    }
+}
 });
 
 // ==========================================
@@ -3508,6 +3509,7 @@ function audioBufferToWav(buffer, start, end) {
   }
   return new Blob([wavBuffer], { type: 'audio/wav' });
 }
+  
 function ajustarTamanoCanvas() {
   const canvas = document.getElementById('karaokeCanvas');
   if (!canvas) return;
