@@ -2194,6 +2194,7 @@ function exportStereoWav(buffer) {
 // ==========================================
 
 async function splitAudio() {
+    console.log("🚀 Iniciando separación..."); // <--- ESTO NOS DIRÁ SI EL BOTÓN FUNCIONA
     const fileInput = $("splitterFile");
     const file = fileInput?.files[0];
     
@@ -2227,6 +2228,7 @@ async function splitAudio() {
         }
         
         const directUrl = tmpData.data.url.replace("tmpfiles.org/", "tmpfiles.org/dl/");
+        const secureUrl = directUrl.replace("http://", "https://"); // Fuerza HTTPS
         statusText.textContent = "2/4 🚀 Iniciando Inteligencia Artificial...";
         detailText.textContent = "Despertando al modelo de alta calidad MDX23...";
         
@@ -2320,7 +2322,11 @@ async function splitAudio() {
                 btn.textContent = "✨ Separar Audio con IA";
             }
         }, 4000);
+
+        console.log("✅ Separación completada");
+        
     } catch (err) {
+        console.error("❌ Error durante la separación:", err); // <--- ESTO NOS DIRÁ SI HAY UN FALLO OCULTO
         console.error(err);
         statusText.textContent = "❌ Error detectado";
         detailText.textContent = err.message || "Revisa la consola para más detalles.";
