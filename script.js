@@ -2628,28 +2628,32 @@ async function applyCorrectedLyrics() {
     .join("\n")
     .trim();
   
+  const statusElement = document.getElementById("selectedVoiceStatus");
+
   if (selectedVoiceId) {
     try {
       await updateLibraryItem(selectedVoiceId, {
         transcription: baseTranscriptionSegments
       });
       
-      if (status) {
-        status.textContent = "Estado: letra corregida aplicada y guardada ✅";
+      if (statusElement) {
+        statusElement.textContent = "Estado: letra corregida aplicada y guardada ✅";
+        statusElement.style.color = "#22c55e"; // Verde éxito
       }
     } catch (error) {
       console.error(error);
-      if (status) {
-        status.textContent = "Estado: letra corregida aplicada, pero no se pudo guardar en BD";
+      if (statusElement) {
+        statusElement.textContent = "Estado: letra corregida, error al guardar en BD ❌";
+        statusElement.style.color = "#ef4444"; // Rojo error
       }
     }
   } else {
-    if (status) {
-      status.textContent = "Estado: letra corregida aplicada ✅";
+    if (statusElement) {
+      statusElement.textContent = "Estado: letra corregida aplicada ✅";
+      statusElement.style.color = "#22c55e";
     }
   }
 }
-
 // ==========================================
 // SINCRONIZACIÓN MANUAL CON TAPS
 // ==========================================
