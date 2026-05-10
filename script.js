@@ -2794,6 +2794,23 @@ function cancelTapSync() {
   tapSyncCurrentIndex = 0;
 }
 
+function stopTapSync() {
+    tapSyncMode = false; // Desactivamos el modo de grabación de taps
+    
+    const voicePlayer = $("selectedVoicePlayer");
+    if (voicePlayer) {
+        voicePlayer.pause();
+    }
+    
+    // Quitamos el evento del teclado para que no siga capturando espacios
+    document.removeEventListener("keydown", handleTapSyncKeypress);
+    
+    console.log("⏹️ Sincronización pausada. Taps guardados hasta ahora:", tapSyncTimestamps.length);
+    
+    // Opcional: Podrías cambiar el texto del botón a "Continuar" si quisieras
+    alert("⏹️ Sincronización detenida. Puedes retomar cuando quieras.");
+}
+
 async function applyTapSync() {
   if (tapSyncTimestamps.length === 0 || tapSyncLines.length === 0) {
     alert("⚠️ No hay datos de sincronización.");
@@ -2935,6 +2952,7 @@ if (typeof document !== 'undefined') {
             safeAdd("applyTapSyncBtn", "click", applyTapSync);
             safeAdd("redoTapSyncBtn", "click", redoTapSync);
             safeAdd("splitBtn", "click", splitAudio);
+            safeAdd("stopTapSyncBtn", "click", stopTapSync);
             
             // Biblioteca y Karaoke
             safeAdd("saveLibraryFileBtn", "click", saveManualFileToLibrary);
