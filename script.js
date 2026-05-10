@@ -3468,13 +3468,12 @@ function audioBufferToWav(buffer, start, end) {
   const dataLength = length * numChannels * bytesPerSample;
   const wavBuffer = new ArrayBuffer(44 + dataLength);
   const view = new DataView(wavBuffer);
-
   const writeString = (offset, string) => {
     for (let i = 0; i < string.length; i++) {
       view.setUint8(offset + i, string.charCodeAt(i));
     }
   };
-
+  
   // Cabecera WAV
   writeString(0, 'RIFF');
   view.setUint32(4, 36 + dataLength, true);
@@ -3507,20 +3506,17 @@ function audioBufferToWav(buffer, start, end) {
       }
     }
   }
-
   return new Blob([wavBuffer], { type: 'audio/wav' });
 }
-
 function ajustarTamanoCanvas() {
   const canvas = document.getElementById('karaokeCanvas');
   if (!canvas) return;
-
+  
   // Ajusta el ancho interno del canvas al ancho de su contenedor visual
   const container = canvas.parentElement;
   canvas.width = container.clientWidth;
   
   // Puedes mantener una altura fija o hacerla proporcional
   canvas.height = 450; 
-
   console.log("Canvas ajustado a:", canvas.width, "x", canvas.height);
 }
