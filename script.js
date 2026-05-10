@@ -1619,15 +1619,16 @@ function cargarPistaKaraoke(e) {
 
   // 2. Usar un Blob con tipo explícito para evitar problemas de caché
   const blob = new Blob([file], { type: 'audio/mpeg' });
-  track.src = URL.createObjectURL(blob);
-  
-  track.volume = 0.4;
-
-  $("karaokeStatus").textContent = "Estado: Pista lista. ¡Presiona Iniciar Grabación!";
-  
-  // Limpiamos letras anteriores para que no se mezclen
-  transcriptionSegments = [];
-  cargarLetrasEnMonitor();
+  const urlConCacheBuster = new URL(item.file_url);
+    urlConCacheBuster.searchParams.append('v', Date.now());
+    track.src = urlConCacheBuster.toString();
+    
+    track.volume = 0.4;
+    $("karaokeStatus").textContent = "Estado: Pista lista. ¡Presiona Iniciar Grabación!";
+    
+    // Limpiamos letras anteriores para que no se mezclen
+    transcriptionSegments = [];
+    cargarLetrasEnMonitor();
 }
 
 async function loadTrackOptionsInKaraoke() {
@@ -1675,14 +1676,16 @@ async function loadSelectedTrackFromLibraryKaraoke() {
     karaokeSelectedTrackName = item.name;
 
     const track = $("karaokeTrack");
-    track.src = item.file_url;
-    track.volume = 0.4;
-
-    $("karaokeStatus").textContent = `Estado: Pista cargada (${item.name}). ¡Inicia grabación!`;
-    cargarLetrasEnMonitor();
+    const urlConCacheBuster = new URL(item.file_url);
+      urlConCacheBuster.searchParams.append('v', Date.now());
+      track.src = urlConCacheBuster.toString();
+      track.volume = 0.4;
+      
+      $("karaokeStatus").textContent = `Estado: Pista cargada (${item.name}). ¡Inicia grabación!`;
+      cargarLetrasEnMonitor();
   } catch (error) {
-    console.error(error);
-    alert("❌ Error al cargar la pista.");
+      console.error(error);
+      alert("❌ Error al cargar la pista.");
   }
 }
 
@@ -3224,19 +3227,17 @@ async function loadKaraokeCatalog() {
 
 function parseUltraStarSync(syncContent) {
     if (!syncContent || typeof syncContent !== "string") return [];
-
+    
     const lines = syncContent.split("\n").map(line => line.trim()).filter(Boolean);
     let bpm = 120, gap = 0;
     const noteLines = [];
-
+    
     for (const line of lines) {
         if (line.startsWith("#BPM:")) bpm = parseFloat(line.replace("#BPM:", "")) || 120;
         else if (line.startsWith("#GAP:")) gap = parseInt(line.replace("#GAP:", "")) || 0;
         else if (/^[:*FR]/.test(line)) noteLines.push(line);
     }
-
     const secondsPerTick = (60 / bpm) / 4;
-
     const parsedSegments = noteLines.map(line => {
         const match = line.match(/^[:*FR]\s+(-?\d+)\s+(\d+)\s+(-?\d+)\s+(.+)$/);
         if (!match) return null;
@@ -3248,7 +3249,7 @@ function parseUltraStarSync(syncContent) {
 
         const start = (gap / 1000) + (startTick * secondsPerTick);
         const end = start + (durationTick * secondsPerTick);
-
+        
         return {
             start, 
             end, 
@@ -3260,15 +3261,15 @@ function parseUltraStarSync(syncContent) {
 
     return parsedSegments;
 }
+
 async function loadCatalogSong(folder, title, artist) {
   const status = $("karaokeStatus");
   const track = $("karaokeTrack");
-    
     // 1. Limpieza previa inmediata
     if (status) status.textContent = `Estado: Cargando "${title}"...`;
     
     try {
-    // 2. Cargar sincronización (TXT)
+        // 2. Cargar sincronización (TXT)
         const syncResponse = await fetch(`./karaoke-catalog/${folder}/sync.txt`);
         if (!syncResponse.ok) throw new Error("No se pudo cargar la sincronización");
         
@@ -3276,53 +3277,56 @@ async function loadCatalogSong(folder, title, artist) {
         const parsedSegments = parseUltraStarSync(syncContent);
         
         if (!parsedSegments.length) throw new Error("Formato de sincronización no válido");
-    // 3. Cargar audio (MP3)
+        // 3. Cargar audio (MP3)
         const audioResponse = await fetch(`./karaoke-catalog/${folder}/audio.mp3`);
         if (!audioResponse.ok) throw new Error("No se pudo cargar el audio");
         
         const audioBlob = await audioResponse.blob();
-
-    // 4. Configurar el reproductor (Manejo de memoria)
+        // 4. Configurar el reproductor (Manejo de memoria)
         if (track) {
+            
             // Liberamos la URL anterior si existía para evitar fugas de memoria
             if (track.src && track.src.startsWith("blob:")) {
                 URL.revokeObjectURL(track.src);
             }
-            track.src = URL.createObjectURL(audioBlob);
+            const urlConCacheBuster = new URL(item.file_url);
+            urlConCacheBuster.searchParams.append('v', Date.now());
+            track.src = urlConCacheBuster.toString();
             track.volume = 0.4;
         }
-
-    // 5. Actualizar estado global
-    karaokeSelectedTrackBlob = audioBlob;
-    karaokeSelectedTrackName = `${title} - ${artist}`;
-    transcriptionSegments = parsedSegments;
-    baseTranscriptionSegments = [...parsedSegments];
+        // 5. Actualizar estado global
+        
+        karaokeSelectedTrackBlob = audioBlob;
+        karaokeSelectedTrackName = `${title} - ${artist}`;
+        transcriptionSegments = parsedSegments;
+        baseTranscriptionSegments = [...parsedSegments];
+        
+        // Reiniciar variables de seguimiento
+        currentTime = 0; 
+        if (typeof pitchHistory !== 'undefined') pitchHistory = [];
+        
+        // 6. UI y Feedback
+        cargarLetrasEnMonitor();
+        
+        if (typeof drawKaraokeMonitor === "function") {
+            drawKaraokeMonitor(0);
+        }
+        if (status) {
+            status.textContent = `Estado: "${title}" cargada. ¡Lista para cantar! 🎤`;
+        }
+        
+        const canvas = $("karaokeCanvas");
+        if (canvas) {
+            canvas.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
     
-    // Reiniciar variables de seguimiento
-    currentTime = 0; 
-    if (typeof pitchHistory !== 'undefined') pitchHistory = [];
-    
-    // 6. UI y Feedback
-    cargarLetrasEnMonitor();
-    
-    if (typeof drawKaraokeMonitor === "function") {
-        drawKaraokeMonitor(0);
-    }
-    
-    if (status) {
-        status.textContent = `Estado: "${title}" cargada. ¡Lista para cantar! 🎤`;
-    }
-    
-    const canvas = $("karaokeCanvas");
-    if (canvas) {
-        canvas.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
     } catch (error) {
-    console.error("Error en loadCatalogSong:", error);
-    if (status) status.textContent = `Estado: Error al cargar "${title}"`;
-    alert(`❌ Error: ${error.message}`);
+        console.error("Error en loadCatalogSong:", error);
+        if (status) status.textContent = `Estado: Error al cargar "${title}"`;
+        alert(`❌ Error: ${error.message}`);
     }
 }
+
 async function loadMyKaraokeSongs() {
   const container = $("myKaraokeList");
   if (!container) return;
@@ -3382,6 +3386,22 @@ async function loadMyKaraokeSongs() {
   }
 }
 
+async function loadAudioSecurely(url, element) {
+    try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        // Revocamos la URL anterior para liberar memoria
+        if (element.src.startsWith("blob:")) URL.revokeObjectURL(element.src);
+        
+        // Creamos una nueva URL interna que NO tiene problemas de caché
+        element.src = URL.createObjectURL(blob);
+    } catch (err) {
+        console.error("Error al cargar audio:", err);
+        // Fallback a URL directa si el fetch falla
+        element.src = url;
+    }
+}
+
 async function loadKaraokeSong(id) {
   try {
     const song = await getLibraryItemByIdFromSupabase(id);
@@ -3400,17 +3420,18 @@ async function loadKaraokeSong(id) {
           // Intentamos descargar el archivo y convertirlo a un objeto local (blob)
           const response = await fetch(song.file_url);
           const blob = await response.blob();
-          track.src = URL.createObjectURL(blob);
+          const urlConCacheBuster = new URL(item.file_url);
+            urlConCacheBuster.searchParams.append('v', Date.now());
+            track.src = urlConCacheBuster.toString();
         } catch (fetchErr) {
-          console.error("Error al descargar audio, usando fallback:", fetchErr);
-          // Si falla el fetch, intentamos la carga directa como último recurso
-          track.src = song.file_url;
+            console.error("Error al descargar audio, usando fallback:", fetchErr);
+            // Si falla el fetch, intentamos la carga directa como último recurso
+            track.src = song.file_url;
         }
       } else if (song.audioBlob) {
-        track.src = URL.createObjectURL(song.audioBlob);
+          track.src = URL.createObjectURL(song.audioBlob);
       }
-      
-      track.volume = 0.4;
+        track.volume = 0.4;
     }
 
     // --- (Aquí sigue el resto de tu código original de letras) ---
