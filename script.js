@@ -2835,9 +2835,26 @@ async function applyTapSync() {
   $("startTapSyncBtn").style.display = "inline-block";
 }
 
+// Asegúrate de tener esta función en tu script.js
 function redoTapSync() {
-  $("tapSyncResult").style.display = "none";
-  startTapSync();
+    // 1. Detenemos todo
+    const voicePlayer = $("selectedVoicePlayer");
+    if (voicePlayer) {
+        voicePlayer.pause();
+        voicePlayer.currentTime = 0;
+    }
+    
+    // 2. Limpiamos las variables de tiempo
+    tapSyncTimestamps = [];
+    tapSyncCurrentIndex = 0;
+    
+    // 3. Reiniciamos la pantalla
+    updateTapSyncDisplay();
+    
+    // 4. Volvemos a empezar el audio
+    if (voicePlayer) voicePlayer.play();
+    
+    console.log("🔄 Sincronización reiniciada desde cero.");
 }
 
 // ==========================================
