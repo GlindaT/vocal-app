@@ -387,6 +387,28 @@ function cargarAudioEstudio(e) {
   $("studioStatus").textContent = `Estado: pista cargada (${file.name})`;
 }
 
+// Asegúrate de asignar el evento cuando se selecciona un archivo
+const voiceFileInput = document.getElementById("voiceFileInput");
+if (voiceFileInput) {
+    voiceFileInput.addEventListener("change", function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Cargar en el reproductor de voz de la interfaz (voicePlayer)
+        const voicePlayer = document.getElementById("voicePlayer"); // Asegúrate que este sea el ID de tu audio
+        if (voicePlayer) {
+            if (voicePlayer.src && voicePlayer.src.startsWith("blob:")) {
+                URL.revokeObjectURL(voicePlayer.src);
+            }
+            voicePlayer.src = URL.createObjectURL(file);
+        }
+
+        // Guardar referencia para que el botón "Transcribir con Whisper" la encuentre
+        selectedVoiceBlob = file; 
+        document.getElementById("selectedVoiceStatus").textContent = `Estado: Voz subida (${file.name})`;
+    });
+}
+
 function playTrack() {
   const player = $("player");
 
