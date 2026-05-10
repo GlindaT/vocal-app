@@ -2998,8 +2998,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     } catch (error) {
       console.error("Error en la inicialización:", error);
     }
-  });
-}
+});
 
 // ==========================================
 // MONITOR DE KARAOKE (CANVAS)
