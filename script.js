@@ -13,6 +13,15 @@ window.addEventListener('DOMContentLoaded', async () => {
 // Reutilizar el buffer para el afinador
 const pitchBuffer = new Float32Array(2048);
 
+// Agrega esto en tu función de inicialización de la página (donde cargas el DOM)
+const track = $("karaokeTrack");
+if (track) {
+    track.addEventListener('seeked', () => {
+        // Al mover la barra de tiempo, redibujamos inmediatamente
+        drawKaraokeMonitor(track.currentTime, 0);
+    });
+}
+
 // ==========================================
 // CONFIG GLOBAL
 // ==========================================
@@ -3351,15 +3360,16 @@ async function loadKaraokeSong(id) {
       track.volume = 0.4;
     }
 
-    // Sincronizar letras
-    if (Array.isArray(song.transcription) && song.transcription.length > 0) {
-      transcriptionSegments = JSON.parse(JSON.stringify(song.transcription));
-      baseTranscriptionSegments = [...transcriptionSegments];
-      cargarLetrasEnMonitor();
-    } else {
-      transcriptionSegments = [];
-      cargarLetrasEnMonitor();
-    }
+    / Sustituye la parte de carga de letras en loadKaraokeSong por esto:
+if (Array.isArray(song.transcription) && song.transcription.length > 0) {
+    transcriptionSegments = song.transcription; // Ya es un array
+    baseTranscriptionSegments = [...song.transcription];
+    cargarLetrasEnMonitor();
+    
+    // FORZAR DIBUJO INICIAL
+    const canvas = $("karaokeCanvas");
+    if (canvas) drawKaraokeMonitor(0, 0); 
+}
 
     const title = song.metadata?.title || song.name;
     if ($("karaokeStatus")) {
