@@ -3379,11 +3379,23 @@ async function loadKaraokeSong(id) {
 
     const track = $("karaokeTrack");
     if (track) {
-      // IMPORTANTE: Revocar URL anterior para no saturar la memoria
-      if (track.src && track.src.startsWith("blob:")) URL.revokeObjectURL(track.src);
+      // 1. Limpieza de memoria
+      if (track.src && track.src.startsWith("blob:")) {
+        URL.revokeObjectURL(track.src);
+      }
 
+      // 2. Carga segura del audio (evitando el error de caché)
       if (song.file_url) {
-        track.src = song.file_url;
+        try {
+          // Intentamos descargar el archivo y convertirlo a un objeto local (blob)
+          const response = await fetch(song.file_url);
+          const blob = await response.blob();
+          track.src = URL.createObjectURL(blob);
+        } catch (fetchErr) {
+          console.error("Error al descargar audio, usando fallback:", fetchErr);
+          // Si falla el fetch, intentamos la carga directa como último recurso
+          track.src = song.file_url;
+        }
       } else if (song.audioBlob) {
         track.src = URL.createObjectURL(song.audioBlob);
       }
@@ -3391,17 +3403,14 @@ async function loadKaraokeSong(id) {
       track.volume = 0.4;
     }
 
-    // Lógica corregida para carga de letras
+    // --- (Aquí sigue el resto de tu código original de letras) ---
     if (Array.isArray(song.transcription) && song.transcription.length > 0) {
         transcriptionSegments = song.transcription; 
         baseTranscriptionSegments = [...song.transcription];
         cargarLetrasEnMonitor();
-        
-        // FORZAR DIBUJO INICIAL
         const canvas = $("karaokeCanvas");
         if (canvas) drawKaraokeMonitor(0, 0); 
     } else {
-        // Limpiamos si no hay letras
         transcriptionSegments = [];
         baseTranscriptionSegments = [];
         cargarLetrasEnMonitor();
@@ -3420,6 +3429,7 @@ async function loadKaraokeSong(id) {
     alert("❌ Error al cargar la canción");
   }
 }
+
 function audioBufferToWav(buffer, start, end) {
   const numChannels = buffer.numberOfChannels;
   const sampleRate = buffer.sampleRate;
