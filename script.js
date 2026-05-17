@@ -10,7 +10,6 @@ const state = {
 
 let db = null;
 let pitchHistory = [];
-let pitchBuffer = [];
 let buffer = [];
 let transcriptionSegments = [];
 let baseTranscriptionSegments = [];
