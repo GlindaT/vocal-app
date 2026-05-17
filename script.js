@@ -10,6 +10,7 @@ const state = {
 
 let db = null;
 let pitchHistory = [];
+let pitchBuffer = [];
 let transcriptionSegments = [];
 let baseTranscriptionSegments = [];
 let autoScrollEnabled = true; // Control de auto-scroll
