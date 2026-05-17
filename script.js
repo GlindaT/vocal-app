@@ -3507,4 +3507,3 @@ function ajustarTamanoCanvas() {
   canvas.height = 450; 
   console.log("Canvas ajustado a:", canvas.width, "x", canvas.height);
 }
-}
