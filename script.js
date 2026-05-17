@@ -32,6 +32,9 @@ function safeAdd(id, event, handler) {
   if (el) el.addEventListener(event, handler);
 }
 
+// Reutilizar el buffer para el afinador
+const pitchBuffer = new Float32Array(2048);
+
 // CARGAS PROTEGIDAS: Si una falla, no detiene a las demás
   loadKaraokeCatalog().catch(err => console.error("Fallo catálogo:", err));
   loadMyKaraokeSongs().catch(err => console.error("Fallo mis canciones:", err));
