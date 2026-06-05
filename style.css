@@ -1,13 +1,12 @@
-@import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@600&family=Caveat:wght@600&family=Lobster&family=Comic+Neue:wght@400;700&family=Spectral:wght@400;600&display=swap');
 /* ==========================================
    VARIABLES (ESCALABLE)
 ========================================== */
 :root {
-  --bg-main: #F5F3A9;
+  --bg-main: #0f172a;
   --bg-sidebar: #1e293b;
   --bg-card: #1e293b;
 
-  --text-main: #0D0670;
+  --text-main: #ffffff;
   --text-muted: #94a3b8;
 
   --accent: #22c55e;
@@ -26,7 +25,7 @@
 
 body {
   margin: 0;
-  font-family: Roboto, sans-serif;
+  font-family: Arial, sans-serif;
   background: var(--bg-main);
   color: var(--text-main);
 }
@@ -59,7 +58,7 @@ body {
   background: none;
   border: none;
   color: var(--text-muted);
-  padding: 15px;
+  padding: 12px;
   text-align: left;
   cursor: pointer;
   border-radius: 8px;
@@ -176,7 +175,7 @@ audio {
 ========================================== */
 
 #noteDisplay {
-  font-size: 140px; /* Mucho más grande */
+  font-size: 120px; /* Mucho más grande */
   font-weight: 900;
   margin: 0;
   transition: color 0.3s ease;
@@ -210,21 +209,6 @@ audio {
   padding: 12px;
   border-radius: 10px;
   margin-bottom: 10px;
-}
-progress {
-  height: 10px;
-  border-radius: 5px;
-  overflow: hidden;
-  border: none;
-}
-
-progress::-webkit-progress-bar {
-  background-color: var(--bg-main);
-}
-
-progress::-webkit-progress-value {
-  background-color: var(--accent);
-  transition: width 0.3s ease;
 }
 
 /* ==========================================
@@ -335,6 +319,16 @@ input[type="text"] {
 
 .karaoke-line.upcoming {
   color: var(--text-muted);
+}
+
+/* Oculta por completo la sección si tiene la clase .oculto */
+.contenido-desplegable.oculto {
+    display: none !important;
+}
+
+/* Rota la flecha 90 grados apuntando abajo cuando el menú esté desplegado */
+.flecha.rotada {
+    transform: rotate(90deg);
 }
 
 /* ==========================================
@@ -454,14 +448,6 @@ input[type="text"] {
    MODO CELULAR (RESPONSIVE DESIGN)
 ========================================== */
 @media (max-width: 768px) {
-    #noteDisplay {
-        font-size: clamp(60px, 20vw, 100px); /* Tamaño fluido que no rompe la pantalla */
-    }
-    .afinador-container {
-        height: auto;
-        padding-top: 20px;
-    }
-}
   .app {
     flex-direction: column-reverse; /* Pone el menú abajo y el contenido arriba */
     height: 100vh;
@@ -562,17 +548,12 @@ input[type="text"] {
 }
 
 #karaokeCanvas {
-    background-color: #000 !important;
+    background: linear-gradient(180deg, #0a0a0a 0%, #1a1a2e 100%);
     display: block;
-    width: 100% !important;
-    height: auto;
-    image-rendering: crisp-edges; /* Para que las notas se vean nítidas */
-}
-
-/* Aseguramos que el contenido general scrollee si hay muchas canciones */
-.content {
-    overflow-y: auto !important;
-    padding-bottom: 100px;
+    width: 100%;
+    height: 300px;
+    border-radius: 8px;
+    border: 2px solid #3b82f6;
 }
 /* ==========================================
    SISTEMA DE TEMAS GLOBALES
@@ -819,29 +800,6 @@ input[type="text"] {
   font-size: 13px;
 }
 
-/* Estilos por Pestaña */
-#afinador { font-family: 'Comfortaa', cursive; }
-#estudio { font-family: 'Spectral', cursive; }
-#karaoke { font-family: 'Comfortaa', cursive; }
-#splitter { font-family: 'Comfortaa', cursive; }
-#config { font-family: 'Spectral', serif; }
-
-progress {
-  height: 10px;
-  border-radius: 5px;
-  overflow: hidden;
-  border: none;
-}
-
-progress::-webkit-progress-bar {
-  background-color: var(--bg-main);
-}
-
-progress::-webkit-progress-value {
-  background-color: var(--accent);
-  transition: width 0.3s ease;
-}
-
 /* Modal */
 #ultrastarModal .settings-group {
   margin-bottom: 15px;
@@ -849,98 +807,4 @@ progress::-webkit-progress-value {
 
 #ultrastarModal input[type="file"] {
   margin-top: 8px;
-}
-
-/* Quita la flecha fea por defecto en navegadores como Chrome, Safari y Firefox */
-details.card summary {
-  list-style: none;
-}
-details.card summary::-webkit-details-marker {
-  display: none;
-}
-
-/* Agrega una flecha personalizada a la derecha del título */
-details.card summary::after {
-  content: "▼";
-  float: right;
-  font-size: 0.9rem;
-  color: var(--text-muted);
-  transition: transform 0.2s ease;
-}
-
-/* Hace que la flecha gire hacia arriba cuando el contenedor esté abierto */
-details[open].card summary::after {
-  transform: rotate(180deg);
-  color: var(--accent); /* Cambia al color de acento de tu app */
-}
-
-/* --- Ajuste de visibilidad para el monitor --- */
-#karaokeLiveLyrics {
-   display: block !important; /* Forzamos que se vea si el JS lo activa */
-   min-height: 200px;
-}
-
-/* --- Unificación de Temas de Escenario (JS -> CSS) --- */
-/* Esto asegura que los nombres que el usuario elige en el <select> activen estos estilos */
-
-.theme-neon { 
-    background: #0d0221 !important; 
-    border: 2px solid #fb00ff !important; 
-    box-shadow: 0 0 15px #fb00ff;
-}
-.theme-neon .karaoke-live-line.active { 
-    color: #fb00ff !important; 
-    text-shadow: 0 0 15px #fb00ff; 
-}
-
-.theme-concierto { 
-    background: radial-gradient(circle, #1e293b 0%, #000000 100%) !important; 
-    border: 2px solid #facc15 !important; 
-}
-.theme-concierto .karaoke-live-line.active { 
-    color: #facc15 !important; 
-    transform: scale(1.15); 
-}
-/* Asegurar el desplazamiento en la app */
-.app {
-    display: flex;
-    height: 100vh;
-    overflow: hidden; /* El contenedor padre no scrollea */
-}
-
-.content {
-    flex: 1;
-    overflow-y: auto !important; /* El contenido SI scrollea */
-    padding: 20px;
-    height: 100%;
-    display: block;
-}
-
-/* Obligar al monitor de letras a no flotar */
-#karaokeLiveLyricsContainer {
-   display: none; /* Por defecto escondido */
-   position: relative !important; 
-   width: 100% !important;
-   max-height: 150px !important; /* Altura controlada */
-   overflow: hidden !important;
-   background: rgba(0, 0, 0, 0.8) !important;
-   z-index: 10 !important;
-   margin-top: 10px;
-}
-
-/* Ajuste de las letras dentro del monitor */
-#karaokeLiveLyrics {
-    height: 120px !important;
-    font-size: 20px !important; /* Tamaño legible pero no gigante */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-/* Asegurar que el Pentagrama sea visible */
-#karaokeCanvas {
-   display: block !important;
-   width: 100% !important;
-   height: 450px !important; /* Dale una buena altura ahora que no hay letras abajo */
-   background: #000;
 }
