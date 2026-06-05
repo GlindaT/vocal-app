@@ -2619,7 +2619,7 @@ function handleTapSyncKeypress(e) {
 function recordTap() {
   if (!tapSyncMode) return;
   
-  const voicePlayer = $("player");
+  const voicePlayer = $("selectedVoicePlayer");
   if (!voicePlayer) return;
   
   const currentTime = voicePlayer.currentTime;
@@ -2661,7 +2661,7 @@ function updateTapSyncDisplay() {
 function finishTapSync() {
   tapSyncMode = false;
   
-  const voicePlayer = $("player");
+  const voicePlayer = $("selectedVoicePlayer");
   if (voicePlayer) voicePlayer.pause();
   
   document.removeEventListener("keydown", handleTapSyncKeypress);
@@ -2676,7 +2676,7 @@ function finishTapSync() {
 function cancelTapSync() {
   tapSyncMode = false;
   
-  const voicePlayer = $("player");
+  const voicePlayer = $("selectedVoicePlayer");
   if (voicePlayer) voicePlayer.pause();
   
   document.removeEventListener("keydown", handleTapSyncKeypress);
@@ -2697,7 +2697,7 @@ async function applyTapSync() {
     return;
   }
   
-  const voicePlayer = $("player");
+  const voicePlayer = $("seleteVoicePlayer");
   const totalDuration = voicePlayer ? voicePlayer.duration : 0;
   const status = $("selectedVoiceStatus");
   
