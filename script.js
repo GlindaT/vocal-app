@@ -2556,15 +2556,15 @@ async function applyCorrectedLyrics() {
 // ==========================================
 function startTapSync() {
   const lyricsText = $("lyricsText");
-  const trackPlayer = $("player");
+  const voicePlayer = $("selectedVoicePlayer");
   
   if (!lyricsText || !lyricsText.value.trim()) {
     alert("⚠️ Primero escribe o corrige la letra en el área de texto.");
     return;
   }
   
-  if (!trackPlayer || !trackPlayer.src) {
-    alert("⚠️ Primero carga una PISTA INSTRUMENTAL en Estudio. La sincronización se hace contra la pista, no contra la voz.");
+  if (!voicePlayer || !voicePlayer.src) {
+    alert("⚠️ Primero carga una Voz en Estudio.");
     return;
   }
   
@@ -2594,8 +2594,8 @@ function startTapSync() {
   updateTapSyncDisplay();
   
   // Reproducir la PISTA desde el inicio (la sincronización es contra el instrumental)
-  trackPlayer.currentTime = 0;
-  trackPlayer.play();
+  voicePlayer.currentTime = 0;
+  voicePlayer.play();
   
   // Activar listener de teclado
   document.addEventListener("keydown", handleTapSyncKeypress);
@@ -2619,10 +2619,10 @@ function handleTapSyncKeypress(e) {
 function recordTap() {
   if (!tapSyncMode) return;
   
-  const trackPlayer = $("player");
-  if (!trackPlayer) return;
+  const voicePlayer = $("player");
+  if (!voicePlayer) return;
   
-  const currentTime = trackPlayer.currentTime;
+  const currentTime = voicePlayer.currentTime;
   
   tapSyncTimestamps.push(currentTime);
   tapSyncCurrentIndex++;
@@ -2661,8 +2661,8 @@ function updateTapSyncDisplay() {
 function finishTapSync() {
   tapSyncMode = false;
   
-  const trackPlayer = $("player");
-  if (trackPlayer) trackPlayer.pause();
+  const voicePlayer = $("player");
+  if (voicePlayer) voicePlayer.pause();
   
   document.removeEventListener("keydown", handleTapSyncKeypress);
   
@@ -2676,8 +2676,8 @@ function finishTapSync() {
 function cancelTapSync() {
   tapSyncMode = false;
   
-  const trackPlayer = $("player");
-  if (trackPlayer) trackPlayer.pause();
+  const voicePlayer = $("player");
+  if (voicePlayer) voicePlayer.pause();
   
   document.removeEventListener("keydown", handleTapSyncKeypress);
   
@@ -2697,8 +2697,8 @@ async function applyTapSync() {
     return;
   }
   
-  const trackPlayer = $("player");
-  const totalDuration = trackPlayer ? trackPlayer.duration : 0;
+  const voicePlayer = $("player");
+  const totalDuration = voicePlayer ? voicePlayer.duration : 0;
   const status = $("selectedVoiceStatus");
   
   // Mostrar estado
@@ -3427,15 +3427,15 @@ async function confirmUltrastarImport() {
     });
     
     // Si hay voz separada, guardarla también
-    if (vocalsFile) {
-      await addLibraryItem({
-        name: `Voz - ${parsedUltrastar.title} (${parsedUltrastar.artist})`,
-        type: "voz",
-        audioBlob: vocalsFile,
-        date: new Date().toLocaleString("es-ES"),
-        transcription: segments
-      });
-    }
+  //  if (vocalsFile) {
+   //   await addLibraryItem({
+      //  name: `Voz - ${parsedUltrastar.title} (${parsedUltrastar.artist})`,
+    //    type: "voz",
+    //    audioBlob: vocalsFile,
+    //    date: new Date().toLocaleString("es-ES"),
+     //   transcription: segments
+    //  });
+ //   } 
     
     // Guardar como "karaoke listo"
     await addLibraryItem({
@@ -3569,7 +3569,7 @@ async function loadCatalogSong(folder, title, artist) {
     const track = $("karaokeTrack");
     if (track) {
       track.src = URL.createObjectURL(audioBlob);
-      track.volume = 0.4;
+      track.volume = 0.6;
       karaokeSelectedTrackBlob = audioBlob;
       karaokeSelectedTrackName = `${title} - ${artist}`;
     }
@@ -3604,11 +3604,7 @@ async function loadMyKaraokeSongs() {
     // Obtener canciones tipo "karaoke" de la biblioteca
     const karaokeSongs = await getLibraryItemsByType("karaoke");
     
-    // También obtener voces que tengan transcripción
-    const voces = await getLibraryItemsByType("voz");
-    const vocesConSync = voces.filter(v => v.transcription && v.transcription.length > 0);
-    
-    const allSongs = [...karaokeSongs, ...vocesConSync];
+    const allSongs = [...karaokeSongs,];
     
     if (allSongs.length === 0) {
       container.innerHTML = `
@@ -3680,7 +3676,7 @@ async function loadKaraokeSong(id) {
     const track = $("karaokeTrack");
     if (track && song.audioBlob) {
       track.src = URL.createObjectURL(song.audioBlob);
-      track.volume = 0.4;
+      track.volume = 0.6;
       karaokeSelectedTrackBlob = song.audioBlob;
       karaokeSelectedTrackName = song.name;
     }
