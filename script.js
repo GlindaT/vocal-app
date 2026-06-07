@@ -31,6 +31,26 @@ function safeAdd(id, event, handler) {
   if (el) el.addEventListener(event, handler);
 }
 
+document.addEventListener("DOMContentLoaded", async () => {
+  const encabezados = document.querySelectorAll('.encabezado-desplegable');
+  
+  encabezados.forEach(encabezado => {
+    encabezado.addEventListener('click', () => {
+      const targetId = encabezado.getAttribute('data-target');
+      const arrowId = encabezado.getAttribute('data-arrow');
+      
+      const content = document.getElementById(targetId);
+      const arrow = document.getElementById(arrowId);
+      
+      if (content && arrow) {
+        content.classList.toggle('oculto'); 
+        arrow.classList.toggle('rotada');
+      }
+    });
+  });
+}
+
+
 // ==========================================
 // MIGRACIÓN DE NOMBRES (VocalApp → vocalApp)
 // ==========================================
