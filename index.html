@@ -320,7 +320,7 @@
         </div>
       </div>
       
-      <!-- MODAL IMPORTAR ULTRASTAR -->
+      <!-- MODAL IMPORTAR ULTRASTAR 
       <div id="ultrastarModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center;">
         <div style="background: var(--bg-card); padding: 30px; border-radius: 12px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;">
           <h3 style="margin-top: 0; color: var(--accent);">📥 Importar Canción UltraStar</h3>
@@ -369,7 +369,8 @@
           </div>
         </div>
       </div>
-
+      -->
+      
       <!-- Paso 1: Pista -->
       <div class="card">
         <!-- Encabezado interactivo sin onclick -->
@@ -541,8 +542,16 @@
             <option value="naturaleza">🌿 Naturaleza</option>
           </select>
         </div>
-        <p id="saveNotification" class="save-notification" style="opacity:0; transition: opacity 0.5s;">✅ Configuración guardada</p>
+        <div class="settings-group" style="margin-top: 20px;">
+          <label for="karaokeThemeSelect">🎨 Escenario de Karaoke (Tema Visual)</label>
+          <select id="karaokeThemeSelect">
+            <option value="theme-clasico">Clásico (Slate)</option>
+            <option value="theme-fiesta">Fiesta (Luces Animadas)</option>
+          </select>
+        </div>
       </div>
+      <p id="saveNotification" class="save-notification" style="opacity:0; transition: opacity 0.5s;">✅ Configuración guardada</p>
+    </div>
     </section>
 
   </main>
