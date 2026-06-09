@@ -1197,15 +1197,14 @@ async function loadTextOptionsInStudio() {
 async function loadSelectedTextFromLibrary() {
   const select = $("textLibrarySelect");
   const status = $("selectedTextStatus");
-  // CORRECCIÓN: Cambiado de "text" al ID real de tu HTML que es "lyricsText"
-  const textInput = $("lyricsText"); 
+  const textInput = $("lyricsText"); // Tu <textarea> del monitor de edición
 
   if (!select || !status || !textInput) return;
 
   const selectedId = Number(select.value);
 
   if (!selectedId) {
-    alert("⚠️ Selecciona una letra");
+    alert("⚠️ Selecciona una letra de la lista primero.");
     return;
   }
 
@@ -1213,52 +1212,47 @@ async function loadSelectedTextFromLibrary() {
     const item = await getLibraryItemById(selectedId);
 
     if (!item) {
-      alert("⚠️ No se encontró el archivo");
+      alert("⚠️ No se encontró la letra en la base de datos.");
       return;
     }
 
-    // Sincronizamos los IDs globales para el flujo de los Taps
+    // Sincronizamos las variables globales para el sistema de Taps
     selectedTextId = item.id;
     selectedVoiceId = item.id; 
-    status.textContent = `Estado: letra seleccionada -> ${item.name}`;
 
-    // Leemos el array de palabras que guardó nuestra función de segmentación
+    // Verificamos si el archivo tiene palabras segmentadas
     if (Array.isArray(item.lyrics) && item.lyrics.length > 0) {
       
-      // Mapeamos los segmentos para que la previsualización del karaoke los entienda en 0
+      // Guardamos en la variable de trabajo global
       textSegments = item.lyrics.map(word => ({
         id: word.id,
         text: word.text,
-        startTime: word.startTime,
-        duration: word.duration,
-        pitch: word.pitch
+        startTime: word.startTime || 0,
+        duration: word.duration || 0,
+        pitch: word.pitch || 0
       }));
 
-      // Renderizamos la vista previa del karaoke
-      renderKaraokeLyrics(textSegments);
-      cargarLetrasEnMonitor();
+      // Intentamos refrescar la vista previa visual si las funciones existen
+      try { renderKaraokeLyrics(textSegments); } catch(e) {}
+      try { cargarLetrasEnMonitor(); } catch(e) {}
 
-      // Inyectamos las palabras directamente en tu monitor "lyricsText"
+      // 🎯 LA INYECCIÓN CLAVE: Pasamos las palabras separadas por espacios al cuadro de texto
       textInput.value = textSegments
         .map(seg => seg.text || "")
         .join(" ")
         .trim();
 
-      status.textContent = "Estado: Letra manual cargada en el Monitor ⚡ (Lista para taps)";
+      status.innerHTML = `📄 <strong>Estado:</strong> Letra cargada en el Monitor ⚡ (Lista para taps)`;
     } else {
       textSegments = [];
-      renderKaraokeLyrics([]);
-      cargarLetrasEnMonitor();
-
-      if (textInput) textInput.value = "";
-      status.textContent = `Estado: Letra seleccionada -> ${item.name} (el archivo no contiene palabras)`;
+      textInput.value = "";
+      status.textContent = "Estado: El archivo de texto cargado no contiene palabras válidas.";
     }
   } catch (error) {
-    console.error(error);
-    alert("❌ No se pudo cargar la letra seleccionada");
+    console.error("Error al cargar texto en el monitor:", error);
+    alert("❌ No se pudo cargar la letra seleccionada.");
   }
 }
-
 
 // ==========================================
 // TRANSCRIPCIÓN CON TÉCNICA DE CHUNKING
@@ -3255,7 +3249,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     safeAdd("loadSelectedVoiceBtn", "click", loadSelectedVoiceFromLibrary);
 
     safeAdd("refreshStudioTextListBtn", "click", loadTextOptionsInStudio);
-    safeAdd("loadStudioTextBtn", "click", loadSelectedTextFromLibrary);
+    safeAdd("loadSelectedTextBtn", "click", loadSelectedTextFromLibrary);
     
     safeAdd("transcribeVoiceBtn", "click", transcribeSelectedVoice);
     safeAdd("applyCorrectedLyricsBtn", "click", applyCorrectedLyrics);
@@ -3649,7 +3643,7 @@ async function startKaraokePitchDetection() {
 
     loop();
 }
-
+/*
 // ==========================================
 // IMPORTADOR ULTRASTAR
 // ==========================================
@@ -3903,7 +3897,7 @@ async function confirmUltrastarImport() {
     alert("❌ Error al importar la canción. Revisa la consola para más detalles.");
   }
 }
-
+*/
 // ==========================================
 // CATÁLOGO Y MIS CANCIONES
 // ==========================================
