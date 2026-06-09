@@ -4226,7 +4226,7 @@ async function loadKaraokeSong(id) {
       return;
     }
     
-    // Cargar pista
+    // 1. Cargar pista instrumental en el reproductor de canto
     const track = $("karaokeTrack");
     if (track && song.audioBlob) {
       track.src = URL.createObjectURL(song.audioBlob);
@@ -4235,21 +4235,49 @@ async function loadKaraokeSong(id) {
       karaokeSelectedTrackName = song.name;
     }
     
-    // Cargar transcripción
-    if (song.transcription && song.transcription.length > 0) {
+    // 2. 🎯 BIFURCACIÓN DE LECTURA DE LETRAS (Bug del Canvas solucionado)
+    // Verificamos si la canción proviene de tu flujo manual .txt o de la IA tradicional
+    if (Array.isArray(song.lyrics) && song.lyrics.length > 0) {
+      // FORMATO MANUAL: Mapeamos los datos para que el Canvas original los lea de forma transparente
+      transcriptionSegments = song.lyrics;
+      baseTranscriptionSegments = song.lyrics;
+      
+      // Activamos también tus variables globales de texto por seguridad
+      textSegments = song.lyrics;
+      baseTextSegments = song.lyrics;
+      
+      cargarLetrasEnMonitor();
+      console.log("🎤 Letras manuales cargadas exitosamente en el reproductor de Karaoke");
+    } else if (song.transcription && song.transcription.length > 0) {
+      // FORMATO IA ORIGINAL: Mantiene la lógica intacta para Whisper
       transcriptionSegments = song.transcription;
       baseTranscriptionSegments = song.transcription;
+      textSegments = [];
+      baseTextSegments = [];
+      
       cargarLetrasEnMonitor();
+      console.log("🎤 Transcripción de IA cargada exitosamente en el reproductor de Karaoke");
+    } else {
+      // Si la canción por algún motivo no tiene ninguna letra asociada
+      transcriptionSegments = [];
+      baseTranscriptionSegments = [];
+      textSegments = [];
+      baseTextSegments = [];
+      console.warn("⚠️ Esta canción no contiene letras sincronizadas.");
     }
     
     const title = song.metadata?.title || song.name;
-    $("karaokeStatus").textContent = `Estado: "${title}" cargada. ¡Lista para cantar! 🎤`;
+    if ($("karaokeStatus")) {
+      $("karaokeStatus").textContent = `Estado: "${title}" cargada. ¡Lista para cantar! 🎤`;
+    }
     
-    // Scroll al monitor
-    $("karaokeCanvas").scrollIntoView({ behavior: "smooth", block: "center" });
+    // Scroll fluido al monitor Canvas para centrar la vista del usuario
+    if ($("karaokeCanvas")) {
+      $("karaokeCanvas").scrollIntoView({ behavior: "smooth", block: "center" });
+    }
     
   } catch (error) {
-    console.error("Error cargando canción:", error);
+    console.error("Error cargando canción en el módulo Karaoke:", error);
     alert("❌ Error al cargar la canción");
   }
 }
