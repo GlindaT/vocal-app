@@ -1095,7 +1095,7 @@ async function loadTextOptionsInStudio() {
   }
 }
 
-async function loadSelectedTextFromLibrary() {
+async function loadSelectedTextFromLibraryStudio() {
   const select = $("textLibrarySelect");
   const player = $("selectedTextPlayer");
   const status = $("selectedTextStatus");
