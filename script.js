@@ -492,6 +492,7 @@ let studioTextFileName = "";
 let selectedTextId = null;
 let studioTextBlob = null;
 let selectedTextBlob = null;
+let activeTapPlayer = null;
 
 
 // ==========================================
@@ -2806,9 +2807,15 @@ async function applyCorrectedLyrics() {
 function startTapSync() {
   const lyricsText = $("lyricsText");
   const text = $("text");
-  const voicePlayer = $("selectedVoicePlayer");
   
-  // 1. CORRECCIÓN DE VALIDACIÓN: Validar la caja que realmente tenga texto
+  // 1. Detectamos cuál reproductor de audio tiene un archivo cargado
+  const voicePlayer = $("selectedVoicePlayer"); // Reproductor de voz (IA)
+  const trackPlayer = $("player");              // Reproductor de pista instrumental (Estudio)
+  
+  // El reproductor activo será el de voz si tiene contenido; de lo contrario, el de la pista
+  const activePlayer = (voicePlayer && voicePlayer.src) ? voicePlayer : trackPlayer;
+  
+  // 2. CORRECCIÓN DE VALIDACIÓN DE LETRA
   const textoActivo = (lyricsText && lyricsText.value.trim()) ? lyricsText.value.trim() : (text ? text.value.trim() : "");
   
   if (!textoActivo) {
@@ -2816,24 +2823,24 @@ function startTapSync() {
     return;
   }
   
-  if (!voicePlayer || !voicePlayer.src) {
-    alert("⚠️ Primero carga un archivo de Audio / Voz en el Estudio para reproducir.");
+  // 3. CORRECCIÓN DEL AUDIO (Solución al bug de tu alerta):
+  // Validamos si alguno de los dos reproductores tiene un archivo de música listo
+  if (!activePlayer || !activePlayer.src) {
+    alert("⚠️ Primero carga un archivo de audio (ya sea la Pista o la Voz) en el Estudio para poder escuchar y hacer los Taps.");
     return;
   }
 
-  // 2. DETECCIÓN DINÁMICA DE FORMATO: ¿Es IA o es .txt manual?
-  // Si el texto contiene saltos de línea (\n), asumimos formato de líneas (IA).
-  // Si está separado por espacios principales, lo tratamos como palabras (.txt manual).
+  // 4. DETECCIÓN DINÁMICA DE FORMATO: ¿Es IA o es .txt manual?
   if (textoActivo.includes("\n")) {
-    // Flujo original (Por líneas de texto)
+    // Sincronización original línea por línea
     tapSyncLines = textoActivo
       .split("\n")
       .map(line => line.trim())
       .filter(line => line.length > 0);
   } else {
-    // NUEVO FLUJO MANUAL: Sincronización palabra por palabra para el .txt plano
+    // Sincronización palabra por palabra para tu .txt plano corrido
     tapSyncLines = textoActivo
-      .split(/\s+/) // Corta por cualquier tipo de espacio en blanco
+      .split(/\s+/)
       .map(palabra => palabra.trim())
       .filter(palabra => palabra.length > 0);
   }
@@ -2843,7 +2850,7 @@ function startTapSync() {
     return;
   }
 
-  // Reiniciar variables globales de control
+  // Reiniciar variables globales de control de taps
   tapSyncTimestamps = [];
   tapSyncCurrentIndex = 0;
   tapSyncMode = true;
@@ -2854,18 +2861,22 @@ function startTapSync() {
   if ($("tapSyncActive")) $("tapSyncActive").style.display = "block";
   if ($("tapSyncResult")) $("tapSyncResult").style.display = "none";
   
-  // Mostrar el primer elemento a sincronizar (línea o palabra)
+  // Mostrar la primera palabra o línea a sincronizar
   updateTapSyncDisplay();
   
-  // Reproducir el audio desde el inicio
-  voicePlayer.currentTime = 0;
-  voicePlayer.play();
+  // Guardamos una referencia global del reproductor que se usó para los taps
+  // Esto es vital para que la función recordTap() sepa a quién leerle el .currentTime
+  activeTapPlayer = activePlayer;
+  
+  // Reproducir el audio guía desde el inicio
+  activePlayer.currentTime = 0;
+  activePlayer.play();
   
   // Activar listener de teclado de forma segura limpiando listeners previos
   document.removeEventListener("keydown", handleTapSyncKeypress);
   document.addEventListener("keydown", handleTapSyncKeypress);
   
-  console.log(`🎯 Sincronización iniciada. Total de elementos (${textoActivo.includes("\n") ? 'Líneas' : 'Palabras'}):`, tapSyncLines.length);
+  console.log(`🎯 Sincronización iniciada usando el reproductor: ${activePlayer.id}. Total de elementos:`, tapSyncLines.length);
 }
 
 function handleTapSyncKeypress(e) {
@@ -2918,18 +2929,18 @@ function segmentarTextoPlano(texto) {
 function recordTap() {
   if (!tapSyncMode) return;
   
-  const voicePlayer = $("selectedVoicePlayer");
+  // Usamos el reproductor dinámico que guardó startTapSync
+  const player = window.activeTapPlayer || $("selectedVoicePlayer");
   
-  // CORRECCIÓN: Validamos de forma segura que el reproductor exista
-  if (!voicePlayer) return;
+  if (!player) return;
   
-  const currentTime = voicePlayer.currentTime;
+  const currentTime = player.currentTime;
   
-  // Guardamos el segundo exacto en el que el usuario presionó la barra espaciadora
+  // Guardamos el tiempo del tap
   tapSyncTimestamps.push(currentTime);
   tapSyncCurrentIndex++;
   
-  // Efecto visual del botón (Mantiene tu excelente diseño de feedback)
+  // Efecto visual del botón TAP
   const tapBtn = $("tapBeatBtn");
   if (tapBtn) {
     tapBtn.style.transform = "scale(0.95)";
@@ -2940,7 +2951,6 @@ function recordTap() {
     }, 100);
   }
   
-  // Si ya terminamos de procesar todos los elementos (líneas o palabras)
   if (tapSyncCurrentIndex >= tapSyncLines.length) {
     finishTapSync();
   } else {
