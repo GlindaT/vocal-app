@@ -133,7 +133,8 @@
   <div class="card">
     <h3>Letra desde Biblioteca</h3>
     <div class="studio-controls">
-      <button id="refreshTextListBtn" type="button">🔄 Actualizar lista</button>
+      <!-- CORRECCIÓN: ID ajustado a 'refreshStudioTextListBtn' para que coincida con tu safeAdd -->
+      <button id="refreshStudioTextListBtn" type="button">🔄 Actualizar lista</button>
     </div>
     
     <select id="textLibrarySelect">
@@ -144,7 +145,8 @@
       <button id="loadSelectedTextBtn" type="button">📥 Cargar letra seleccionada</button>
     </div>
 
-    <text id="selectedText" controls></text>
+    <!-- CORRECCIÓN: Se elimina la etiqueta inválida <text> y se cambia por un contenedor seguro -->
+    <div id="selectedTextContainer" style="margin: 10px 0;"></div>
 
     <p id="selectedTextStatus">Estado: ningún texto seleccionado</p>
   </div>
@@ -194,46 +196,49 @@
     <button id="applyCorrectedLyricsBtn" type="button">✅ Aplicar letra corregida</button>
   </div>
 
-  <!-- SINCRONIZACIÓN MANUAL CON TAPS -->
-<div id="tapSyncSection" style="margin-top: 15px; padding: 15px; background: linear-gradient(135deg, #1e3a5f, #1e293b); border-radius: 8px; border: 2px solid #3b82f6;">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-    <h4 style="margin: 0; color: #60a5fa;">🎯 Sincronización Manual</h4>
-    <button id="toggleAutoScrollBtn" type="button" style="background: #f59e0b; font-size: 12px; padding: 5px 10px;">🔒 Auto-scroll: ON</button>
-  </div>
-  
-  <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">
-    Escucha el audio y presiona TAP (o ESPACIO) cada vez que empiece una nueva línea.
-  </p>
-  
-  <div class="studio-controls" style="margin-bottom: 15px;">
-    <button id="startTapSyncBtn" type="button" style="background: #3b82f6; color: white;">▶️ Iniciar Sincronización</button>
-    <button id="cancelTapSyncBtn" type="button" style="background: #6b7280; display: none;">❌ Cancelar</button>
-  </div>
-  
-  <!-- Modo de sincronización activo -->
-  <div id="tapSyncActive" style="display: none;">
-    <div style="text-align: center; padding: 20px; background: var(--bg-main); border-radius: 8px; margin-bottom: 15px;">
-      <p style="font-size: 14px; color: var(--text-muted); margin: 0 0 10px 0;">Línea actual:</p>
-      <p id="tapCurrentLine" style="font-size: 20px; font-weight: bold; color: #facc15; margin: 0 0 15px 0;">---</p>
-      <p style="font-size: 14px; color: var(--text-muted); margin: 0 0 5px 0;">Progreso:</p>
-      <p id="tapProgress" style="font-size: 16px; color: #22c55e; margin: 0;">0 / 0 líneas</p>
+  <!-- SINCRONIZACIÓN MANUAL WITH TAPS -->
+  <div id="tapSyncSection" style="margin-top: 15px; padding: 15px; background: linear-gradient(135deg, #1e3a5f, #1e293b); border-radius: 8px; border: 2px solid #3b82f6;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+      <h4 style="margin: 0; color: #60a5fa;">🎯 Sincronización Manual</h4>
+      <button id="toggleAutoScrollBtn" type="button" style="background: #f59e0b; font-size: 12px; padding: 5px 10px;">🔒 Auto-scroll: ON</button>
     </div>
     
-    <button id="tapBeatBtn" type="button" style="width: 100%; padding: 30px; font-size: 24px; background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border-radius: 12px;">
-      🎵 TAP (o presiona ESPACIO)
-    </button>
-    
-    <p style="font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 10px;">
-      ⌨️ También puedes usar la barra espaciadora
+    <!-- AJUSTE: Texto más universal para cubrir líneas (IA) o palabras (.txt manual) -->
+    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">
+      Escucha el audio y presiona TAP (o ESPACIO) cada vez que empiece el siguiente elemento de la letra.
     </p>
-  </div>
-  
-  <!-- Resultado -->
-  <div id="tapSyncResult" style="display: none; margin-top: 15px; padding: 15px; background: #14532d; border-radius: 8px; border: 1px solid #22c55e;">
-    <p style="color: #22c55e; font-weight: bold; margin: 0 0 10px 0;">✅ ¡Sincronización completada!</p>
-    <div class="studio-controls">
-      <button id="applyTapSyncBtn" type="button" style="background: #22c55e;">✅ Aplicar tiempos</button>
-      <button id="redoTapSyncBtn" type="button" style="background: #f59e0b;">🔄 Repetir</button>
+    
+    <div class="studio-controls" style="margin-bottom: 15px;">
+      <button id="startTapSyncBtn" type="button" style="background: #3b82f6; color: white;">▶️ Iniciar Sincronización</button>
+      <button id="cancelTapSyncBtn" type="button" style="background: #6b7280; display: none;">❌ Cancelar</button>
+    </div>
+    
+    <!-- Modo de sincronización activo -->
+    <div id="tapSyncActive" style="display: none;">
+      <div style="text-align: center; padding: 20px; background: var(--bg-main); border-radius: 8px; margin-bottom: 15px;">
+        <!-- AJUSTE: 'Elemento actual' en lugar de línea para que tenga sentido palabra por palabra -->
+        <p style="font-size: 14px; color: var(--text-muted); margin: 0 0 10px 0;">Elemento actual:</p>
+        <p id="tapCurrentLine" style="font-size: 20px; font-weight: bold; color: #facc15; margin: 0 0 15px 0;">---</p>
+        <p style="font-size: 14px; color: var(--text-muted); margin: 0 0 5px 0;">Progreso:</p>
+        <p id="tapProgress" style="font-size: 16px; color: #22c55e; margin: 0;">0 / 0 elementos</p>
+      </div>
+      
+      <button id="tapBeatBtn" type="button" style="width: 100%; padding: 30px; font-size: 24px; background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border-radius: 12px;">
+        🎵 TAP (o presiona ESPACIO)
+      </button>
+      
+      <p style="font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 10px;">
+        ⌨️ También puedes usar la barra espaciadora
+      </p>
+    </div>
+    
+    <!-- Resultado -->
+    <div id="tapSyncResult" style="display: none; margin-top: 15px; padding: 15px; background: #14532d; border-radius: 8px; border: 1px solid #22c55e;">
+      <p style="color: #22c55e; font-weight: bold; margin: 0 0 10px 0;">✅ ¡Sincronización completada!</p>
+      <div class="studio-controls">
+        <button id="applyTapSyncBtn" type="button" style="background: #22c55e;">✅ Aplicar tiempos</button>
+        <button id="redoTapSyncBtn" type="button" style="background: #f59e0b;">🔄 Repetir</button>
+      </div>
     </div>
   </div>
 </div>
@@ -259,7 +264,7 @@
     <button class="folder-btn" onclick="renderLibrary('voz')">🎙️ Voces</button>
     <button class="folder-btn" onclick="renderLibrary('grabacion')">💾 Grabaciones</button>
     <button class="folder-btn" onclick="renderLibrary('karaoke')">🎤 Karaoke</button>
-    <button class="folder-btn" onclick="renderLibrary('letras')">📝 Letras</button>
+    <button class="folder-btn" onclick="renderLibrary('texto')">📝 Letras</button>
   </div>
 
   <!-- SUBIR ARCHIVOS DESDE PC (ahorra API) -->
