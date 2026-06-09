@@ -3293,6 +3293,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     loadKaraokeCatalog();
     loadMyKaraokeSongs();
     
+    
+    // --- BIBLIOTECA ---
+    // Guarda el archivo (audio o texto manual) en IndexedDB
     safeAdd("saveLibraryFileBtn", "click", saveManualFileToLibrary);
     
     // Autocompleta el nombre del archivo limpiando la extensión (.txt, .mp3, etc.)
