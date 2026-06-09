@@ -2877,7 +2877,7 @@ async function applyTapSync() {
         type: "karaoke",
         audioBlob: studioTrackBlob,       // ← LA PISTA, no la voz
         vocalsBlob: selectedVoiceBlob || null,
-        textBlob: selectedTextBlob;
+        textBlob: selectedTextBlob,
         date: new Date().toLocaleString("es-ES"),
         transcription: baseTranscriptionSegments,
         metadata: {
