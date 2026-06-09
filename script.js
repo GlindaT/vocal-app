@@ -788,7 +788,7 @@ async function saveToLibrary(blob, options = {}) {
   try {
     await addLibraryItem({
       name: options.name || "Audio",
-      type: options.type || "audio", "text",
+      type: options.type || "audio",
       audioBlob: blob,
       date: new Date().toLocaleString("es-ES"),
       transcription: options.transcription || [] // Añadir campo para evitar errores
@@ -853,6 +853,7 @@ async function renderLibrary(filter = 'todos') {
     await loadTrackOptionsInKaraoke();
     await loadTextOptionsInStudio();
     await loadTextFromLibraryStudio();
+    await loadSelectedTextFromLibraryStudio();
 
   } catch (error) {
     console.error(error);
@@ -1095,7 +1096,7 @@ async function loadTextOptionsInStudio() {
   }
 }
 
-async function loadSelectedTextFromLibrary() {
+async function loadSelectedTextFromLibraryStudio() {
   const select = $("textLibrarySelect");
   const player = $("selectedTextPlayer");
   const status = $("selectedTextStatus");
@@ -2695,7 +2696,7 @@ function startTapSync() {
   const voicePlayer = $("selectedVoicePlayer");
   const text = $("text");
   
-  if (!lyricsText || !lyricsText.value.trim() || (!text || !text.value.trim())) {
+  if (!lyricsText || !lyricsText.value.trim() || !text || !text.value.trim()) {
     alert("⚠️ Primero escribe o corrige la letra en el área de texto.");
     return;
   }
@@ -2704,9 +2705,13 @@ function startTapSync() {
     alert("⚠️ Primero carga una Voz en Estudio.");
     return;
   }
+
+  if (!text || !text.src) {
+    alert("⚠️ Primero carga una letra en Estudio.");
+  }
   
   // Obtener líneas de la letra
-  tapSyncLines = lyricsText.value
+  tapSyncLines = lyricsText.value || text.value
     .split("\n")
     .map(line => line.trim())
     .filter(line => line.length > 0);
@@ -2715,6 +2720,7 @@ function startTapSync() {
     alert("⚠️ No hay líneas de texto para sincronizar.");
     return;
   }
+
   
   // Reiniciar variables
   tapSyncTimestamps = [];
