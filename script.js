@@ -3137,41 +3137,79 @@ async function applyTapSync() {
     return;
   }
   
-  // CORRECCIÓN: Corrección de dedo en el ID original ("seleteVoicePlayer" -> "selectedVoicePlayer")
   const voicePlayer = $("selectedVoicePlayer");
   const totalDuration = voicePlayer ? voicePlayer.duration : 0;
   
-  // Detectamos el estado visual correcto
   const statusId = selectedVoiceId ? "selectedVoiceStatus" : "selectedTextStatus";
   const status = $(statusId);
   
   if (status) status.textContent = "Estado: Aplicando tiempos y analizando notas...";
   
   const newSegments = [];
-  
-  // Calcular marcas de tiempo para cada palabra/línea
-  for (let i = 0; i < tapSyncLines.length; i++) {
-    const start = tapSyncTimestamps[i] || 0;
-    let end = (i < tapSyncTimestamps.length - 1) ? tapSyncTimestamps[i + 1] : (totalDuration || start + 3);
-    
-    newSegments.push(buildWordTimingFromSegment({
-      start: start,
-      end: end,
-      text: tapSyncLines[i]
-    }));
+  const isTextoManual = !selectedVoiceBlob && selectedVoiceId;
+  const modoSeleccionado = window.currentTapSyncModeType || "linea"; // "linea" o "palabra"
+
+  // 🎯 BIFURCACIÓN DE MAPEO: EVITA LAS BARRAS GIGANTES EN EL CANVAS
+  if (isTextoManual && modoSeleccionado === "linea") {
+    // Si hiciste taps por líneas, distribuimos el tiempo proporcionalmente palabra por palabra
+    let globalWordId = 1;
+
+    tapSyncLines.forEach((lineText, lineIndex) => {
+      const startFrase = tapSyncTimestamps[lineIndex] || 0;
+      const endFrase = (lineIndex < tapSyncTimestamps.length - 1) ? tapSyncTimestamps[lineIndex + 1] : (totalDuration || startFrase + 3.0);
+      const duracionTotalFrase = endFrase - startFrase;
+
+      // Rompemos la línea en palabras reales
+      const palabrasDeLaLinea = lineText.split(/\s+/).filter(w => w.trim().length > 0);
+      const totalPalabras = palabrasDeLaLinea.length;
+
+      if (totalPalabras === 0) return;
+
+      const duracionPorPalabra = duracionTotalFrase / totalPalabras;
+
+      palabrasDeLaLinea.forEach((palabraText, wordIndex) => {
+        const wordStart = startFrase + (wordIndex * duracionPorPalabra);
+        const wordEnd = wordStart + duracionPorPalabra;
+
+        // Construimos la estructura idéntica a la que espera buildWordTimingFromSegment y tu Canvas
+        newSegments.push(buildWordTimingFromSegment({
+          start: wordStart,
+          end: wordEnd,
+          text: palabraText,
+          id: globalWordId++,
+          renglon: lineIndex + 1,
+          // Inyectamos el sub-objeto words para mantener retrocompatibilidad total con tu monitor de IA
+          words: [{
+            start: wordStart,
+            end: wordEnd,
+            word: palabraText,
+            midi: 60
+          }]
+        }));
+      });
+    });
+  } else {
+    // Flujo original (Si es palabra por palabra o viene directo de la IA)
+    for (let i = 0; i < tapSyncLines.length; i++) {
+      const start = tapSyncTimestamps[i] || 0;
+      let end = (i < tapSyncTimestamps.length - 1) ? tapSyncTimestamps[i + 1] : (totalDuration || start + 3);
+      
+      newSegments.push(buildWordTimingFromSegment({
+        start: start,
+        end: end,
+        text: tapSyncLines[i]
+      }));
+    }
   }
   
-  // Analizar pitch desde la VOZ (si hay un archivo binario de audio disponible)
+  // Analizar pitch desde la VOZ (si hay audio cargado en Estudio)
   let analyzedSegments = newSegments;
   if (selectedVoiceBlob) {
     if (status) status.textContent = "Estado: Analizando notas musicales... 🎵";
-    // Pasamos el blob de voz para calcular el pitch musical real de la canción
     analyzedSegments = await analyzePitchForSegments(selectedVoiceBlob, selectedTextBlob || null, newSegments);
   }
   
-  // CORRECCIÓN: Determinamos el tipo de archivo actual para actualizar las variables globales correctas
-  const isTextoManual = !selectedVoiceBlob && selectedVoiceId; // Es texto manual si no hay audio de voz pero hay un ID activo
-
+  // Asignamos a las variables globales correctas según el tipo de flujo
   if (isTextoManual) {
     baseTextSegments = analyzedSegments;
     textSegments = analyzedSegments;
@@ -3189,42 +3227,40 @@ async function applyTapSync() {
     try {
       const karaokeName = `Karaoke - ${studioTrackFileName || "Sin nombre"}`;
       
-      // Construimos el objeto final unificado para la biblioteca
       const karaokeItem = {
         name: karaokeName,
         type: "karaoke",
-        audioBlob: studioTrackBlob, // La pista instrumental de fondo
+        audioBlob: studioTrackBlob, 
         vocalsBlob: selectedVoiceBlob || null,
         textBlob: selectedTextBlob || null,
         date: new Date().toLocaleString("es-ES"),
         metadata: {
           title: studioTrackFileName || "Sin nombre",
           artist: "",
-          syncedManually: true
+          syncedManually: true,
+          tapStyleUsed: modoSeleccionado
         }
       };
 
-      // Guardamos los segmentos en la propiedad correspondiente según el origen
       if (isTextoManual) {
-        karaokeItem.lyrics = analyzedSegments; // Para letras manuales .txt
+        karaokeItem.lyrics = analyzedSegments; 
       } else {
-        karaokeItem.transcription = analyzedSegments; // Para el flujo de IA
+        karaokeItem.transcription = analyzedSegments; 
       }
 
       await addLibraryItem(karaokeItem);
-      console.log("✅ Karaoke listo guardado en Biblioteca (con pista instrumental)");
+      console.log("... Karaoke listo guardado en Biblioteca con distribución de palabras");
       
-      // Refrescar listas locales de la interfaz
       try { await loadMyKaraokeSongs(); } catch (e) {}
       try { await renderLibrary("todos"); } catch (e) {}
     } catch (err) {
-      console.error("❌ Error guardando karaoke:", err);
+      console.error("... Error guardando karaoke:", err);
     }
   } else {
-    console.warn("⚠️ No hay pista cargada en Estudio - solo se guardará localmente");
+    console.warn("... No hay pista cargada en Estudio - solo se guardará localmente");
   }
   
-  // Guardar de vuelta la sincronización final en el elemento original de la biblioteca
+  // Guardar de vuelta en el archivo origen de la biblioteca
   const currentId = selectedVoiceId || selectedTextId;
   if (currentId) {
     const updateData = isTextoManual 
@@ -3232,11 +3268,10 @@ async function applyTapSync() {
       : { transcription: analyzedSegments };
 
     updateLibraryItem(currentId, updateData)
-      .then(() => console.log("✅ Sincronización guardada también en el archivo origen"))
+      .then(() => console.log("... Sincronización guardada en origen"))
       .catch(err => console.error("Error al actualizar origen:", err));
   }
   
-  // Resetear interfaz de Taps para una nueva sesión
   if ($("startTapSyncBtn")) $("startTapSyncBtn").style.display = "inline-block";
   if ($("tapSyncResult")) $("tapSyncResult").style.display = "none";
   
@@ -3246,13 +3281,13 @@ async function applyTapSync() {
   
   if (status) {
     status.textContent = studioTrackBlob
-      ? "Estado: ✅ Karaoke listo guardado en Biblioteca (con pista)"
-      : "Estado: ✅ Sincronización aplicada (sin pista cargada)";
+      ? "Estado: ... Karaoke listo guardado en Biblioteca (con pista)"
+      : "Estado: ... Sincronización aplicada (sin pista cargada)";
   }
   
   alert(studioTrackBlob
-    ? "✅ ¡Karaoke listo! Lo encontrarás en la Biblioteca → carpeta Karaoke, y en 'Mis Canciones' del Karaoke."
-    : "✅ Tiempos aplicados. ⚠️ Carga una pista en Estudio antes de sincronizar para guardar el karaoke con la pista instrumental.");
+    ? "... ¡Karaoke listo! Lo encontrarás en la Biblioteca -> carpeta Karaoke, y en 'Mis Canciones' del Karaoke."
+    : "... Tiempos aplicados. ... Carga una pista en Estudio antes de sincronizar para guardar el karaoke con la pista instrumental.");
 }
 
 function redoTapSync() {
