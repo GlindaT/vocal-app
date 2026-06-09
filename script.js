@@ -486,6 +486,8 @@ let studioTrackBlob = null;
 let studioTrackId = null;
 let selectedVoiceBlob = null;
 let selectedVoiceId = null;
+let studioTextFileName = "";
+let selectedTextId = null;
 
 
 // ==========================================
@@ -846,6 +848,7 @@ async function renderLibrary(filter = 'todos') {
     await loadVoiceOptionsInStudio();
     await loadTrackOptionsInStudio();
     await loadTrackOptionsInKaraoke();
+    await loadTextOptionsInStudio();
 
   } catch (error) {
     console.error(error);
@@ -1057,6 +1060,104 @@ async function loadSelectedVoiceFromLibrary() {
     alert("❌ No se pudo cargar la voz seleccionada");
   }
 }
+
+async function loadTextOptionsInStudio() {
+  const select = $("textLibrarySelect");
+  if (!select) return;
+
+  select.innerHTML = `<option value="">Selecciona una letra guardada</option>`;
+
+  try {
+    const letras = await getLibraryItemsByType("letras");
+
+    const merged = [...letras];
+
+    if (!merged.length) {
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "No hay letras guardadas";
+      select.appendChild(option);
+      return;
+    }
+
+    merged.forEach((item) => {
+      const option = document.createElement("option");
+      option.value = item.id;
+      option.textContent = `${item.name} (${item.date || "sin fecha"})`;
+      select.appendChild(option);
+    });
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+async function loadSelectedTextFromLibrary() {
+  const select = $("textLibrarySelect");
+  const player = $("selectedTextPlayer");
+  const status = $("selectedTextStatus");
+  const text = $("text");
+
+  if (!select || !player || !status || !text) return;
+
+  const selectedId = Number(select.value);
+
+  if (!selectedId) {
+    alert("⚠️ Selecciona una letra");
+    return;
+  }
+
+  try {
+    const item = await getLibraryItemById(selectedId);
+
+    if (!item) {
+      alert("⚠️ No se encontró el archivo");
+      return;
+    }
+
+    selectedTextBlob = item.textBlob;
+    selectedVoiceId = item.id;
+
+    const textURL = URL.createObjectURL(item.textBlob);
+    player.src = audioURL;
+    status.textContent = `Estado: letra seleccionada -> ${item.name}`;
+
+    
+    if (Array.isArray(item.text) && item.text.length > 0) {
+      baseTextSegments = item.text.map(seg =>
+        buildWordTimingFromSegment(seg)
+      );
+
+      // IMPORTANTE:
+      // aquí respetamos exactamente las líneas guardadas
+      textSegments = baseTextSegments;
+
+      renderKaraokeLyrics(textSegments);
+      cargarLetrasEnMonitor();
+
+      if (text) {
+        text.value = textSegments
+          .map(seg => seg.text || "")
+          .join("\n")
+          .trim();
+      }
+
+      status.textContent = "Estado: letra seleccionada (Letras cargadas de memoria ⚡)";
+    } else {
+      baseTextSegments = [];
+      textSegments = [];
+
+      renderKaraokeLyrics([]);
+      cargarLetrasEnMonitor();
+
+      if (text) text.value = "";
+      status.textContent = `Estado: Letra seleccionada -> ${item.name} (sin transcripción guardada)`;
+    }
+  } catch (error) {
+    console.error(error);
+    alert("❌ No se pudo cargar la letra seleccionada");
+  }
+}
+
 
 // ==========================================
 // TRANSCRIPCIÓN CON TÉCNICA DE CHUNKING
@@ -1589,7 +1690,7 @@ function cargarPistaKaraoke(e) {
 
   const track = $("karaokeTrack");
   track.src = URL.createObjectURL(file);
-  track.volume = 0.4;
+  track.volume = 0.6;
 
   $("karaokeStatus").textContent = "Estado: Pista lista. ¡Presiona Iniciar Grabación!";
   cargarLetrasEnMonitor();
@@ -1655,12 +1756,12 @@ function cargarLetrasEnMonitor() {
   const container = $("karaokeLiveLyrics");
   if (!container) return;
 
-  console.log("cargarLetrasEnMonitor -> transcriptionSegments:", transcriptionSegments);
+  console.log("cargarLetrasEnMonitor -> transcriptionSegments || textSegments:", transcriptionSegments);
 
   container.innerHTML = "";
 
   if (!Array.isArray(transcriptionSegments) || transcriptionSegments.length === 0) {
-    container.innerHTML = `<p class="karaoke-placeholder" style="font-size:18px;">⚠️ Ve a la pestaña 'Estudio', transcribe una voz y vuelve aquí para ver la letra.</p>`;
+    container.innerHTML = `<p class="karaoke-placeholder" style="font-size:18px;">⚠️ Ve a la pestaña 'Estudio', transcribe una voz o sube las letras y vuelve aquí.</p>`;
     return;
   }
 
@@ -2296,8 +2397,9 @@ function applyAppTheme(theme) {
   // Aplicamos el tema al elemento raíz (html)
   document.documentElement.setAttribute("data-theme", theme);
   
-  // También al body por si acaso
+  /* También al body por si acaso
   document.body.setAttribute("data-theme", theme);
+  */
   
   console.log("🎨 Tema aplicado:", theme);
 }
@@ -2510,18 +2612,21 @@ function showSaveNotification() {
 async function applyCorrectedLyrics() {
   const lyricsText = $("lyricsText");
   const status = $("selectedVoiceStatus");
+  //se agrega text
+  const text = $("text");
+  const status = $("selectedTextStatus");
 
-  if (!lyricsText) return;
+  if (!lyricsText || !text) return;
 
-  const correctedText = lyricsText.value.trim();
+  const correctedText = lyricsText.value.trim() || text.value.trim();
 
   if (!correctedText) {
     alert("⚠️ No hay texto corregido para aplicar.");
     return;
   }
 
-  if (!Array.isArray(baseTranscriptionSegments) || !baseTranscriptionSegments.length) {
-    alert("⚠️ Primero transcribe una voz antes de corregir la letra.");
+  if (!Array.isArray(baseTranscriptionSegments) || !baseTranscriptionSegments.length || (baseTextSegments) || !baseTextSegments.length) {
+    alert("⚠️ Primero transcribe una voz o sube las letras antes de corregir.");
     return;
   }
 
@@ -2536,12 +2641,12 @@ async function applyCorrectedLyrics() {
   }
 
   // Guardamos como nueva base la versión corregida
-  baseTranscriptionSegments = rebuiltSegments;
+  baseTranscriptionSegments || baseTextSegmentsd = rebuiltSegments;
 
   // Mostramos exactamente las líneas escritas por el usuario
-  transcriptionSegments = rebuiltSegments;
+  transcriptionSegments || textSegments = rebuiltSegments;
 
-  renderKaraokeLyrics(transcriptionSegments);
+  renderKaraokeLyrics(transcriptionSegments || textSegments);
   cargarLetrasEnMonitor();
 
   lyricsText.value = transcriptionSegments
@@ -2549,10 +2654,18 @@ async function applyCorrectedLyrics() {
     .join("\n")
     .trim();
 
-  if (selectedVoiceId) {
+  text.value = textSegments
+    .map(seg => seg.text || "")
+    .join("\n")
+    .trim();
+
+  if (selectedVoiceId || selectedTextId) {
     try {
       await updateLibraryItem(selectedVoiceId, {
         transcription: baseTranscriptionSegments
+      });
+      await updateLibraryItem(selectedTextId, {
+        text: baseTextSegments
       });
 
       if (status) {
@@ -2577,8 +2690,9 @@ async function applyCorrectedLyrics() {
 function startTapSync() {
   const lyricsText = $("lyricsText");
   const voicePlayer = $("selectedVoicePlayer");
+  const text = $("text");
   
-  if (!lyricsText || !lyricsText.value.trim()) {
+  if (!lyricsText || !lyricsText.value.trim() || (!text || !text.value.trim())) {
     alert("⚠️ Primero escribe o corrige la letra en el área de texto.");
     return;
   }
@@ -2640,7 +2754,8 @@ function recordTap() {
   if (!tapSyncMode) return;
   
   const voicePlayer = $("selectedVoicePlayer");
-  if (!voicePlayer) return;
+  const text = $("selectedText");
+  if (!voicePlayer || !selectedText) return;
   
   const currentTime = voicePlayer.currentTime;
   
@@ -2720,6 +2835,9 @@ async function applyTapSync() {
   const voicePlayer = $("seleteVoicePlayer");
   const totalDuration = voicePlayer ? voicePlayer.duration : 0;
   const status = $("selectedVoiceStatus");
+  //agregado
+  const text = $("selectedText");
+  const status = $("selectedTextStatus");
   
   // Mostrar estado
   if (status) status.textContent = "Estado: Aplicando tiempos y analizando notas...";
@@ -2740,15 +2858,15 @@ async function applyTapSync() {
   // Analizar pitch desde la VOZ (si está seleccionada) para detectar notas musicales
   // Los tiempos están alineados a la pista, y la voz suele estar alineada con la pista
   let analyzedSegments = newSegments;
-  if (selectedVoiceBlob) {
+  if (selectedVoiceBlob) || (selectedTextBlob) {
     if (status) status.textContent = "Estado: Analizando notas musicales... 🎵";
-    analyzedSegments = await analyzePitchForSegments(selectedVoiceBlob, newSegments);
+    analyzedSegments = await analyzePitchForSegments(selectedVoiceBlob, selectedTextBlob, newSegments);
   }
   
-  baseTranscriptionSegments = analyzedSegments;
-  transcriptionSegments = analyzedSegments;
+  baseTranscriptionSegments || baseTextSegments = analyzedSegments;
+  transcriptionSegments || textSegments = analyzedSegments;
   
-  renderKaraokeLyrics(transcriptionSegments);
+  renderKaraokeLyrics(transcriptionSegments || textSegments);
   cargarLetrasEnMonitor();
   
   // 🎤 GUARDAR COMO ARCHIVO "KARAOKE LISTO" CON LA PISTA (NO LA VOZ)
@@ -2761,6 +2879,7 @@ async function applyTapSync() {
         type: "karaoke",
         audioBlob: studioTrackBlob,       // ← LA PISTA, no la voz
         vocalsBlob: selectedVoiceBlob || null,
+        textBlob: selectedTextBlob;
         date: new Date().toLocaleString("es-ES"),
         transcription: baseTranscriptionSegments,
         metadata: {
@@ -2780,11 +2899,11 @@ async function applyTapSync() {
     console.warn("⚠️ No hay pista cargada en Estudio - solo se guardará la transcripción en la voz");
   }
   
-  // También guardar la transcripción asociada a la voz (si está seleccionada)
+  // También guardar la transcripción asociada a la letra (si está seleccionada)
   // para que al recargarla mantenga la sincronización
-  if (selectedVoiceId) {
-    updateLibraryItem(selectedVoiceId, { transcription: baseTranscriptionSegments })
-      .then(() => console.log("✅ Transcripción guardada también en la voz"))
+  if (selectedTextId) {
+    updateLibraryItem(selectedTextId, { text: baseTextSegments })
+      .then(() => console.log("✅ Transcripción guardada también en la letra"))
       .catch(err => console.error("Error:", err));
   }
   
@@ -2850,7 +2969,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     // estudio
     safeAdd("audioFile", "change", cargarAudioEstudio);
     safeAdd("refreshStudioTrackListBtn", "click", loadTrackOptionsInStudio);
+    safeAdd("refreshStudioTextListBtn", "click", loadTextOptionsInStudio);
     safeAdd("loadStudioTrackBtn", "click", loadSelectedTrackFromLibraryStudio);
+    safeAdd("loadStudioTextBtn", "click", loadSelectedTextFromLibraryStudio);
     safeAdd("playTrackBtn", "click", playTrack);
     safeAdd("pauseTrackBtn", "click", pauseTrack);
     safeAdd("stopTrackBtn", "click", stopTrack);
@@ -2859,7 +2980,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     safeAdd("redoStudioRecBtn", "click", redoStudioRecording);
     safeAdd("saveStudioRecBtn", "click", saveStudioRecording);
     safeAdd("refreshVoiceListBtn", "click", loadVoiceOptionsInStudio);
+    safeAdd("refreshTextListBtn", "click", loadTextOptionsInStudio);
     safeAdd("loadSelectedVoiceBtn", "click", loadSelectedVoiceFromLibrary);
+    safeAdd("loadSelectedTextBtn", "click", loadSelectedTextFromLibrary);
     safeAdd("transcribeVoiceBtn", "click", transcribeSelectedVoice);
     safeAdd("applyCorrectedLyricsBtn", "click", applyCorrectedLyrics);
 
