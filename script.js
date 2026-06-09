@@ -2640,7 +2640,7 @@ async function applyCorrectedLyrics() {
   }
 
   // Guardamos como nueva base la versión corregida
-  baseTranscriptionSegments || baseTextSegmentsd = rebuiltSegments;
+  baseTranscriptionSegments || baseTextSegments = rebuiltSegments;
 
   // Mostramos exactamente las líneas escritas por el usuario
   transcriptionSegments || textSegments = rebuiltSegments;
