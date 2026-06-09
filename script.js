@@ -2758,13 +2758,11 @@ async function applyCorrectedLyrics() {
       
       if (text) text.value = textoFormateado;
       if (lyricsText) lyricsText.value = textoFormateado;
-
+      
       await updateLibraryItem(currentId, {
         lyrics: finalSegments,
         isSincronizada: false
       });
-    }
-
     } else {
       // FLUJO ORIGINAL DE IA (Mantiene tu lógica de tiempos de audio previos)
       if (!Array.isArray(baseTranscriptionSegments) || !baseTranscriptionSegments.length) {
@@ -2797,7 +2795,7 @@ async function applyCorrectedLyrics() {
       status.textContent = "Estado: letra corregida aplicada y guardada ✅";
     }
     alert("✅ Cambios aplicados y guardados correctamente.");
-
+  
   } catch (error) {
     console.error("Error al aplicar la letra corregida:", error);
     if (status) {
