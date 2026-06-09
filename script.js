@@ -1095,7 +1095,7 @@ async function loadTextOptionsInStudio() {
   }
 }
 
-async function loadSelectedTextFromLibraryStudio() {
+async function loadSelectedTextFromLibrary() {
   const select = $("textLibrarySelect");
   const player = $("selectedTextPlayer");
   const status = $("selectedTextStatus");
@@ -2976,20 +2976,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     // estudio
     safeAdd("audioFile", "change", cargarAudioEstudio);
     safeAdd("refreshStudioTrackListBtn", "click", loadTrackOptionsInStudio);
-    safeAdd("refreshStudioTextListBtn", "click", loadTextOptionsInStudio);
     safeAdd("loadStudioTrackBtn", "click", loadSelectedTrackFromLibraryStudio);
-    safeAdd("loadStudioTextBtn", "click", loadSelectedTextFromLibraryStudio);
+    
+    
     safeAdd("playTrackBtn", "click", playTrack);
     safeAdd("pauseTrackBtn", "click", pauseTrack);
     safeAdd("stopTrackBtn", "click", stopTrack);
+    
     safeAdd("startStudioRecBtn", "click", startStudioRecording);
     safeAdd("stopStudioRecBtn", "click", stopStudioRecording);
     safeAdd("redoStudioRecBtn", "click", redoStudioRecording);
     safeAdd("saveStudioRecBtn", "click", saveStudioRecording);
+    
     safeAdd("refreshVoiceListBtn", "click", loadVoiceOptionsInStudio);
-    safeAdd("refreshTextListBtn", "click", loadTextOptionsInStudio);
     safeAdd("loadSelectedVoiceBtn", "click", loadSelectedVoiceFromLibrary);
+
+    safeAdd("refreshStudioTextListBtn", "click", loadTextOptionsInStudio);
     safeAdd("loadSelectedTextBtn", "click", loadSelectedTextFromLibrary);
+    
     safeAdd("transcribeVoiceBtn", "click", transcribeSelectedVoice);
     safeAdd("applyCorrectedLyricsBtn", "click", applyCorrectedLyrics);
 
