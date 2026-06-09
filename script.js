@@ -811,7 +811,6 @@ async function renderLibrary(filter = 'todos') {
   try {
     let library = await getAllLibraryItems();
 
-    // Filtramos según la carpeta seleccionada
     let filteredItems = library;
     if (filter !== 'todos') {
       filteredItems = library.filter(item => item.type === filter);
@@ -824,17 +823,34 @@ async function renderLibrary(filter = 'todos') {
     } else {
       filteredItems.forEach((item) => {
         const div = document.createElement("div");
-        div.className = "library-item card"; // Usamos la clase card para que se vea bien
+        div.className = "library-item card"; 
         div.style.marginBottom = "10px";
 
-        const audioURL = URL.createObjectURL(item.audioBlob);
-
-        div.innerHTML = `
-          <p><strong>${item.name}</strong></p>
-          <small>Tipo: ${item.type.toUpperCase()} | ${item.date}</small>
-          <audio controls src="${audioURL}" style="width:100%; margin: 10px 0;"></audio>
-          <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#e11d48;">🗑️ Eliminar</button>
-        `;
+        // VERIFICACIÓN CLAVE: Diseñar la tarjeta según el tipo de archivo
+        if (item.type === "texto") {
+          // El número de palabras ayuda al usuario a verificar que se segmentó bien
+          const totalPalabras = item.lyrics ? item.lyrics.length : 0;
+          
+          div.innerHTML = `
+            <p><strong>📄 ${item.name}</strong></p>
+            <small>Tipo: LETRA (.TXT) | ${item.date} | ${totalPalabras} palabras</small>
+            <div style="margin: 10px 0; display: flex; gap: 10px;">
+              <button type="button" data-id="${item.id}" class="send-to-monitor-btn" style="background:#2563eb; color:white; padding:5px 10px; border-radius:4px;">👁️ Enviar al Monitor</button>
+            </div>
+            <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#e11d48;">🗑️ Eliminar</button>
+          `;
+        } else {
+          // Flujo original seguro para pistas y audios con Blob existente
+          const audioURL = item.audioBlob ? URL.createObjectURL(item.audioBlob) : "";
+          
+          div.innerHTML = `
+            <p><strong>🎵 ${item.name}</strong></p>
+            <small>Tipo: ${item.type.toUpperCase()} | ${item.date}</small>
+            <audio controls src="${audioURL}" style="width:100%; margin: 10px 0;"></audio>
+            <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#e11d48;">🗑️ Eliminar</button>
+          `;
+        }
+        
         container.appendChild(div);
       });
     }
@@ -844,11 +860,18 @@ async function renderLibrary(filter = 'todos') {
       btn.addEventListener("click", async () => {
         const id = Number(btn.dataset.id);
         await deleteLibraryItem(id);
-        renderLibrary(filter); // Recargamos la misma vista
+        renderLibrary(filter); 
       });
     });
 
-    // Actualizamos los selectores del Estudio y Karaoke para que vean los cambios
+    // NUEVO EVENTO: Escuchar clics en el botón de enviar al monitor
+    document.querySelectorAll(".send-to-monitor-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = Number(btn.dataset.id);
+        await cargarTextoEnMonitor(id); // Llamada al siguiente paso del flujo
+      });
+    });
+
     await loadVoiceOptionsInStudio();
     await loadTrackOptionsInStudio();
     await loadTrackOptionsInKaraoke();
@@ -879,26 +902,48 @@ async function saveManualFileToLibrary() {
   const type = typeSelect ? typeSelect.value : "audio";
   const customName = nameInput ? nameInput.value.trim() : "";
 
+  // Validación dinámica según el tipo de archivo
   if (!file) {
-    alert("⚠️ Selecciona un archivo de audio");
+    const mensajeError = (type === "texto") ? "⚠️ Selecciona un archivo .txt" : "⚠️ Selecciona un archivo de audio";
+    alert(mensajeError);
     return;
   }
 
   const finalName = customName || file.name;
 
   try {
-    await addLibraryItem({
+    // OBJETO BASE PARA LA BIBLIOTECA
+    const libraryItem = {
       name: finalName,
       type: type,
-      audioBlob: file,
       date: new Date().toLocaleString("es-ES")
-    });
+    };
 
+    // BIFURCACIÓN DE FLUJO SEGÚN EL TIPO
+    if (type === "texto") {
+      // 1. Leer el archivo .txt plano como string de texto
+      const textoPlano = await leerArchivoTexto(file);
+      
+      // 2. Segmentar el texto en un array de palabras formateadas con tiempos en 0
+      const letrasSegmentadas = segmentarTextoPlano(textoPlano);
+      
+      // 3. Guardar el array estructurado en lugar de un Blob de audio
+      libraryItem.lyrics = letrasSegmentadas;
+      libraryItem.isSincronizada = false; // Bandera para el flujo de taps
+    } else {
+      // Flujo original para audio y pista
+      libraryItem.audioBlob = file;
+    }
+
+    // Guardar en la base de datos local (IndexDB / LocalStorage / API)
+    await addLibraryItem(libraryItem);
+
+    // Renderizar y limpiar interfaz
     await renderLibrary('todos');
 
     if (fileInput) fileInput.value = "";
     if (nameInput) nameInput.value = "";
-    if (typeSelect) typeSelect.value = "pista";
+    if (typeSelect) typeSelect.value = "pista"; // Reseteo por defecto
 
     alert("✅ Archivo guardado en Biblioteca");
   } catch (error) {
@@ -1010,7 +1055,7 @@ async function loadSelectedVoiceFromLibrary() {
   const selectedId = Number(select.value);
 
   if (!selectedId) {
-    alert("⚠️ Selecciona una voz");
+    alert("⚠️ Selecciona un archivo");
     return;
   }
 
@@ -1022,6 +1067,50 @@ async function loadSelectedVoiceFromLibrary() {
       return;
     }
 
+    // --- BIFURCACIÓN NUEVA: SI EL ARCHIVO ES TEXTO PLANO MANUAL ---
+    if (item.type === "texto") {
+      selectedVoiceBlob = null; // No hay audio de voz vinculado directamente
+      selectedVoiceId = item.id;
+
+      // Desactivamos temporalmente el reproductor de voz ya que usamos la letra manual
+      player.src = "";
+      status.textContent = `Estado: Letra manual seleccionada -> ${item.name}`;
+
+      if (Array.isArray(item.lyrics) && item.lyrics.length > 0) {
+        // Mapeamos los datos manuales para que tu reproductor de karaoke los reconozca en 0
+        transcriptionSegments = item.lyrics.map(word => ({
+          id: word.id,
+          text: word.text,
+          startTime: word.startTime,
+          duration: word.duration,
+          pitch: word.pitch
+        }));
+
+        // Renderizamos las palabras vacías en la pantalla de previsualización
+        renderKaraokeLyrics(transcriptionSegments);
+        cargarLetrasEnMonitor();
+
+        // Inyectamos el texto en el Monitor de Edición separado por espacios
+        if (lyricsText) {
+          lyricsText.value = transcriptionSegments
+            .map(seg => seg.text || "")
+            .join(" ") // Separamos por espacio para mantener el formato de lectura fluido
+            .trim();
+        }
+
+        status.textContent = "Estado: Letra manual cargada en el Monitor ⚡ (Lista para taps)";
+      } else {
+        transcriptionSegments = [];
+        renderKaraokeLyrics([]);
+        cargarLetrasEnMonitor();
+        if (lyricsText) lyricsText.value = "";
+        status.textContent = "Estado: El archivo de texto está vacío";
+      }
+      
+      return; // Finaliza la ejecución para el tipo texto de forma segura
+    }
+
+    // --- FLUJO ORIGINAL (Para archivos con Audio y Transcripción de IA) ---
     selectedVoiceBlob = item.audioBlob;
     selectedVoiceId = item.id;
 
@@ -1034,8 +1123,6 @@ async function loadSelectedVoiceFromLibrary() {
         buildWordTimingFromSegment(seg)
       );
 
-      // IMPORTANTE:
-      // aquí respetamos exactamente las líneas guardadas
       transcriptionSegments = baseTranscriptionSegments;
 
       renderKaraokeLyrics(transcriptionSegments);
@@ -1061,7 +1148,7 @@ async function loadSelectedVoiceFromLibrary() {
     }
   } catch (error) {
     console.error(error);
-    alert("❌ No se pudo cargar la voz seleccionada");
+    alert("❌ No se pudo cargar el archivo seleccionado");
   }
 }
 
@@ -1072,7 +1159,8 @@ async function loadTextOptionsInStudio() {
   select.innerHTML = `<option value="">Selecciona una letra guardada</option>`;
 
   try {
-    const letras = await getLibraryItemsByType("letras");
+    // IMPORTANTE: Cambiado a "texto" para coincidir con saveManualFileToLibrary
+    const letras = await getLibraryItemsByType("texto"); 
 
     const merged = [...letras];
 
@@ -1097,11 +1185,10 @@ async function loadTextOptionsInStudio() {
 
 async function loadSelectedTextFromLibrary() {
   const select = $("textLibrarySelect");
-  const player = $("selectedTextPlayer");
   const status = $("selectedTextStatus");
-  const text = $("text");
+  const textInput = $("text"); // Tu área de texto (monitor de edición)
 
-  if (!select || !player || !status || !text) return;
+  if (!select || !status || !textInput) return;
 
   const selectedId = Number(select.value);
 
@@ -1118,43 +1205,40 @@ async function loadSelectedTextFromLibrary() {
       return;
     }
 
-    selectedTextBlob = item.textBlob;
-    selectedVoiceId = item.id;
-
-    const textURL = URL.createObjectURL(item.textBlob);
-    player.src = textURL;
+    // Guardamos la referencia del ID del texto seleccionado en el flujo global
+    selectedVoiceId = item.id; 
     status.textContent = `Estado: letra seleccionada -> ${item.name}`;
 
-    
-    if (Array.isArray(item.text) && item.text.length > 0) {
-      baseTextSegments = item.text.map(seg =>
-        buildWordTimingFromSegment(seg)
-      );
+    // Leemos el array de palabras que guardó nuestra función de segmentación
+    if (Array.isArray(item.lyrics) && item.lyrics.length > 0) {
+      
+      // Mapeamos los segmentos para que la previsualización del karaoke los entienda en 0
+      textSegments = item.lyrics.map(word => ({
+        id: word.id,
+        text: word.text,
+        startTime: word.startTime,
+        duration: word.duration,
+        pitch: word.pitch
+      }));
 
-      // IMPORTANTE:
-      // aquí respetamos exactamente las líneas guardadas
-      textSegments = baseTextSegments;
-
+      // Renderizamos la vista previa del karaoke (se verá el texto sin avanzar aún)
       renderKaraokeLyrics(textSegments);
       cargarLetrasEnMonitor();
 
-      if (text) {
-        text.value = textSegments
-          .map(seg => seg.text || "")
-          .join("\n")
-          .trim();
-      }
+      // Inyectamos las palabras en el monitor de edición espaciadas fluidamente
+      textInput.value = textSegments
+        .map(seg => seg.text || "")
+        .join(" ")
+        .trim();
 
-      status.textContent = "Estado: letra seleccionada (Letras cargadas de memoria ⚡)";
+      status.textContent = "Estado: Letra manual cargada en el Monitor ⚡ (Lista para taps)";
     } else {
-      baseTextSegments = [];
       textSegments = [];
-
       renderKaraokeLyrics([]);
       cargarLetrasEnMonitor();
 
-      if (text) text.value = "";
-      status.textContent = `Estado: Letra seleccionada -> ${item.name} (sin transcripción guardada)`;
+      if (textInput) textInput.value = "";
+      status.textContent = `Estado: Letra seleccionada -> ${item.name} (el archivo no contiene palabras)`;
     }
   } catch (error) {
     console.error(error);
@@ -2615,75 +2699,97 @@ function showSaveNotification() {
 
 async function applyCorrectedLyrics() {
   const lyricsText = $("lyricsText");
-  const status = $(("selectedVoiceStatus" || "selectedTextStatus"));
-  //se agrega text
   const text = $("text");
+  
+  // Determinamos cuál caja de texto está activa y cuál es el ID del elemento actual
+  const currentTextInput = lyricsText || text;
+  const currentId = selectedVoiceId || selectedTextId;
+  const statusId = selectedVoiceId ? "selectedVoiceStatus" : "selectedTextStatus";
+  const status = $(statusId);
 
-  if (!lyricsText || !text) return;
+  if (!currentTextInput) return;
 
-  const correctedText = lyricsText.value.trim() || text.value.trim();
+  const correctedText = currentTextInput.value.trim();
 
   if (!correctedText) {
     alert("⚠️ No hay texto corregido para aplicar.");
     return;
   }
 
-  if (!Array.isArray(baseTranscriptionSegments) || !baseTranscriptionSegments.length || (baseTextSegments) || !baseTextSegments.length) {
-    alert("⚠️ Primero transcribe una voz o sube las letras antes de corregir.");
+  if (!currentId) {
+    alert("❌ No hay ninguna canción o letra seleccionada en el sistema.");
     return;
   }
 
-  const rebuiltSegments = buildSegmentsFromMultilineLyrics(
-    correctedText,
-    baseTranscriptionSegments
-  );
+  try {
+    // Obtenemos el registro actual desde la base de datos para saber si es un .txt manual o audio IA
+    const item = await getLibraryItemById(currentId);
+    if (!item) throw new Error("No se encontró el ítem en la base de datos");
 
-  if (!rebuiltSegments.length) {
-    alert("⚠️ No se pudo reconstruir la letra corregida.");
-    return;
-  }
+    let finalSegments = [];
 
-  // Guardamos como nueva base la versión corregida
-  baseTranscriptionSegments || baseTextSegments === rebuiltSegments;
+    // --- BIFURCACIÓN DE FLUJO ---
+    if (item.type === "texto") {
+      // FLUJO MANUAL: Volvemos a segmentar el texto plano con tiempos en 0
+      finalSegments = segmentarTextoPlano(correctedText);
+      
+      // Actualizamos las variables globales de control de tu app para texto
+      baseTextSegments = finalSegments;
+      textSegments = finalSegments;
+      
+      // Renderizamos la previsualización del karaoke
+      renderKaraokeLyrics(textSegments);
+      cargarLetrasEnMonitor();
 
-  // Mostramos exactamente las líneas escritas por el usuario
-  transcriptionSegments || textSegments === rebuiltSegments;
+      // Sincronizamos la caja de texto visual del monitor
+      if (text) text.value = textSegments.map(seg => seg.text || "").join(" ").trim();
+      if (lyricsText) lyricsText.value = textSegments.map(seg => seg.text || "").join(" ").trim();
 
-  renderKaraokeLyrics(transcriptionSegments || textSegments);
-  cargarLetrasEnMonitor();
+      // Guardamos la estructura en IndexedDB bajo la propiedad 'lyrics'
+      await updateLibraryItem(currentId, {
+        lyrics: finalSegments,
+        isSincronizada: false
+      });
 
-  lyricsText.value = transcriptionSegments
-    .map(seg => seg.text || "")
-    .join("\n")
-    .trim();
+    } else {
+      // FLUJO ORIGINAL DE IA (Mantiene tu lógica de tiempos de audio previos)
+      if (!Array.isArray(baseTranscriptionSegments) || !baseTranscriptionSegments.length) {
+        alert("⚠️ Primero debes transcribir la voz antes de aplicar correcciones de audio.");
+        return;
+      }
 
-  text.value = textSegments
-    .map(seg => seg.text || "")
-    .join("\n")
-    .trim();
+      finalSegments = buildSegmentsFromMultilineLyrics(correctedText, baseTranscriptionSegments);
 
-  if (selectedVoiceId || selectedTextId) {
-    try {
-      await updateLibraryItem(selectedVoiceId, {
+      if (!finalSegments.length) {
+        alert("⚠️ No se pudo reconstruir la letra corregida con los tiempos de la IA.");
+        return;
+      }
+
+      baseTranscriptionSegments = finalSegments;
+      transcriptionSegments = finalSegments;
+
+      renderKaraokeLyrics(transcriptionSegments);
+      cargarLetrasEnMonitor();
+
+      if (lyricsText) lyricsText.value = transcriptionSegments.map(seg => seg.text || "").join("\n").trim();
+
+      // Guardamos bajo la propiedad original de tu IA
+      await updateLibraryItem(currentId, {
         transcription: baseTranscriptionSegments
       });
-      await updateLibraryItem(selectedTextId, {
-        text: baseTextSegments
-      });
+    }
 
-      if (status) {
-        status.textContent = "Estado: letra corregida aplicada y guardada ✅";
-      }
-    } catch (error) {
-      console.error(error);
-      if (status) {
-        status.textContent = "Estado: letra corregida aplicada, pero no se pudo guardar en BD";
-      }
-    }
-  } else {
     if (status) {
-      status.textContent = "Estado: letra corregida aplicada ✅";
+      status.textContent = "Estado: letra corregida aplicada y guardada ✅";
     }
+    alert("✅ Cambios aplicados y guardados correctamente.");
+
+  } catch (error) {
+    console.error("Error al aplicar la letra corregida:", error);
+    if (status) {
+      status.textContent = "Estado: Error al guardar las correcciones en la BD";
+    }
+    alert("❌ No se pudieron salvar las modificaciones del monitor.");
   }
 }
 
@@ -2692,85 +2798,131 @@ async function applyCorrectedLyrics() {
 // ==========================================
 function startTapSync() {
   const lyricsText = $("lyricsText");
-  const voicePlayer = $("selectedVoicePlayer");
   const text = $("text");
+  const voicePlayer = $("selectedVoicePlayer");
   
-  if (!lyricsText || !lyricsText.value.trim() || !text || !text.value.trim()) {
-    alert("⚠️ Primero escribe o corrige la letra en el área de texto.");
+  // 1. CORRECCIÓN DE VALIDACIÓN: Validar la caja que realmente tenga texto
+  const textoActivo = (lyricsText && lyricsText.value.trim()) ? lyricsText.value.trim() : (text ? text.value.trim() : "");
+  
+  if (!textoActivo) {
+    alert("⚠️ Primero escribe, carga o corrige la letra en el área de texto.");
     return;
   }
   
   if (!voicePlayer || !voicePlayer.src) {
-    alert("⚠️ Primero carga una Voz en Estudio.");
+    alert("⚠️ Primero carga un archivo de Audio / Voz en el Estudio para reproducir.");
     return;
   }
 
-  if (!text || !text.src) {
-    alert("⚠️ Primero carga una letra en Estudio.");
+  // 2. DETECCIÓN DINÁMICA DE FORMATO: ¿Es IA o es .txt manual?
+  // Si el texto contiene saltos de línea (\n), asumimos formato de líneas (IA).
+  // Si está separado por espacios principales, lo tratamos como palabras (.txt manual).
+  if (textoActivo.includes("\n")) {
+    // Flujo original (Por líneas de texto)
+    tapSyncLines = textoActivo
+      .split("\n")
+      .map(line => line.trim())
+      .filter(line => line.length > 0);
+  } else {
+    // NUEVO FLUJO MANUAL: Sincronización palabra por palabra para el .txt plano
+    tapSyncLines = textoActivo
+      .split(/\s+/) // Corta por cualquier tipo de espacio en blanco
+      .map(palabra => palabra.trim())
+      .filter(palabra => palabra.length > 0);
   }
-  
-  // Obtener líneas de la letra
-  tapSyncLines = lyricsText.value || text.value
-    .split("\n")
-    .map(line => line.trim())
-    .filter(line => line.length > 0);
   
   if (tapSyncLines.length === 0) {
-    alert("⚠️ No hay líneas de texto para sincronizar.");
+    alert("⚠️ No hay elementos de texto válidos para sincronizar.");
     return;
   }
 
-  
-  // Reiniciar variables
+  // Reiniciar variables globales de control
   tapSyncTimestamps = [];
   tapSyncCurrentIndex = 0;
   tapSyncMode = true;
   
-  // Mostrar/ocultar elementos
-  $("startTapSyncBtn").style.display = "none";
-  $("cancelTapSyncBtn").style.display = "inline-block";
-  $("tapSyncActive").style.display = "block";
-  $("tapSyncResult").style.display = "none";
+  // Mostrar/ocultar elementos de la interfaz
+  if ($("startTapSyncBtn")) $("startTapSyncBtn").style.display = "none";
+  if ($("cancelTapSyncBtn")) $("cancelTapSyncBtn").style.display = "inline-block";
+  if ($("tapSyncActive")) $("tapSyncActive").style.display = "block";
+  if ($("tapSyncResult")) $("tapSyncResult").style.display = "none";
   
-  // Mostrar primera línea
+  // Mostrar el primer elemento a sincronizar (línea o palabra)
   updateTapSyncDisplay();
   
-  // Reproducir la PISTA desde el inicio (la sincronización es contra el instrumental)
+  // Reproducir el audio desde el inicio
   voicePlayer.currentTime = 0;
   voicePlayer.play();
   
-  // Activar listener de teclado
+  // Activar listener de teclado de forma segura limpiando listeners previos
+  document.removeEventListener("keydown", handleTapSyncKeypress);
   document.addEventListener("keydown", handleTapSyncKeypress);
   
-  console.log("🎯 Sincronización iniciada. Líneas:", tapSyncLines.length);
+  console.log(`🎯 Sincronización iniciada. Total de elementos (${textoActivo.includes("\n") ? 'Líneas' : 'Palabras'}):`, tapSyncLines.length);
 }
 
 function handleTapSyncKeypress(e) {
   if (!tapSyncMode) return;
   
+  // Captura barra espaciadora
   if (e.code === "Space" || e.key === " ") {
     e.preventDefault();
-    recordTap();
+    recordTap(); // Ejecuta tu función nativa de marcado de tiempo
   }
   
+  // Captura tecla Escape para cancelar
   if (e.code === "Escape") {
     cancelTapSync();
   }
+}
+
+// Función para leer el archivo .txt usando Promesas (compatible con async/await)
+function leerArchivoTexto(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result);
+    reader.onerror = (e) => reject(new Error("Error al leer el archivo de texto"));
+    reader.readAsText(file, "UTF-8");
+  });
+}
+
+// Función para limpiar el texto y segmentarlo palabra por palabra
+function segmentarTextoPlano(texto) {
+  // Reemplaza múltiples espacios, tabuladores o saltos de línea por un solo espacio
+  const textoLimpio = texto.replace(/\s+/g, ' ').trim();
+  
+  if (textoLimpio === "") return [];
+
+  // Rompe el texto en un array usando los espacios como separador
+  const palabras = textoLimpio.split(' ');
+  
+  // Mapea cada palabra al formato que tu monitor de edición y taps necesitan
+  return palabras.map((palabra, index) => {
+    return {
+      id: index + 1,       // Orden secuencial para los taps
+      text: palabra,       // La palabra que se mostrará en pantalla
+      startTime: 0,        // Inicializado en 0 (esperando el tap)
+      duration: 0,         // Inicializado en 0
+      pitch: 0             // Inicializado en 0
+    };
+  });
 }
 
 function recordTap() {
   if (!tapSyncMode) return;
   
   const voicePlayer = $("selectedVoicePlayer");
-  const text = $("selectedText");
-  if (!voicePlayer || !selectedText) return;
+  
+  // CORRECCIÓN: Validamos de forma segura que el reproductor exista
+  if (!voicePlayer) return;
   
   const currentTime = voicePlayer.currentTime;
   
+  // Guardamos el segundo exacto en el que el usuario presionó la barra espaciadora
   tapSyncTimestamps.push(currentTime);
   tapSyncCurrentIndex++;
   
-  // Efecto visual
+  // Efecto visual del botón (Mantiene tu excelente diseño de feedback)
   const tapBtn = $("tapBeatBtn");
   if (tapBtn) {
     tapBtn.style.transform = "scale(0.95)";
@@ -2781,6 +2933,7 @@ function recordTap() {
     }, 100);
   }
   
+  // Si ya terminamos de procesar todos los elementos (líneas o palabras)
   if (tapSyncCurrentIndex >= tapSyncLines.length) {
     finishTapSync();
   } else {
@@ -2797,11 +2950,13 @@ function updateTapSyncDisplay() {
   }
   
   if (progressEl) {
-    progressEl.textContent = `${tapSyncCurrentIndex} / ${tapSyncLines.length} líneas`;
+    // CORRECCIÓN: Detecta dinámicamente si estás contando palabras o líneas
+    const tipoUnidad = (textSegments && textSegments.length > 0) ? "palabras" : "líneas";
+    progressEl.textContent = `${tapSyncCurrentIndex} / ${tapSyncLines.length} ${tipoUnidad}`;
   }
 }
 
-function finishTapSync() {
+async function finishTapSync() {
   tapSyncMode = false;
   
   const voicePlayer = $("selectedVoicePlayer");
@@ -2809,11 +2964,81 @@ function finishTapSync() {
   
   document.removeEventListener("keydown", handleTapSyncKeypress);
   
-  $("tapSyncActive").style.display = "none";
-  $("tapSyncResult").style.display = "block";
-  $("cancelTapSyncBtn").style.display = "none";
+  if ($("tapSyncActive")) $("tapSyncActive").style.display = "none";
+  if ($("tapSyncResult")) $("tapSyncResult").style.display = "block";
+  if ($("cancelTapSyncBtn")) $("cancelTapSyncBtn").style.display = "none";
   
-  console.log("✅ Sincronización completada. Timestamps:", tapSyncTimestamps);
+  // OBTENER EL ID ACTIVO (Voz o Texto manual)
+  const currentId = selectedVoiceId || selectedTextId;
+  if (!currentId) {
+    console.error("❌ No se encontró un ID activo para guardar los taps.");
+    return;
+  }
+
+  try {
+    // 1. Recuperar el ítem original de la base de datos
+    const item = await getLibraryItemById(currentId);
+    if (!item) throw new Error("No se pudo obtener el elemento de la biblioteca");
+
+    // 2. CONSTRUIR LOS TIEMPOS FINALES
+    // Mapeamos los timestamps grabados para asignárselos a cada palabra/línea
+    let finalSegments = [];
+    
+    if (item.type === "texto") {
+      // Flujo Manual (.txt): Emparejamos cada palabra con su timestamp de tap
+      finalSegments = item.lyrics.map((word, index) => {
+        const startTime = tapSyncTimestamps[index] || 0;
+        // La duración estimada es el tiempo hasta el siguiente tap, o 0.5 seg para el último
+        const nextTime = tapSyncTimestamps[index + 1] || (startTime + 0.5);
+        const duration = Math.max(0.1, nextTime - startTime);
+
+        return {
+          id: word.id,
+          text: word.text,
+          startTime: startTime,
+          duration: duration,
+          pitch: word.pitch || 0 // Mantiene el tono inicializado para el motor de canto
+        };
+      });
+
+      // Actualizamos las variables globales de control de texto
+      textSegments = finalSegments;
+      baseTextSegments = finalSegments;
+
+      // 3. GUARDAR EN INDEXEDDB (Estructura manual de letras)
+      await updateLibraryItem(currentId, {
+        lyrics: finalSegments,
+        isSincronizada: true // Marcamos como sincronizada con éxito
+      });
+
+    } else {
+      // Flujo Original (Voz / IA): Si estuvieras usando la transcripción tradicional
+      finalSegments = (item.transcription || []).map((seg, index) => {
+        // Aplica el mapeo según la lógica nativa que use tu IA por líneas
+        return {
+          ...seg,
+          startTime: tapSyncTimestamps[index] || seg.startTime
+        };
+      });
+
+      baseTranscriptionSegments = finalSegments;
+      transcriptionSegments = finalSegments;
+
+      // GUARDAR EN INDEXEDDB (Estructura IA)
+      await updateLibraryItem(currentId, {
+        transcription: finalSegments
+      });
+    }
+
+    // 4. Actualizar las pantallas visuales del Karaoke con los tiempos reales
+    renderKaraokeLyrics(finalSegments);
+    console.log("✅ Sincronización guardada exitosamente en la BD para el ID:", currentId);
+    alert("🎯 ¡Sincronización por Taps completada y guardada en tu Biblioteca!");
+
+  } catch (error) {
+    console.error("❌ Error guardando los resultados de los Taps:", error);
+    alert("❌ Los taps se registraron pero no se pudieron almacenar en la Base de Datos.");
+  }
 }
 
 function cancelTapSync() {
@@ -2824,10 +3049,10 @@ function cancelTapSync() {
   
   document.removeEventListener("keydown", handleTapSyncKeypress);
   
-  $("startTapSyncBtn").style.display = "inline-block";
-  $("cancelTapSyncBtn").style.display = "none";
-  $("tapSyncActive").style.display = "none";
-  $("tapSyncResult").style.display = "none";
+  if ($("startTapSyncBtn")) $("startTapSyncBtn").style.display = "inline-block";
+  if ($("cancelTapSyncBtn")) $("cancelTapSyncBtn").style.display = "none";
+  if ($("tapSyncActive")) $("tapSyncActive").style.display = "none";
+  if ($("tapSyncResult")) $("tapSyncResult").style.display = "none";
   
   tapSyncLines = [];
   tapSyncTimestamps = [];
@@ -2840,17 +3065,19 @@ async function applyTapSync() {
     return;
   }
   
-  const voicePlayer = $("seleteVoicePlayer");
+  // CORRECCIÓN: Corrección de dedo en el ID original ("seleteVoicePlayer" -> "selectedVoicePlayer")
+  const voicePlayer = $("selectedVoicePlayer");
   const totalDuration = voicePlayer ? voicePlayer.duration : 0;
-  const status = $("selectedVoiceStatus" || "selectedTextStatus");
-  //agregado
-  const text = $("selectedText");
   
-  // Mostrar estado
+  // Detectamos el estado visual correcto
+  const statusId = selectedVoiceId ? "selectedVoiceStatus" : "selectedTextStatus";
+  const status = $(statusId);
+  
   if (status) status.textContent = "Estado: Aplicando tiempos y analizando notas...";
   
   const newSegments = [];
   
+  // Calcular marcas de tiempo para cada palabra/línea
   for (let i = 0; i < tapSyncLines.length; i++) {
     const start = tapSyncTimestamps[i] || 0;
     let end = (i < tapSyncTimestamps.length - 1) ? tapSyncTimestamps[i + 1] : (totalDuration || start + 3);
@@ -2862,60 +3089,84 @@ async function applyTapSync() {
     }));
   }
   
-  // Analizar pitch desde la VOZ (si está seleccionada) para detectar notas musicales
-  // Los tiempos están alineados a la pista, y la voz suele estar alineada con la pista
+  // Analizar pitch desde la VOZ (si hay un archivo binario de audio disponible)
   let analyzedSegments = newSegments;
-  if (selectedVoiceBlob || selectedTextBlob) {
+  if (selectedVoiceBlob) {
     if (status) status.textContent = "Estado: Analizando notas musicales... 🎵";
-    analyzedSegments = await analyzePitchForSegments(selectedVoiceBlob, selectedTextBlob, newSegments);
+    // Pasamos el blob de voz para calcular el pitch musical real de la canción
+    analyzedSegments = await analyzePitchForSegments(selectedVoiceBlob, selectedTextBlob || null, newSegments);
   }
   
-  baseTranscriptionSegments || baseTextSegments === analyzedSegments;
-  transcriptionSegments || textSegments === analyzedSegments;
+  // CORRECCIÓN: Determinamos el tipo de archivo actual para actualizar las variables globales correctas
+  const isTextoManual = !selectedVoiceBlob && selectedVoiceId; // Es texto manual si no hay audio de voz pero hay un ID activo
+
+  if (isTextoManual) {
+    baseTextSegments = analyzedSegments;
+    textSegments = analyzedSegments;
+    renderKaraokeLyrics(textSegments);
+  } else {
+    baseTranscriptionSegments = analyzedSegments;
+    transcriptionSegments = analyzedSegments;
+    renderKaraokeLyrics(transcriptionSegments);
+  }
   
-  renderKaraokeLyrics(transcriptionSegments || textSegments);
   cargarLetrasEnMonitor();
   
-  // 🎤 GUARDAR COMO ARCHIVO "KARAOKE LISTO" CON LA PISTA (NO LA VOZ)
-  // Esto soluciona el bug: el karaoke ahora reproduce la PISTA + letra sincronizada
+  // 🎤 GUARDAR COMO ARCHIVO "KARAOKE LISTO" CON LA PISTA INSTRUMENTAL
   if (studioTrackBlob) {
     try {
       const karaokeName = `Karaoke - ${studioTrackFileName || "Sin nombre"}`;
-      await addLibraryItem({
+      
+      // Construimos el objeto final unificado para la biblioteca
+      const karaokeItem = {
         name: karaokeName,
         type: "karaoke",
-        audioBlob: studioTrackBlob,       // ← LA PISTA, no la voz
+        audioBlob: studioTrackBlob, // La pista instrumental de fondo
         vocalsBlob: selectedVoiceBlob || null,
-        textBlob: selectedTextBlob,
+        textBlob: selectedTextBlob || null,
         date: new Date().toLocaleString("es-ES"),
-        transcription: baseTranscriptionSegments,
         metadata: {
           title: studioTrackFileName || "Sin nombre",
           artist: "",
           syncedManually: true
         }
-      });
+      };
+
+      // Guardamos los segmentos en la propiedad correspondiente según el origen
+      if (isTextoManual) {
+        karaokeItem.lyrics = analyzedSegments; // Para letras manuales .txt
+      } else {
+        karaokeItem.transcription = analyzedSegments; // Para el flujo de IA
+      }
+
+      await addLibraryItem(karaokeItem);
       console.log("✅ Karaoke listo guardado en Biblioteca (con pista instrumental)");
-      // Refrescar listas
+      
+      // Refrescar listas locales de la interfaz
       try { await loadMyKaraokeSongs(); } catch (e) {}
       try { await renderLibrary("todos"); } catch (e) {}
     } catch (err) {
       console.error("❌ Error guardando karaoke:", err);
     }
   } else {
-    console.warn("⚠️ No hay pista cargada en Estudio - solo se guardará la transcripción en la voz");
+    console.warn("⚠️ No hay pista cargada en Estudio - solo se guardará localmente");
   }
   
-  // También guardar la transcripción asociada a la letra (si está seleccionada)
-  // para que al recargarla mantenga la sincronización
-  if (selectedTextId) {
-    updateLibraryItem(selectedTextId, { text: baseTextSegments })
-      .then(() => console.log("✅ Transcripción guardada también en la letra"))
-      .catch(err => console.error("Error:", err));
+  // Guardar de vuelta la sincronización final en el elemento original de la biblioteca
+  const currentId = selectedVoiceId || selectedTextId;
+  if (currentId) {
+    const updateData = isTextoManual 
+      ? { lyrics: analyzedSegments, isSincronizada: true }
+      : { transcription: analyzedSegments };
+
+    updateLibraryItem(currentId, updateData)
+      .then(() => console.log("✅ Sincronización guardada también en el archivo origen"))
+      .catch(err => console.error("Error al actualizar origen:", err));
   }
   
-  $("startTapSyncBtn").style.display = "inline-block";
-  $("tapSyncResult").style.display = "none";
+  // Resetear interfaz de Taps para una nueva sesión
+  if ($("startTapSyncBtn")) $("startTapSyncBtn").style.display = "inline-block";
+  if ($("tapSyncResult")) $("tapSyncResult").style.display = "none";
   
   tapSyncLines = [];
   tapSyncTimestamps = [];
@@ -2932,9 +3183,8 @@ async function applyTapSync() {
     : "✅ Tiempos aplicados. ⚠️ Carga una pista en Estudio antes de sincronizar para guardar el karaoke con la pista instrumental.");
 }
 
-
 function redoTapSync() {
-  $("tapSyncResult").style.display = "none";
+  if ($("tapSyncResult")) $("tapSyncResult").style.display = "none";
   startTapSync();
 }
 
@@ -2992,7 +3242,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     safeAdd("loadSelectedVoiceBtn", "click", loadSelectedVoiceFromLibrary);
 
     safeAdd("refreshStudioTextListBtn", "click", loadTextOptionsInStudio);
-    safeAdd("loadSelectedTextBtn", "click", loadSelectedTextFromLibrary);
+    safeAdd("loadStudioTextBtn", "click", loadSelectedTextFromLibrary);
     
     safeAdd("transcribeVoiceBtn", "click", transcribeSelectedVoice);
     safeAdd("applyCorrectedLyricsBtn", "click", applyCorrectedLyrics);
@@ -3043,13 +3293,27 @@ document.addEventListener("DOMContentLoaded", async () => {
     loadKaraokeCatalog();
     loadMyKaraokeSongs();
     
-    // biblioteca - subir archivo desde PC
     safeAdd("saveLibraryFileBtn", "click", saveManualFileToLibrary);
+    
+    // Autocompleta el nombre del archivo limpiando la extensión (.txt, .mp3, etc.)
     safeAdd("libraryFileInput", "change", (e) => {
       const file = e.target.files[0];
       const nameInput = $("libraryFileName");
       if (file && nameInput && !nameInput.value.trim()) {
         nameInput.value = file.name.replace(/\.[^.]+$/, "");
+      }
+    });
+
+    // NUEVO: Filtra la ventana de selección de archivos según lo que elijas en el menú desplegable
+    safeAdd("libraryFileType", "change", () => {
+      const typeSelect = $("libraryFileType");
+      const fileInput = $("libraryFileInput");
+      if (typeSelect && fileInput) {
+        if (typeSelect.value === "texto") {
+          fileInput.setAttribute("accept", ".txt");
+        } else {
+          fileInput.setAttribute("accept", "audio/*");
+        }
       }
     });
 
