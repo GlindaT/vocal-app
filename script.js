@@ -2643,7 +2643,7 @@ async function applyCorrectedLyrics() {
   baseTranscriptionSegments || baseTextSegments === rebuiltSegments;
 
   // Mostramos exactamente las líneas escritas por el usuario
-  transcriptionSegments || textSegments = rebuiltSegments;
+  transcriptionSegments || textSegments === rebuiltSegments;
 
   renderKaraokeLyrics(transcriptionSegments || textSegments);
   cargarLetrasEnMonitor();
