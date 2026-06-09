@@ -2611,10 +2611,9 @@ function showSaveNotification() {
 
 async function applyCorrectedLyrics() {
   const lyricsText = $("lyricsText");
-  const status = $("selectedVoiceStatus");
+  const status = $(("selectedVoiceStatus" || "selectedTextStatus"));
   //se agrega text
   const text = $("text");
-  const status = $("selectedTextStatus");
 
   if (!lyricsText || !text) return;
 
