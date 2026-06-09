@@ -2856,13 +2856,13 @@ async function applyTapSync() {
   // Analizar pitch desde la VOZ (si está seleccionada) para detectar notas musicales
   // Los tiempos están alineados a la pista, y la voz suele estar alineada con la pista
   let analyzedSegments = newSegments;
-  if (selectedVoiceBlob) || (selectedTextBlob) {
+  if (selectedVoiceBlob || selectedTextBlob) {
     if (status) status.textContent = "Estado: Analizando notas musicales... 🎵";
     analyzedSegments = await analyzePitchForSegments(selectedVoiceBlob, selectedTextBlob, newSegments);
   }
   
-  baseTranscriptionSegments || baseTextSegments = analyzedSegments;
-  transcriptionSegments || textSegments = analyzedSegments;
+  baseTranscriptionSegments || baseTextSegments === analyzedSegments;
+  transcriptionSegments || textSegments === analyzedSegments;
   
   renderKaraokeLyrics(transcriptionSegments || textSegments);
   cargarLetrasEnMonitor();
