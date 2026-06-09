@@ -1198,12 +1198,11 @@ async function loadTextOptionsInStudio() {
 async function loadSelectedTextFromLibrary() {
   const select = $("textLibrarySelect");
   const status = $("selectedTextStatus");
-  const textInput = $("lyricsText"); // Tu <textarea> del monitor de edición
+  const textInput = $("lyricsText"); 
 
   if (!select || !status || !textInput) return;
 
   const selectedId = Number(select.value);
-
   if (!selectedId) {
     alert("⚠️ Selecciona una letra de la lista primero.");
     return;
@@ -1211,46 +1210,46 @@ async function loadSelectedTextFromLibrary() {
 
   try {
     const item = await getLibraryItemById(selectedId);
-
     if (!item) {
       alert("⚠️ No se encontró la letra en la base de datos.");
       return;
     }
 
-    // Sincronizamos las variables globales para el sistema de Taps
     selectedTextId = item.id;
     selectedVoiceId = item.id; 
 
-    // Verificamos si el archivo tiene palabras segmentadas
     if (Array.isArray(item.lyrics) && item.lyrics.length > 0) {
-      
-      // Guardamos en la variable de trabajo global
-      textSegments = item.lyrics.map(word => ({
-        id: word.id,
-        text: word.text,
-        startTime: word.startTime || 0,
-        duration: word.duration || 0,
-        pitch: word.pitch || 0
-      }));
+      textSegments = item.lyrics;
 
-      // Intentamos refrescar la vista previa visual si las funciones existen
       try { renderKaraokeLyrics(textSegments); } catch(e) {}
       try { cargarLetrasEnMonitor(); } catch(e) {}
 
-      // 🎯 LA INYECCIÓN CLAVE: Pasamos las palabras separadas por espacios al cuadro de texto
-      textInput.value = textSegments
-        .map(seg => seg.text || "")
-        .join(" ")
-        .trim();
+      // 🎯 RECONSTRUCCIÓN DE LÍNEAS ORIGINALES PARA EL MONITOR
+      let textoFormateadoParaPantalla = "";
+      
+      textSegments.forEach((word, index) => {
+        textoFormateadoParaPantalla += word.text;
+        
+        const nextWord = textSegments[index + 1];
+        if (nextWord) {
+          // Si la siguiente palabra pertenece a un renglón diferente, ponemos salto de línea, si no, un espacio
+          if (nextWord.renglon !== word.renglon) {
+            textoFormateadoParaPantalla += "\n";
+          } else {
+            textoFormateadoParaPantalla += " ";
+          }
+        }
+      });
 
-      status.innerHTML = `📄 <strong>Estado:</strong> Letra cargada en el Monitor ⚡ (Lista para taps)`;
+      textInput.value = textoFormateadoParaPantalla;
+      status.innerHTML = `📄 <strong>Estado:</strong> Letra cargada respetando tus líneas de estrofa original ⚡`;
     } else {
       textSegments = [];
       textInput.value = "";
-      status.textContent = "Estado: El archivo de texto cargado no contiene palabras válidas.";
+      status.textContent = "Estado: El archivo de texto no contiene palabras válidas.";
     }
   } catch (error) {
-    console.error("Error al cargar texto en el monitor:", error);
+    console.error(error);
     alert("❌ No se pudo cargar la letra seleccionada.");
   }
 }
@@ -2738,26 +2737,33 @@ async function applyCorrectedLyrics() {
 
     // --- BIFURCACIÓN DE FLUJO ---
     if (item.type === "texto") {
-      // FLUJO MANUAL: Volvemos a segmentar el texto plano con tiempos en 0
+      // Pasamos el texto editado por el monitor por el nuevo segmentador de renglones
       finalSegments = segmentarTextoPlano(correctedText);
       
-      // Actualizamos las variables globales de control de tu app para texto
       baseTextSegments = finalSegments;
       textSegments = finalSegments;
       
-      // Renderizamos la previsualización del karaoke
       renderKaraokeLyrics(textSegments);
       cargarLetrasEnMonitor();
 
-      // Sincronizamos la caja de texto visual del monitor
-      if (text) text.value = textSegments.map(seg => seg.text || "").join(" ").trim();
-      if (lyricsText) lyricsText.value = textSegments.map(seg => seg.text || "").join(" ").trim();
+      // Re-inyectamos respetando los saltos de línea manuales modificados
+      let textoFormateado = "";
+      textSegments.forEach((word, index) => {
+        textoFormateado += word.text;
+        const nextWord = textSegments[index + 1];
+        if (nextWord) {
+          textoFormateado += (nextWord.renglon !== word.renglon) ? "\n" : " ";
+        }
+      });
+      
+      if (text) text.value = textoFormateado;
+      if (lyricsText) lyricsText.value = textoFormateado;
 
-      // Guardamos la estructura en IndexedDB bajo la propiedad 'lyrics'
       await updateLibraryItem(currentId, {
         lyrics: finalSegments,
         isSincronizada: false
       });
+    }
 
     } else {
       // FLUJO ORIGINAL DE IA (Mantiene tu lógica de tiempos de audio previos)
@@ -2901,24 +2907,36 @@ function leerArchivoTexto(file) {
 
 // Función para limpiar el texto y segmentarlo palabra por palabra
 function segmentarTextoPlano(texto) {
-  // Reemplaza múltiples espacios, tabuladores o saltos de línea por un solo espacio
-  const textoLimpio = texto.replace(/\s+/g, ' ').trim();
-  
-  if (textoLimpio === "") return [];
+  if (!texto || texto.trim() === "") return [];
 
-  // Rompe el texto en un array usando los espacios como separador
-  const palabras = textoLimpio.split(' ');
+  // 1. CORRECCIÓN CLAVE: Limpiamos espacios horizontales dobles, pero RESPETAMOS los saltos de línea (\n)
+  const textoLimpio = texto.replace(/[ \t]+/g, ' ').trim();
   
-  // Mapea cada palabra al formato que tu monitor de edición y taps necesitan
-  return palabras.map((palabra, index) => {
-    return {
-      id: index + 1,       // Orden secuencial para los taps
-      text: palabra,       // La palabra que se mostrará en pantalla
-      startTime: 0,        // Inicializado en 0 (esperando el tap)
-      duration: 0,         // Inicializado en 0
-      pitch: 0             // Inicializado en 0
-    };
+  // 2. Rompemos el texto primero por líneas para saber en qué renglón va cada elemento
+  const lineas = textoLimpio.split('\n');
+  let palabraGlobalIndex = 1;
+  let todasLasPalabras = [];
+
+  lineas.forEach((lineaTexto, renglonIndex) => {
+    const lineaLimpia = lineaTexto.trim();
+    if (!lineaLimpia) return; // Si es una línea vacía (separación de estrofas), la saltamos
+
+    // Rompemos la línea actual en palabras individuales
+    const palabrasDeLaLinea = lineaLimpia.split(' ');
+
+    palabrasDeLaLinea.forEach((palabra) => {
+      todasLasPalabras.push({
+        id: palabraGlobalIndex++, // ID secuencial para los taps
+        text: palabra,
+        renglon: renglonIndex + 1, // Guardamos a qué línea de estrofa pertenece originalmente 👈 ¡NUEVO!
+        startTime: 0,
+        duration: 0,
+        pitch: 0
+      });
+    });
   });
+
+  return todasLasPalabras;
 }
 
 function recordTap() {
