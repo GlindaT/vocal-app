@@ -331,16 +331,16 @@
           <span id="flecha-catalogo" class="flecha" style="transition: transform 0.2s ease; font-size: 1.2rem; color: var(--accent);">▶</span>
         </div>
 
-        <!-- Contenido que se va a ocultar 
+        <!-- Contenido que se va a ocultar -->
         <div id="contenido-catalogo" class="contenido-desplegable" style="margin-top: 15px;">
           <!-- Catálogo pre-cargado -->
-          <!-- <div id="catalogSection">
+          <div id="catalogSection"> 
             <h4 style="color: var(--accent); margin-bottom: 10px;">📚 Catálogo de la App</h4>
             <div id="catalogList" style="max-height: 200px; overflow-y: auto;">
               <p style="color: var(--text-muted);">Cargando catálogo...</p>
             </div>
           </div>
-          -->
+          
           <!-- Mis canciones importadas/creadas -->
           <div id="myKaraokeSongs" style="margin-top: 20px;">
             <h4 style="color: #f59e0b; margin-bottom: 10px;">📁✒️ Mis Canciones</h4>
@@ -410,15 +410,16 @@
       </div>
       -->
       
-      <!-- Paso 1: Pista 
+      <!-- Paso 1: Pista -->
       <div class="card">
-        Encabezado interactivo sin onclick 
+        <!--Encabezado interactivo sin onclick -->
         <div class="encabezado-desplegable" data-target="contenido-pista" data-arrow="flecha-pista" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;">
           <h3 style="margin: 0;">1. Cargar Pista (Instrumental)</h3>
           <span id="flecha-pista" class="flecha" style="transition: transform 0.2s ease; font-size: 1.2rem; color: var(--accent);">▶</span>
         </div>
-        -->
-        <!-- Contenido que se va a ocultar 
+      </div>
+        
+        <!-- Contenido que se va a ocultar -->
         <div id="contenido-pista" class="contenido-desplegable" style="margin-top: 15px;">
           Opción A: Desde la Biblioteca 
           <div class="studio-controls">
@@ -430,16 +431,15 @@
           <div class="studio-controls" style="margin-bottom: 15px;">
             <button id="loadKaraokeTrackBtn" type="button" style="background: #3b82f6; color: white;">📥 Cargar Pista de Biblioteca</button>
           </div> 
-      -->
+      
 
-          <!-- Opción B: Desde la PC 
+          <!-- Opción B: Desde la PC -->
           <p style="color: var(--text-muted); font-size: 14px;">O sube un archivo nuevo desde tu PC:</p>
           <input type="file" id="karaokeTrackFile" accept="audio/*">
           
           <audio id="karaokeTrack" controls style="margin-top: 15px; width: 100%;"></audio>
         </div>
-      </div> 
-      -->
+      
       <!-- Paso 2: Grabación -->
       <div class="card">
         <h3>Grabación Sincronizada</h3>
