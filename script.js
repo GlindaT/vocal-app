@@ -2833,7 +2833,7 @@ async function applyTapSync() {
   
   const voicePlayer = $("seleteVoicePlayer");
   const totalDuration = voicePlayer ? voicePlayer.duration : 0;
-  const status = $(("selectedVoiceStatus) || ("selectedTextStatus"));
+  const status = $("selectedVoiceStatus" || "selectedTextStatus");
   //agregado
   const text = $("selectedText");
   
