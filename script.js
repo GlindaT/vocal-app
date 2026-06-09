@@ -788,7 +788,7 @@ async function saveToLibrary(blob, options = {}) {
   try {
     await addLibraryItem({
       name: options.name || "Audio",
-      type: options.type || "audio" "text",
+      type: options.type || "audio", "text",
       audioBlob: blob,
       date: new Date().toLocaleString("es-ES"),
       transcription: options.transcription || [] // Añadir campo para evitar errores
