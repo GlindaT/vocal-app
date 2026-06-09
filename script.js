@@ -877,7 +877,7 @@ async function saveManualFileToLibrary() {
   const nameInput = $("libraryFileName");
 
   const file = fileInput ? fileInput.files[0] : null;
-  const type = typeSelect ? typeSelect.value : "audio" "text";
+  const type = typeSelect ? typeSelect.value : "audio";
   const customName = nameInput ? nameInput.value.trim() : "";
 
   if (!file) {
