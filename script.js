@@ -3278,7 +3278,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (file) importKaraokeFile(file);
       e.target.value = "";
     });
-
+    
+    /*
     // Importador UltraStar
     safeAdd("importUltrastarBtn", "click", openUltrastarModal);
     safeAdd("cancelImportBtn", "click", closeUltrastarModal);
@@ -3295,6 +3296,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         closeUltrastarModal();
       }
     });
+    */
       
     // Cargar catálogo y mis canciones al iniciar
     loadKaraokeCatalog();
