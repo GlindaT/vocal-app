@@ -2807,15 +2807,14 @@ async function applyCorrectedLyrics() {
 function startTapSync() {
   const lyricsText = $("lyricsText");
   const text = $("text");
+  const voicePlayer = $("selectedVoicePlayer");
+  const trackPlayer = $("player");
   
-  // 1. Detectamos cuál reproductor de audio tiene un archivo cargado
-  const voicePlayer = $("selectedVoicePlayer"); // Reproductor de voz (IA)
-  const trackPlayer = $("player");              // Reproductor de pista instrumental (Estudio)
-  
-  // El reproductor activo será el de voz si tiene contenido; de lo contrario, el de la pista
+  // 1. Obtener el método seleccionado por el usuario en el HTML
+  const methodSelect = $("tapSyncMethodSelect");
+  const modoSeleccionado = methodSelect ? methodSelect.value : "linea"; // "linea" o "palabra"
+
   const activePlayer = (voicePlayer && voicePlayer.src) ? voicePlayer : trackPlayer;
-  
-  // 2. CORRECCIÓN DE VALIDACIÓN DE LETRA
   const textoActivo = (lyricsText && lyricsText.value.trim()) ? lyricsText.value.trim() : (text ? text.value.trim() : "");
   
   if (!textoActivo) {
@@ -2823,22 +2822,20 @@ function startTapSync() {
     return;
   }
   
-  // 3. CORRECCIÓN DEL AUDIO (Solución al bug de tu alerta):
-  // Validamos si alguno de los dos reproductores tiene un archivo de música listo
   if (!activePlayer || !activePlayer.src) {
-    alert("⚠️ Primero carga un archivo de audio (ya sea la Pista o la Voz) en el Estudio para poder escuchar y hacer los Taps.");
+    alert("⚠️ Primero carga un archivo de audio (Pista o Voz) en el Estudio para escuchar y hacer los Taps.");
     return;
   }
 
-  // 4. DETECCIÓN DINÁMICA DE FORMATO: ¿Es IA o es .txt manual?
-  if (textoActivo.includes("\n")) {
-    // Sincronización original línea por línea
+  // 2. PROCESAMIENTO SEGÚN EL MODO ELEGIDO POR EL USUARIO
+  if (modoSeleccionado === "linea") {
+    // Modo Línea por línea: Cortamos por saltos de línea (\n)
     tapSyncLines = textoActivo
       .split("\n")
       .map(line => line.trim())
       .filter(line => line.length > 0);
   } else {
-    // Sincronización palabra por palabra para tu .txt plano corrido
+    // Modo Palabra por palabra: Ignoramos saltos de línea y cortamos por cualquier espacio
     tapSyncLines = textoActivo
       .split(/\s+/)
       .map(palabra => palabra.trim())
@@ -2850,34 +2847,32 @@ function startTapSync() {
     return;
   }
 
-  // Reiniciar variables globales de control de taps
+  // Guardar en una propiedad global qué modo se usó en esta sesión de taps
+  // Esto es crucial para que applyTapSync() sepa cómo estructurar el guardado final
+  window.currentTapSyncModeType = modoSeleccionado;
+
+  // Reiniciar variables globales de control
   tapSyncTimestamps = [];
   tapSyncCurrentIndex = 0;
   tapSyncMode = true;
   
-  // Mostrar/ocultar elementos de la interfaz
   if ($("startTapSyncBtn")) $("startTapSyncBtn").style.display = "none";
   if ($("cancelTapSyncBtn")) $("cancelTapSyncBtn").style.display = "inline-block";
   if ($("tapSyncActive")) $("tapSyncActive").style.display = "block";
   if ($("tapSyncResult")) $("tapSyncResult").style.display = "none";
   
-  // Mostrar la primera palabra o línea a sincronizar
   updateTapSyncDisplay();
   
-  // Guardamos una referencia global del reproductor que se usó para los taps
-  // Esto es vital para que la función recordTap() sepa a quién leerle el .currentTime
-  activeTapPlayer = activePlayer;
-  
-  // Reproducir el audio guía desde el inicio
+  window.activeTapPlayer = activePlayer;
   activePlayer.currentTime = 0;
   activePlayer.play();
   
-  // Activar listener de teclado de forma segura limpiando listeners previos
   document.removeEventListener("keydown", handleTapSyncKeypress);
   document.addEventListener("keydown", handleTapSyncKeypress);
   
-  console.log(`🎯 Sincronización iniciada usando el reproductor: ${activePlayer.id}. Total de elementos:`, tapSyncLines.length);
+  console.log(`🎯 Sincronización iniciada en modo: [${modoSeleccionado.toUpperCase()}]. Total:`, tapSyncLines.length);
 }
+
 
 function handleTapSyncKeypress(e) {
   if (!tapSyncMode) return;
@@ -2967,8 +2962,8 @@ function updateTapSyncDisplay() {
   }
   
   if (progressEl) {
-    // CORRECCIÓN: Detecta dinámicamente si estás contando palabras o líneas
-    const tipoUnidad = (textSegments && textSegments.length > 0) ? "palabras" : "líneas";
+    // Lee el modo global guardado para pintar "palabras" o "líneas" dinámicamente
+    const tipoUnidad = (window.currentTapSyncModeType === "palabra") ? "palabras" : "líneas";
     progressEl.textContent = `${tapSyncCurrentIndex} / ${tapSyncLines.length} ${tipoUnidad}`;
   }
 }
@@ -3002,30 +2997,45 @@ async function finishTapSync() {
     let finalSegments = [];
     
     if (item.type === "texto") {
-      // Flujo Manual (.txt): Emparejamos cada palabra con su timestamp de tap
-      finalSegments = item.lyrics.map((word, index) => {
-        const startTime = tapSyncTimestamps[index] || 0;
-        // La duración estimada es el tiempo hasta el siguiente tap, o 0.5 seg para el último
-        const nextTime = tapSyncTimestamps[index + 1] || (startTime + 0.5);
-        const duration = Math.max(0.1, nextTime - startTime);
+      const esPalabraPorPalabra = (window.currentTapSyncModeType === "palabra");
 
-        return {
-          id: word.id,
-          text: word.text,
-          startTime: startTime,
-          duration: duration,
-          pitch: word.pitch || 0 // Mantiene el tono inicializado para el motor de canto
-        };
-      });
+      if (esPalabraPorPalabra) {
+        // Guardado palabra por palabra (Flujo manual original)
+        finalSegments = item.lyrics.map((word, index) => {
+          const startTime = tapSyncTimestamps[index] || 0;
+          const nextTime = tapSyncTimestamps[index + 1] || (startTime + 0.5);
+          return {
+            id: word.id,
+            text: word.text,
+            startTime: startTime,
+            duration: Math.max(0.1, nextTime - startTime),
+            pitch: word.pitch || 0
+          };
+        });
+      } else {
+        // Guardado línea por línea: Cada línea del .txt se convierte en un segmento completo
+        finalSegments = tapSyncLines.map((lineText, index) => {
+          const startTime = tapSyncTimestamps[index] || 0;
+          const nextTime = tapSyncTimestamps[index + 1] || (startTime + 3.0); // Estimado de 3 seg por frase si es la última
+          return {
+            id: index + 1,
+            text: lineText,
+            startTime: startTime,
+            duration: Math.max(0.5, nextTime - startTime),
+            pitch: 0,
+            // Simulamos un sub-array de palabras con el mismo tiempo para no romper el Canvas original
+            words: [{ start: startTime, end: nextTime, word: lineText, midi: 60 }]
+          };
+        });
+      }
 
-      // Actualizamos las variables globales de control de texto
       textSegments = finalSegments;
       baseTextSegments = finalSegments;
 
-      // 3. GUARDAR EN INDEXEDDB (Estructura manual de letras)
       await updateLibraryItem(currentId, {
         lyrics: finalSegments,
-        isSincronizada: true // Marcamos como sincronizada con éxito
+        isSincronizada: true,
+        tapModeStyle: window.currentTapSyncModeType // Guardamos qué estilo de taps se usó
       });
 
     } else {
@@ -3446,8 +3456,12 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     return pentagramTop + normalized * pentagramHeight;
   }
 
-  // --- DIBUJAR BARRAS DE NOTAS (ULTRASTAR STYLE) ---
-  if (Array.isArray(transcriptionSegments) && transcriptionSegments.length > 0) {
+  // --- DETERMINAR QUÉ FUENTE DE DATOS USAR ---
+  // Si existe la variable de texto manual cargada, le damos prioridad; si no, usamos la de IA
+  const datosActivos = (textSegments && textSegments.length > 0) ? textSegments : transcriptionSegments;
+  const esFlujoManual = (textSegments && textSegments.length > 0);
+
+  if (Array.isArray(datosActivos) && datosActivos.length > 0) {
     
     // Ventana de tiempo visible (5 segundos hacia adelante, 1 hacia atrás)
     const timeWindowStart = currentTime - 1;
@@ -3463,81 +3477,101 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     ctx.lineTo(lineX, pentagramBottom);
     ctx.stroke();
 
-    // Recorrer todos los segmentos
-    transcriptionSegments.forEach((segment) => {
-      const words = Array.isArray(segment.words) ? segment.words : [];
-      
-      words.forEach((word) => {
-        // Verificar si está en la ventana visible
-        if (word.end < timeWindowStart || word.start > timeWindowEnd) return;
-        
-        // Calcular posición X basada en el tiempo
-        const wordStartX = lineX + (word.start - currentTime) * pixelsPerSecond;
-        const wordEndX = lineX + (word.end - currentTime) * pixelsPerSecond;
-        const barWidth = Math.max(wordEndX - wordStartX, 20);
-        
-        // Posición Y basada en la nota MIDI
-        const midi = word.midi || segment.midi || 60; // Default: C4
-        const barY = midiToY(midi);
-        const barHeight = 22;
-        
-        // Determinar si la palabra está activa
-        const isActive = currentTime >= word.start && currentTime <= word.end;
-        const isPast = currentTime > word.end;
-        
-        // Determinar si el usuario está cantando la nota correcta
-        let isCorrect = false;
-        if (isActive && currentFreq > 0) {
-          const userMidi = frequencyToMidi(currentFreq);
-          isCorrect = Math.abs(userMidi - midi) <= 2; // Tolerancia de 2 semitonos
-        }
-        
-        // Colores según estado
-        let barColor, textColor, borderColor;
-        if (isPast) {
-          barColor = "#4b5563"; // Gris
-          textColor = "#9ca3af";
-          borderColor = "#6b7280";
-        } else if (isActive) {
-          if (isCorrect) {
-            barColor = "#22c55e"; // Verde - ¡Correcto!
-            textColor = "#ffffff";
-            borderColor = "#4ade80";
-          } else {
-            barColor = "#3b82f6"; // Azul - Activo
-            textColor = "#ffffff";
-            borderColor = "#60a5fa";
-          }
-        } else {
-          barColor = "#1e40af"; // Azul oscuro - Próximo
-          textColor = "#93c5fd";
-          borderColor = "#3b82f6";
-        }
-        
-        // Dibujar barra con bordes redondeados
-        ctx.fillStyle = barColor;
-        ctx.beginPath();
-        ctx.roundRect(wordStartX, barY - barHeight/2, barWidth, barHeight, 8);
-        ctx.fill();
-        
-        // Borde
-        ctx.strokeStyle = borderColor;
-        ctx.lineWidth = isActive ? 2 : 1;
-        ctx.stroke();
-        
-        // Texto de la palabra
-        ctx.fillStyle = textColor;
-        ctx.font = isActive ? "bold 12px Arial" : "11px Arial";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        
-        // Truncar si es muy largo
-        let displayWord = word.word || "";
-        if (displayWord.length > 10) {
-          displayWord = displayWord.substring(0, 8) + "..";
-        }
-        ctx.fillText(displayWord, wordStartX + barWidth/2, barY);
+    // Extraemos la lista plana de todas las palabras a procesar
+    let palabrasAProcesar = [];
+
+    if (esFlujoManual) {
+      // Formato manual .txt: El array ya contiene las palabras de forma directa
+      palabrasAProcesar = datosActivos.map(word => ({
+        start: word.startTime || 0,
+        end: (word.startTime || 0) + (word.duration || 0.5),
+        midi: word.pitch || 60, // Default C4 si no se analizó el tono
+        texto: word.text || ""
+      }));
+    } else {
+      // Formato de IA: Extraemos las palabras desde el objeto anidado original
+      datosActivos.forEach((segment) => {
+        const words = Array.isArray(segment.words) ? segment.words : [];
+        words.forEach((w) => {
+          palabrasAProcesar.push({
+            start: w.start,
+            end: w.end,
+            midi: w.midi || segment.midi || 60,
+            texto: w.word || ""
+          });
+        });
       });
+    }
+
+    // --- DIBUJAR BARRAS DE NOTAS (ULTRASTAR STYLE) ---
+    palabrasAProcesar.forEach((word) => {
+      // Verificar si está en la ventana visible
+      if (word.end < timeWindowStart || word.start > timeWindowEnd) return;
+      
+      // Calcular posición X basada en el tiempo
+      const wordStartX = lineX + (word.start - currentTime) * pixelsPerSecond;
+      const wordEndX = lineX + (word.end - currentTime) * pixelsPerSecond;
+      const barWidth = Math.max(wordEndX - wordStartX, 25); // Un poco más ancho para legibilidad
+      
+      // Posición Y basada en la nota MIDI
+      const barY = midiToY(word.midi);
+      const barHeight = 22;
+      
+      // Determinar si la palabra está activa
+      const isActive = currentTime >= word.start && currentTime <= word.end;
+      const isPast = currentTime > word.end;
+      
+      // Determinar si el usuario está cantando la nota correcta
+      let isCorrect = false;
+      if (isActive && currentFreq > 0) {
+        const userMidi = frequencyToMidi(currentFreq);
+        isCorrect = Math.abs(userMidi - word.midi) <= 2; // Tolerancia de 2 semitonos
+      }
+      
+      // Colores según estado
+      let barColor, textColor, borderColor;
+      if (isPast) {
+        barColor = "#4b5563"; // Gris pasado
+        textColor = "#9ca3af";
+        borderColor = "#6b7280";
+      } else if (isActive) {
+        if (isCorrect) {
+          barColor = "#22c55e"; // Verde - ¡Le atinó a la nota!
+          textColor = "#ffffff";
+          borderColor = "#4ade80";
+        } else {
+          barColor = "#3b82f6"; // Azul - Palabra activa
+          textColor = "#ffffff";
+          borderColor = "#60a5fa";
+        }
+      } else {
+        barColor = "#1e40af"; // Azul oscuro - Próxima nota
+        textColor = "#93c5fd";
+        borderColor = "#3b82f6";
+      }
+      
+      // Dibujar barra con bordes redondeados
+      ctx.fillStyle = barColor;
+      ctx.beginPath();
+      ctx.roundRect(wordStartX, barY - barHeight/2, barWidth, barHeight, 8);
+      ctx.fill();
+      
+      // Borde
+      ctx.strokeStyle = borderColor;
+      ctx.lineWidth = isActive ? 2 : 1;
+      ctx.stroke();
+      
+      // Texto de la palabra encima de la barra
+      ctx.fillStyle = textColor;
+      ctx.font = isActive ? "bold 12px Arial" : "11px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      
+      let displayWord = word.texto;
+      if (displayWord.length > 10) {
+        displayWord = displayWord.substring(0, 8) + "..";
+      }
+      ctx.fillText(displayWord, wordStartX + barWidth/2, barY);
     });
 
   } else {
@@ -3552,7 +3586,6 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     const userMidi = frequencyToMidi(currentFreq);
     const userY = midiToY(userMidi);
     
-    // Punto grande en la posición actual
     ctx.beginPath();
     ctx.fillStyle = "#facc15";
     ctx.shadowBlur = 15;
@@ -3561,7 +3594,6 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     ctx.fill();
     ctx.shadowBlur = 0;
     
-    // Rastro de la voz
     ctx.beginPath();
     ctx.strokeStyle = "rgba(250, 204, 21, 0.6)";
     ctx.lineWidth = 3;
@@ -3584,34 +3616,36 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     ctx.stroke();
   }
 
-  // --- DIBUJAR LETRA ACTUAL ABAJO ---
-  const currentSegment = transcriptionSegments.find(seg => 
-    currentTime >= seg.start && currentTime <= seg.end + 0.5
-  );
-  
-  if (currentSegment) {
-    // Fondo para la letra
+  // --- DIBUJAR TEXTO FLUIDO EN LA PARTE INFERIOR (CRAWL DE LETRA) ---
+  // Buscamos las palabras que están por sonar en un rango cercano a la pantalla
+  let fraseActual = "";
+  let fraseSiguiente = "";
+
+  if (esFlujoManual) {
+    // Para el flujo manual .txt, construimos un bloque dinámico de lectura
+    const palabrasFrase = textSegments.filter(w => currentTime >= w.startTime - 2 && currentTime <= w.startTime + 4);
+    fraseActual = palabrasFrase.map(w => w.text).join(" ");
+  } else {
+    // Para el flujo tradicional de la IA por segmentos de línea enteros
+    const currentSegment = transcriptionSegments.find(seg => 
+      currentTime >= seg.start && currentTime <= seg.end + 0.5
+    );
+    if (currentSegment) fraseActual = currentSegment.text || "";
+
+    const nextSegment = transcriptionSegments.find(seg => seg.start > currentTime);
+    if (nextSegment && !currentSegment) fraseSiguiente = "Próximo: " + (nextSegment.text || "");
+  }
+
+  // Renderizar la caja de texto inferior en el Canvas si hay texto por cantar
+  if (fraseActual || fraseSiguiente) {
     ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
     ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
     
-    // Letra actual
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 20px Arial";
+    ctx.fillStyle = fraseActual ? "#ffffff" : "#94a3b8";
+    ctx.font = fraseActual ? "bold 20px Arial" : "16px Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillText(currentSegment.text || "", canvas.width / 2, canvas.height - 25);
-  }
-
-  // --- DIBUJAR SIGUIENTE LÍNEA ---
-  const nextSegment = transcriptionSegments.find(seg => seg.start > currentTime);
-  if (nextSegment && !currentSegment) {
-    ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-    ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
-    
-    ctx.fillStyle = "#94a3b8";
-    ctx.font = "16px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText("Próximo: " + (nextSegment.text || ""), canvas.width / 2, canvas.height - 25);
+    ctx.fillText(fraseActual || fraseSiguiente, canvas.width / 2, canvas.height - 25);
   }
 }
 
