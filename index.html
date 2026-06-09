@@ -90,7 +90,7 @@
   </div>
 
   <select id="studioTrackSelect">
-    <option value="">Selecciona una pista desde Biblioteca</option>
+    <option value="">Selecciona un archivo de audio con la pista desde Biblioteca</option>
   </select>
 
   <div class="studio-controls" style="margin-bottom: 15px;">
@@ -117,7 +117,7 @@
   </div>
 
   <select id="voiceLibrarySelect">
-    <option value="">Selecciona una voz guardada</option>
+    <option value="">Selecciona un archivo de audio con la voz desde Biblioteca</option>
   </select>
 
   <div class="studio-controls">
@@ -130,6 +130,21 @@
   <p id="selectedVoiceStatus">Estado: ninguna voz seleccionada</p>
   </div>
 
+  <div class="card">
+    <h3>Letra desde Biblioteca</h3>
+    <div class="studio-controls">
+      <button id="refreshTextListBtn" type="button">🔄 Actualizar lista</button>
+    </div>
+    
+    <select id="textLibrarySelect">
+      <option value="">Selecciona un archivo de texto con la letra desde Biblioteca</option>
+    </select>
+    
+    <div class="studio-controls">
+      <button id="loadSelectedTextBtn" type="button">📥 Cargar letra seleccionada</button>
+    </div>
+  
+<!--
   <div class="card">
     
     <h3>Grabación de voz</h3>
@@ -159,6 +174,7 @@
 
     <audio id="voicePlayer" controls></audio>
   </div>
+    -->
 
  <div class="card">
   <h3>Letra</h3>
@@ -217,11 +233,13 @@
   </div>
 </div>
 
-
+<!--
   <div id="karaokeLyrics" class="karaoke-lyrics">
     <p class="karaoke-placeholder">Aquí se mostrará la letra sincronizada.</p>
   </div>
+   -->
 </div>
+   
 
 </section>
 
