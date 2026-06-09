@@ -3014,56 +3014,85 @@ async function finishTapSync() {
     
     if (item.type === "texto") {
       const esPalabraPorPalabra = (window.currentTapSyncModeType === "palabra");
-
+      
       if (esPalabraPorPalabra) {
-        // Guardado palabra por palabra (Flujo manual original)
+        // [Se mantiene igual] Flujo manual palabra por palabra independiente
         finalSegments = item.lyrics.map((word, index) => {
           const startTime = tapSyncTimestamps[index] || 0;
           const nextTime = tapSyncTimestamps[index + 1] || (startTime + 0.5);
           return {
             id: word.id,
             text: word.text,
+            renglon: word.renglon || 1,
             startTime: startTime,
             duration: Math.max(0.1, nextTime - startTime),
             pitch: word.pitch || 0
           };
         });
       } else {
-        // Guardado línea por línea: Cada línea del .txt se convierte en un segmento completo
-        finalSegments = tapSyncLines.map((lineText, index) => {
-          const startTime = tapSyncTimestamps[index] || 0;
-          const nextTime = tapSyncTimestamps[index + 1] || (startTime + 3.0); // Estimado de 3 seg por frase si es la última
-          return {
-            id: index + 1,
-            text: lineText,
-            startTime: startTime,
-            duration: Math.max(0.5, nextTime - startTime),
-            pitch: 0,
-            // Simulamos un sub-array de palabras con el mismo tiempo para no romper el Canvas original
-            words: [{ start: startTime, end: nextTime, word: lineText, midi: 60 }]
-          };
+        // 🎯 NUEVO FLUJO CORREGIDO: Taps por Línea, pero Almacenamiento PALABRA POR PALABRA
+        finalSegments = [];
+        let globalWordId = 1;
+        
+        tapSyncLines.forEach((lineText, lineIndex) => {
+          const startTimeFrase = tapSyncTimestamps[lineIndex] || 0;
+          const endTimeFrase = tapSyncTimestamps[lineIndex + 1] || (startTimeFrase + 3.0);
+          const duracionTotalFrase = endTimeFrase - startTimeFrase;
+          
+          // Rompemos la línea actual en sus palabras reales para no generar la barra gigante
+          const palabrasDeLaLinea = lineText.split(/\s+/).filter(w => w.trim().length > 0);
+          const totalPalabras = palabrasDeLaLinea.length;
+          
+          if (totalPalabras === 0) return;
+          // Calculamos cuánto tiempo le corresponde a cada palabra dentro de la frase de forma proporcional
+          const duracionPorPalabra = duracionTotalFrase / totalPalabras;
+          
+          palabrasDeLaLinea.forEach((palabraText, wordIndex) => {
+            const wordStart = startTimeFrase + (wordIndex * duracionPorPalabra);
+            
+            finalSegments.push({
+              id: globalWordId++,
+              text: palabraText,
+              renglon: lineIndex + 1, // Mantenemos el registro de su renglón original
+              startTime: wordStart,
+              duration: duracionPorPalabra,
+              pitch: 60, // Nota central por defecto (C4), lista para que analyzePitch la refine
+              
+              // Simulamos la estructura interna .words que tu Canvas clásico de IA tanto busca
+              words: [{
+                start: wordStart,
+                end: wordStart + duracionPorPalabra,
+                word: palabraText,
+                midi: 60
+              }]
+            });
+          });
         });
       }
-
+      
+      // Sincronizamos las variables globales de trabajo de tu aplicación
       textSegments = finalSegments;
       baseTextSegments = finalSegments;
-
+      
+      // Guardamos en IndexedDB con la estructura de palabras individuales recuperada
       await updateLibraryItem(currentId, {
         lyrics: finalSegments,
         isSincronizada: true,
-        tapModeStyle: window.currentTapSyncModeType // Guardamos qué estilo de taps se usó
+        tapModeStyle: window.currentTapSyncModeType
       });
-
+    
     } else {
+      
       // Flujo Original (Voz / IA): Si estuvieras usando la transcripción tradicional
       finalSegments = (item.transcription || []).map((seg, index) => {
+        
         // Aplica el mapeo según la lógica nativa que use tu IA por líneas
         return {
           ...seg,
           startTime: tapSyncTimestamps[index] || seg.startTime
         };
       });
-
+      
       baseTranscriptionSegments = finalSegments;
       transcriptionSegments = finalSegments;
 
