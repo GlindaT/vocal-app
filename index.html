@@ -81,57 +81,56 @@
     <!-- ESTUDIO -->
 <section id="estudio" class="tab">
   <h1>🎧 Estudio</h1>
-
+  
   <div class="card">
-  <h3>Pista musical</h3>
-
-  <div class="studio-controls">
-    <button id="refreshStudioTrackListBtn" type="button">🔄 Actualizar lista</button>
+    <h3>Pista musical</h3>
+    
+    <div class="studio-controls">
+      <button id="refreshStudioTrackListBtn" type="button">🔄 Actualizar lista</button>
+    </div>
+    
+    <select id="studioTrackSelect">
+      <option value="">Selecciona un archivo de audio con la pista desde Biblioteca</option>
+    </select>
+    
+    <div class="studio-controls" style="margin-bottom: 15px;">
+      <button id="loadStudioTrackBtn" type="button">📥 Cargar pista seleccionada</button>
+    </div>
+    
+    <p style="color: var(--text-muted); font-size: 14px;">O sube un archivo nuevo desde tu PC:</p>
+    <input type="file" id="audioFile" accept="audio/*">
+    
+    <audio id="player" controls></audio>
+    
+    <div class="studio-controls">
+      <button id="playTrackBtn" type="button">▶️ Reproducir</button>
+      <button id="pauseTrackBtn" type="button">⏸️ Pausar</button>
+      <button id="stopTrackBtn" type="button">⏹️ Detener</button>
+    </div>
   </div>
-
-  <select id="studioTrackSelect">
-    <option value="">Selecciona un archivo de audio con la pista desde Biblioteca</option>
-  </select>
-
-  <div class="studio-controls" style="margin-bottom: 15px;">
-    <button id="loadStudioTrackBtn" type="button">📥 Cargar pista seleccionada</button>
-  </div>
-
-  <p style="color: var(--text-muted); font-size: 14px;">O sube un archivo nuevo desde tu PC:</p>
-  <input type="file" id="audioFile" accept="audio/*">
-
-  <audio id="player" controls></audio>
-
-  <div class="studio-controls">
-    <button id="playTrackBtn" type="button">▶️ Reproducir</button>
-    <button id="pauseTrackBtn" type="button">⏸️ Pausar</button>
-    <button id="stopTrackBtn" type="button">⏹️ Detener</button>
-  </div>
-</div>
-
+  
   <div class="card">
-  <h3>Voz desde Biblioteca</h3>
-
-  <div class="studio-controls">
-    <button id="refreshVoiceListBtn" type="button">🔄 Actualizar lista</button>
+    <h3>Voz desde Biblioteca</h3>
+    
+    <div class="studio-controls">
+      <button id="refreshVoiceListBtn" type="button">🔄 Actualizar lista</button>
+    </div>
+    
+    <select id="voiceLibrarySelect">
+      <option value="">Selecciona un archivo de audio con la voz desde Biblioteca</option>
+    </select>
+    
+    <div class="studio-controls">
+      <button id="loadSelectedVoiceBtn" type="button">📥 Cargar voz seleccionada</button>
+      <button id="transcribeVoiceBtn" type="button">📝 Transcribir con Whisper</button>
+    </div>
+    <audio id="selectedVoicePlayer" controls></audio>
+    <p id="selectedVoiceStatus">Estado: ninguna voz seleccionada</p>
   </div>
-
-  <select id="voiceLibrarySelect">
-    <option value="">Selecciona un archivo de audio con la voz desde Biblioteca</option>
-  </select>
-
-  <div class="studio-controls">
-    <button id="loadSelectedVoiceBtn" type="button">📥 Cargar voz seleccionada</button>
-    <button id="transcribeVoiceBtn" type="button">📝 Transcribir con Whisper</button>
-  </div>
-
-  <audio id="selectedVoicePlayer" controls></audio>
-
-  <p id="selectedVoiceStatus">Estado: ninguna voz seleccionada</p>
-  </div>
-
+  
   <div class="card">
     <h3>Letra desde Biblioteca</h3>
+    
     <div class="studio-controls">
       <!-- CORRECCIÓN: ID ajustado a 'refreshStudioTextListBtn' para que coincida con tu safeAdd -->
       <button id="refreshStudioTextListBtn" type="button">🔄 Actualizar lista</button>
@@ -144,10 +143,9 @@
     <div class="studio-controls">
       <button id="loadSelectedTextBtn" type="button">📥 Cargar letra seleccionada</button>
     </div>
-
+    
     <!-- CORRECCIÓN: Se elimina la etiqueta inválida <text> y se cambia por un contenedor seguro -->
     <div id="selectedTextContainer" style="margin: 10px 0;"></div>
-
     <p id="selectedTextStatus">Estado: ningún texto seleccionado</p>
   </div>
   
@@ -243,14 +241,11 @@
   </div>
 </div>
 
-<!--
+  <!--
   <div id="karaokeLyrics" class="karaoke-lyrics">
-    <p class="karaoke-placeholder">Aquí se mostrará la letra sincronizada.</p>
-  </div>
-   -->
+  <p class="karaoke-placeholder">Aquí se mostrará la letra sincronizada.</p>
 </div>
-   
-
+-->
 </section>
 
 <!-- BIBLIOTECA -->
