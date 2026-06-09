@@ -852,7 +852,6 @@ async function renderLibrary(filter = 'todos') {
     await loadTrackOptionsInStudio();
     await loadTrackOptionsInKaraoke();
     await loadTextOptionsInStudio();
-    await loadSelectedTextFromLibraryStudio();
 
   } catch (error) {
     console.error(error);
