@@ -1096,7 +1096,7 @@ async function loadTextOptionsInStudio() {
   }
 }
 
-async function loadSelectedTextFromLibraryStudio() {
+async function loadSelectedTextFromLibrary() {
   const select = $("textLibrarySelect");
   const player = $("selectedTextPlayer");
   const status = $("selectedTextStatus");
@@ -1123,7 +1123,7 @@ async function loadSelectedTextFromLibraryStudio() {
     selectedVoiceId = item.id;
 
     const textURL = URL.createObjectURL(item.textBlob);
-    player.src = audioURL;
+    player.src = textURL;
     status.textContent = `Estado: letra seleccionada -> ${item.name}`;
 
     
