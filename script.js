@@ -3206,7 +3206,7 @@ function redoTapSync() {
 // ==========================================
 document.addEventListener("DOMContentLoaded", async () => {
   try {
-    await migrateLegacyNames();
+    //await migrateLegacyNames();
     await initDB();
     initSettings();
 
