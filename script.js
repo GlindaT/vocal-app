@@ -14,6 +14,8 @@ let db = null;
 let pitchHistory = [];
 let transcriptionSegments = [];
 let baseTranscriptionSegments = [];
+let textSegments = [];
+let baseTextSegments = [];
 let autoScrollEnabled = true; // Control de auto-scroll
 
 // Variables para sincronización con Taps
@@ -786,7 +788,7 @@ async function saveToLibrary(blob, options = {}) {
   try {
     await addLibraryItem({
       name: options.name || "Audio",
-      type: options.type || "audio",
+      type: options.type || "audio" "text",
       audioBlob: blob,
       date: new Date().toLocaleString("es-ES"),
       transcription: options.transcription || [] // Añadir campo para evitar errores
@@ -850,6 +852,7 @@ async function renderLibrary(filter = 'todos') {
     await loadTrackOptionsInStudio();
     await loadTrackOptionsInKaraoke();
     await loadTextOptionsInStudio();
+    await loadTextFromLibraryStudio();
 
   } catch (error) {
     console.error(error);
@@ -873,7 +876,7 @@ async function saveManualFileToLibrary() {
   const nameInput = $("libraryFileName");
 
   const file = fileInput ? fileInput.files[0] : null;
-  const type = typeSelect ? typeSelect.value : "audio";
+  const type = typeSelect ? typeSelect.value : "audio" "text";
   const customName = nameInput ? nameInput.value.trim() : "";
 
   if (!file) {
@@ -3077,7 +3080,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     await loadTrackOptionsInStudio();
     await loadTrackOptionsInKaraoke();
 
-    const player = $("player");
+    const player = $("player" || "text");
     if (player) {
       player.addEventListener("timeupdate", () => {
         updateKaraokeHighlight(player.currentTime);
@@ -3919,6 +3922,7 @@ async function importKaraokeFile(file) {
       type: "karaoke",
       audioBlob: audioBlob,
       vocalsBlob: vocalsBlob,
+      textBlob: textBlob,
       date: new Date().toLocaleString("es-ES"),
       transcription: data.transcription || [],
       metadata: data.metadata || {}
