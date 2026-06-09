@@ -506,7 +506,7 @@ function cargarAudioEstudio(e) {
   studioTrackId = null;
 
   const url = URL.createObjectURL(file);
-  $("player").src || $("text").src = url;
+  $("player").src || $("text").src === url;
   $("studioStatus").textContent = `Estado: pista cargada (${file.name})`;
 }
 
