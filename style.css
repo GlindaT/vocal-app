@@ -284,11 +284,18 @@ input[type="text"] {
   margin-top: 8px;
 }
 #selectedVoiceStatus {
-  margin-top: 15px;
-  color: var(--text-muted);
-  font-weight: bold;
+   margin-top: 15px;
+   color: var(--text-muted);
+   font-weight: bold;
 }
 
+#selectedTextStatus {
+   margin-top: 15px;
+   color: var(--text-muted);
+   font-weight: bold;
+}
+   
+   
 .karaoke-lyrics {
   margin-top: 20px;
   padding: 20px;
