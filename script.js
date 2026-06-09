@@ -1485,10 +1485,18 @@ function buildWordTimingFromSegment(segment) {
 // ==========================================
 // ANÁLISIS DE PITCH PARA ULTRASTAR
 // ==========================================
-async function analyzePitchForSegments(audioBlob, segments) {
-  if (!audioBlob || !segments || !segments.length) {
+// 🎯 VERSIÓN CORREGIDA: Ahora acepta los tres parámetros de tu flujo unificado
+async function analyzePitchForSegments(audioBlob, textBlob, segments) {
+  
+  // CORRECCIÓN: Si el segundo parámetro es el arreglo de segmentos (flujo original de IA)
+  let actualSegments = segments;
+  if (Array.isArray(textBlob) && !segments) {
+    actualSegments = textBlob; // Intercambio seguro por si se invoca con 2 parámetros
+  }
+
+  if (!audioBlob || !actualSegments || !actualSegments.length) {
     console.log("⚠️ No hay audio o segmentos para analizar");
-    return segments;
+    return actualSegments;
   }
 
   try {
@@ -1499,27 +1507,37 @@ async function analyzePitchForSegments(audioBlob, segments) {
     const sampleRate = audioBuffer.sampleRate;
     const channelData = audioBuffer.getChannelData(0);
     
-    console.log("🎵 Analizando pitch de", segments.length, "segmentos...");
+    console.log("🎵 Analizando pitch de", actualSegments.length, "segmentos...");
 
-    const analyzedSegments = segments.map((segment, index) => {
-      // Obtener muestras para este segmento
-      const startSample = Math.floor(segment.start * sampleRate);
-      const endSample = Math.floor(segment.end * sampleRate);
+    const analyzedSegments = actualSegments.map((segment, index) => {
+      // 1. CORRECCIÓN DE PROPIEDADES DINÁMICAS:
+      // Tu .txt manual usa startTime y duration. El flujo original usa start y end.
+      const startTime = segment.start !== undefined ? segment.start : (segment.startTime || 0);
+      const durationTime = segment.duration !== undefined ? segment.duration : 0.5;
+      const endTime = segment.end !== undefined ? segment.end : (startTime + durationTime);
+
+      const startSample = Math.floor(startTime * sampleRate);
+      const endSample = Math.floor(endTime * sampleRate);
       
-      // Extraer porción del audio
       const segmentSamples = channelData.slice(startSample, endSample);
       
-      // Detectar pitch promedio del segmento
       const pitch = detectPitchFromSamples(segmentSamples, sampleRate);
       const note = pitch > 0 ? getNoteFromFrequency(pitch) : null;
       const midiNote = pitch > 0 ? frequencyToMidi(pitch) : null;
       
-      // Analizar pitch por palabra si hay palabras
       let analyzedWords = [];
-      if (Array.isArray(segment.words) && segment.words.length > 0) {
-        analyzedWords = segment.words.map(word => {
-          const wordStartSample = Math.floor(word.start * sampleRate);
-          const wordEndSample = Math.floor(word.end * sampleRate);
+      
+      // 2. ADAPTACIÓN DE SUB-ARRAYS PARA EL CANVAS:
+      // Si el segmento tiene la estructura .words (IA) o fue inyectada por nuestro flujo proporcional de .txt
+      const palabrasInternas = Array.isArray(segment.words) ? segment.words : [];
+      
+      if (palabrasInternas.length > 0) {
+        analyzedWords = palabrasInternas.map(word => {
+          const wStart = word.start !== undefined ? word.start : (word.startTime || startTime);
+          const wEnd = word.end !== undefined ? word.end : (wStart + (word.duration || 0.5));
+
+          const wordStartSample = Math.floor(wStart * sampleRate);
+          const wordEndSample = Math.floor(wEnd * sampleRate);
           const wordSamples = channelData.slice(wordStartSample, wordEndSample);
           
           const wordPitch = detectPitchFromSamples(wordSamples, sampleRate);
@@ -1535,21 +1553,22 @@ async function analyzePitchForSegments(audioBlob, segments) {
         });
       }
 
+      // Devolvemos el segmento enriquecido con los tonos reales de la voz calculados por la función
       return {
         ...segment,
         pitch: pitch,
         note: note,
-        midi: midiNote,
-        words: analyzedWords
+        midi: midiNote || segment.pitch || 60, // Conserva el tono o cae en nota central C4
+        words: analyzedWords.length > 0 ? analyzedWords : [{ start: startTime, end: endTime, word: segment.text, midi: midiNote || 60 }]
       };
     });
 
-    console.log("✅ Análisis de pitch completado");
+    console.log("✅ Análisis de pitch completado con éxito");
     return analyzedSegments;
 
   } catch (error) {
     console.error("❌ Error analizando pitch:", error);
-    return segments;
+    return actualSegments;
   }
 }
 
@@ -1640,12 +1659,14 @@ function buildSegmentsFromMultilineLyrics(text, baseSegments) {
     .map(line => line.trim())
     .filter(Boolean);
 
-  if (!lines.length || !Array.isArray(baseSegments) || !baseSegments.length) {
-    return [];
-  }
+  if (!lines.length) return [];
 
-  const totalStart = baseSegments[0].start;
-  const totalEnd = baseSegments[baseSegments.length - 1].end;
+  // 🎯 PARCHE DE COMPATIBILIDAD MANUAL:
+  // Si no hay segmentos base de la IA, simulamos un flujo lineal con tiempos estimados en 0
+  const tieneBaseValida = Array.isArray(baseSegments) && baseSegments.length > 0;
+  
+  const totalStart = tieneBaseValida ? (baseSegments[0].start || baseSegments[0].startTime || 0) : 0;
+  const totalEnd = tieneBaseValida ? (baseSegments[baseSegments.length - 1].end || baseSegments[baseSegments.length - 1].endTime || 120) : (lines.length * 3.0);
   const totalDuration = Math.max(0, totalEnd - totalStart);
 
   if (totalDuration <= 0) return [];
@@ -1669,11 +1690,23 @@ function buildSegmentsFromMultilineLyrics(text, baseSegments) {
     const segment = {
       start: cursor,
       end: cursor + duration,
+      startTime: cursor, // Duplicamos propiedades para satisfacer ambas estructuras
+      duration: duration,
       text: line
     };
 
     cursor += duration;
-    return buildWordTimingFromSegment(segment);
+    
+    // Ejecutamos tu reconstructor nativo de palabras por segmento
+    try {
+      return buildWordTimingFromSegment(segment);
+    } catch(e) {
+      // Si la función buildWordTimingFromSegment no está disponible en este scope, devolvemos el objeto limpio
+      return {
+        ...segment,
+        words: line.split(' ').map((w, wi) => ({ start: segment.start, end: segment.end, word: w }))
+      };
+    }
   });
 }
 
@@ -1681,7 +1714,7 @@ function renderKaraokeLyrics(segments) {
   const container = $("karaokeLyrics");
   if (!container) return;
 
-  console.log("renderKaraokeLyrics -> segmentos:", segments);
+  console.log("renderKaraokeLyrics -> segmentos cargados:", segments);
 
   container.innerHTML = "";
 
@@ -1694,22 +1727,40 @@ function renderKaraokeLyrics(segments) {
     const line = document.createElement("p");
     line.className = "karaoke-line";
     line.dataset.index = index;
-    line.dataset.start = Number(segment.start || 0);
-    line.dataset.end = Number(segment.end || 0);
 
+    // NORMALIZACIÓN DE TIEMPOS DE FRASE
+    const segStart = segment.start !== undefined ? segment.start : (segment.startTime || 0);
+    const segEnd = segment.end !== undefined ? segment.end : (segStart + (segment.duration || 1));
+
+    line.dataset.start = Number(segStart);
+    line.dataset.end = Number(segEnd);
+
+    // Extraemos las palabras internas si existen, o generamos una simulación limpia
     const words = Array.isArray(segment.words) ? segment.words : [];
 
     if (words.length) {
       words.forEach((wordObj, wordIndex) => {
         const span = document.createElement("span");
         span.className = "karaoke-word";
-        span.dataset.start = Number(wordObj.start || 0);
-        span.dataset.end = Number(wordObj.end || 0);
-        span.textContent = (wordObj.word || "") + (wordIndex < words.length - 1 ? " " : "");
+
+        // NORMALIZACIÓN DE PROPIEDADES DE PALABRAS
+        const wStart = wordObj.start !== undefined ? wordObj.start : (wordObj.startTime || segStart);
+        const wEnd = wordObj.end !== undefined ? wordObj.end : (wStart + (wordObj.duration || 0.5));
+        const wText = wordObj.word !== undefined ? wordObj.word : (wordObj.text || "");
+
+        span.dataset.start = Number(wStart);
+        span.dataset.end = Number(wEnd);
+        span.textContent = wText + (wordIndex < words.length - 1 ? " " : "");
         line.appendChild(span);
       });
     } else {
-      line.textContent = (segment.text || "").trim();
+      // Si es una línea plana sin sub-palabras, la tratamos como un elemento único
+      const span = document.createElement("span");
+      span.className = "karaoke-word";
+      span.dataset.start = Number(segStart);
+      span.dataset.end = Number(segEnd);
+      span.textContent = (segment.text || "").trim();
+      line.appendChild(span);
     }
 
     container.appendChild(line);
@@ -1723,8 +1774,9 @@ function updateKaraokeHighlight(currentTime) {
   let activeLine = null;
 
   lines.forEach((line) => {
-    const start = parseFloat(line.dataset.start);
-    const end = parseFloat(line.dataset.end);
+    // Validamos que el parseo no devuelva NaN asignando un 0 de respaldo
+    const start = parseFloat(line.dataset.start) || 0;
+    const end = parseFloat(line.dataset.end) || 0;
 
     line.classList.remove("active", "past", "upcoming");
 
@@ -1739,8 +1791,8 @@ function updateKaraokeHighlight(currentTime) {
 
     const words = line.querySelectorAll(".karaoke-word");
     words.forEach((word) => {
-      const wordStart = parseFloat(word.dataset.start);
-      const wordEnd = parseFloat(word.dataset.end);
+      const wordStart = parseFloat(word.dataset.start) || 0;
+      const wordEnd = parseFloat(word.dataset.end) || 0;
 
       word.classList.remove("active-word", "past-word");
 
@@ -1752,14 +1804,15 @@ function updateKaraokeHighlight(currentTime) {
     });
   });
 
-  if (activeLine && autoScrollEnabled) {
+  // Asegura el auto-scroll fluido centrado si la variable global existe
+  const isScrollEnabled = typeof autoScrollEnabled !== "undefined" ? autoScrollEnabled : true;
+  if (activeLine && isScrollEnabled) {
     activeLine.scrollIntoView({
       behavior: "smooth",
       block: "center"
     });
   }
 }
-
 // ==========================================
 // KARAOKE
 // ==========================================
