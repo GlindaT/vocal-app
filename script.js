@@ -2833,10 +2833,9 @@ async function applyTapSync() {
   
   const voicePlayer = $("seleteVoicePlayer");
   const totalDuration = voicePlayer ? voicePlayer.duration : 0;
-  const status = $("selectedVoiceStatus");
+  const status = $(("selectedVoiceStatus) || ("selectedTextStatus"));
   //agregado
   const text = $("selectedText");
-  const status = $("selectedTextStatus");
   
   // Mostrar estado
   if (status) status.textContent = "Estado: Aplicando tiempos y analizando notas...";
