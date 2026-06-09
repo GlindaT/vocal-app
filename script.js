@@ -52,7 +52,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 });
 
-
+/*
 // ==========================================
 // MIGRACIÓN DE NOMBRES (VocalApp → vocalApp)
 // ==========================================
@@ -136,7 +136,7 @@ function migrateLegacyNames() {
     }
   });
 }
-
+*/
 // ==========================================
 // INDEXED DB - BIBLIOTECA
 // ==========================================
@@ -983,7 +983,16 @@ async function loadTrackOptionsInStudio() {
 async function loadSelectedTrackFromLibraryStudio() {
   const select = $("studioTrackSelect");
   const player = $("player");
-  const status = $("studioStatus");
+  
+  // CORRECCIÓN: Buscamos o creamos el elemento de estado dinámicamente para que no rompa la función
+  let status = $("studioStatus");
+  if (!status && player) {
+    status = document.createElement("p");
+    status.id = "studioStatus";
+    status.style.fontSize = "14px";
+    status.style.marginTop = "10px";
+    player.parentNode.insertBefore(status, player.nextSibling);
+  }
 
   if (!select || !player || !status) return;
 
@@ -1006,7 +1015,9 @@ async function loadSelectedTrackFromLibraryStudio() {
     studioTrackBlob = item.audioBlob;
     studioTrackId = item.id;
     player.src = URL.createObjectURL(item.audioBlob);
-    status.textContent = `Estado: pista cargada desde Biblioteca (${item.name})`;
+    
+    // Ahora verás este mensaje de forma exitosa en tu pantalla
+    status.innerHTML = `🎵 <strong>Estado:</strong> pista cargada desde Biblioteca (<span style="color:#22c55e;">${item.name}</span>)`;
   } catch (error) {
     console.error(error);
     alert("❌ No se pudo cargar la pista seleccionada");
@@ -1186,7 +1197,8 @@ async function loadTextOptionsInStudio() {
 async function loadSelectedTextFromLibrary() {
   const select = $("textLibrarySelect");
   const status = $("selectedTextStatus");
-  const textInput = $("text"); // Tu área de texto (monitor de edición)
+  // CORRECCIÓN: Cambiado de "text" al ID real de tu HTML que es "lyricsText"
+  const textInput = $("lyricsText"); 
 
   if (!select || !status || !textInput) return;
 
@@ -1205,7 +1217,8 @@ async function loadSelectedTextFromLibrary() {
       return;
     }
 
-    // Guardamos la referencia del ID del texto seleccionado en el flujo global
+    // Sincronizamos los IDs globales para el flujo de los Taps
+    selectedTextId = item.id;
     selectedVoiceId = item.id; 
     status.textContent = `Estado: letra seleccionada -> ${item.name}`;
 
@@ -1221,11 +1234,11 @@ async function loadSelectedTextFromLibrary() {
         pitch: word.pitch
       }));
 
-      // Renderizamos la vista previa del karaoke (se verá el texto sin avanzar aún)
+      // Renderizamos la vista previa del karaoke
       renderKaraokeLyrics(textSegments);
       cargarLetrasEnMonitor();
 
-      // Inyectamos las palabras en el monitor de edición espaciadas fluidamente
+      // Inyectamos las palabras directamente en tu monitor "lyricsText"
       textInput.value = textSegments
         .map(seg => seg.text || "")
         .join(" ")
