@@ -490,7 +490,8 @@ let selectedVoiceBlob = null;
 let selectedVoiceId = null;
 let studioTextFileName = "";
 let selectedTextId = null;
-let loadSelectedTextFromLibraryStudio = null;
+let studioTextBlob = null;
+let selectedTextBlob = null;
 
 
 // ==========================================
