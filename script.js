@@ -3473,7 +3473,7 @@ async function applyTapSync() {
   alert(studioTrackBlob
     ? "¡Karaoke listo! Ahora aparece en la carpeta Karaoke."
     : "Sincronización guardada. (Recuerda que sin pista de audio no se puede crear el archivo final de Karaoke).");
-  
+}
 function redoTapSync() {
   if ($("tapSyncResult")) $("tapSyncResult").style.display = "none";
   startTapSync();
@@ -3670,6 +3670,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 // MONITOR DE KARAOKE (CANVAS)
 // ==========================================
   
+  
 // 1. Constantes globales (Fuera de la función)
 const MIDI_MIN = 48;
 const MIDI_MAX = 84;
@@ -3858,6 +3859,7 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
 // ==========================================
 // DETECCIÓN DE PITCH PARA KARAOKE
 // ==========================================
+  
 async function startKaraokePitchDetection() {
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     
@@ -4153,6 +4155,7 @@ async function confirmUltrastarImport() {
 // ==========================================
 // CATÁLOGO Y MIS CANCIONES
 // ==========================================
+  
 async function loadKaraokeCatalog() {
   const container = $("catalogList");
   if (!container) return;
@@ -4347,7 +4350,7 @@ function configurarEventosListaKaraoke(container) {
 }
 
 let currentKaraokeAudioURL = null;
-
+  
 async function loadKaraokeSong(id) {
   try {
     const song = await getLibraryItemById(id);
@@ -4419,6 +4422,7 @@ function limpiarVariablesMonitor() {
 // ==========================================
 // COMPARTIR / IMPORTAR KARAOKES (.vocalApp)
 // ==========================================
+  
   
 function blobToBase64Full(blob) {
   return new Promise((resolve, reject) => {
