@@ -4419,6 +4419,7 @@ function limpiarVariablesMonitor() {
 // ==========================================
 // COMPARTIR / IMPORTAR KARAOKES (.vocalApp)
 // ==========================================
+  
 function blobToBase64Full(blob) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -4437,8 +4438,8 @@ function dataUrlToBlob(dataUrl) {
   for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
   return new Blob([arr], { type: mime });
 }
-
-  async function exportKaraokeSong(id) {
+  
+async function exportKaraokeSong(id) {
   try {
     const item = await getLibraryItemById(id);
     if (!item) {
