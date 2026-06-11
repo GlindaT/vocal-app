@@ -824,3 +824,53 @@ input[type="text"] {
   border-radius: 8px;
   border: 2px solid #3b82f6;
 }
+
+/* Estilo para los elementos de la biblioteca y canciones */
+.card, .my-karaoke-item {
+    background: #1e293b; /* Un gris muy oscuro elegante */
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: white;
+}
+
+.my-karaoke-item-title {
+    font-weight: bold;
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+.my-karaoke-item-artist {
+    color: #94a3b8;
+    font-size: 0.9rem;
+    margin: 5px 0 0 0;
+}
+
+/* Estilo para los botones dentro de las listas */
+.my-karaoke-item-actions button {
+    cursor: pointer;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 15px;
+    color: white;
+    font-weight: bold;
+    transition: transform 0.1s, background 0.2s;
+}
+
+.my-karaoke-item-actions button:hover {
+    transform: scale(1.05);
+    filter: brightness(1.1);
+}
+
+/* Mensaje de lista vacía */
+.empty-message {
+    text-align: center;
+    padding: 40px;
+    color: #64748b;
+    border: 2px dashed #334155;
+    border-radius: 12px;
+}
