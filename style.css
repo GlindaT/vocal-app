@@ -816,3 +816,15 @@ input[type="text"] {
   border-radius: 8px;
   border: 2px solid #3b82f6;
 }
+
+/* Fuerza al monitor a ocupar todo el ancho disponible */
+#karaokeCanvas {
+    width: 100% !important;
+    height: auto !important;
+    display: block;
+}
+
+/* Asegura que el contenedor no divida el espacio */
+.card {
+    display: block !important; /* Evita que se comporte como columnas */
+}
