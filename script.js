@@ -4506,4 +4506,3 @@ async function importKaraokeFile(file) {
     alert("❌ Archivo .vocalApp inválido o corrupto");
   }
 }
-  
