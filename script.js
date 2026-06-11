@@ -3676,44 +3676,57 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
 
-  // --- 1. CONFIGURACIÓN ---
-  const P_TOP = 40;
+  // --- 1. CONFIGURACIÓN DEL PENTAGRAMA (DISEÑO ORIGINAL RECUPERADO) ---
+  const P_TOP = 30;
   const P_BOTTOM = canvas.height - 100;
   const P_HEIGHT = P_BOTTOM - P_TOP;
-  const MIDI_MIN = 48; 
-  const MIDI_MAX = 84;
-  const lineX = 60; // La línea roja (el ahora)
+  const MIDI_MIN = 48; // C3
+  const MIDI_MAX = 84; // C6
+  const lineX = 60; 
   const pixelsPerSecond = 150;
 
-  // Actualizar historial de voz para el rastro (Trail)
+  // Actualizar historial de voz para el Rastro (Trail)
   if (typeof pitchHistory !== 'undefined') {
     pitchHistory.push(currentFreq > 0 ? currentFreq : null);
     if (pitchHistory.length > 60) pitchHistory.shift();
   }
 
   const midiToY = (midi) => {
-    const val = (midi && midi > 0) ? midi : 60;
+    const val = (midi && midi > 0) ? midi : 60; // 60 es el centro (C4)
     const normalized = (MIDI_MAX - val) / (MIDI_MAX - MIDI_MIN);
     return P_TOP + (normalized * P_HEIGHT);
   };
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Dibujar Rejilla de fondo
-  ctx.strokeStyle = "#222";
+  // --- 2. DIBUJAR LÍNEAS DEL PENTAGRAMA ---
+  ctx.strokeStyle = "#333";
   ctx.lineWidth = 1;
-  for (let i = 0; i <= 12; i++) {
-    const y = P_TOP + (P_HEIGHT / 12) * i;
-    ctx.beginPath(); ctx.moveTo(50, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+  const numLines = 12;
+  for (let i = 0; i <= numLines; i++) {
+    const y = P_TOP + (P_HEIGHT / numLines) * i;
+    ctx.beginPath();
+    ctx.moveTo(40, y);
+    ctx.lineTo(canvas.width, y);
+    ctx.stroke();
   }
 
-  // --- 2. DIBUJAR BARRAS Y DETECTAR ACIERTOS ---
+  // --- 3. DIBUJAR NOTAS A LA IZQUIERDA (RECUPERADO) ---
+  ctx.fillStyle = "#888";
+  ctx.font = "bold 10px Arial";
+  ctx.textAlign = "right";
+  const noteLabels = ["C6", "A5", "F5", "D5", "B4", "G4", "E4", "C4", "A3", "F3", "D3", "C3"];
+  noteLabels.forEach((label, i) => {
+    const y = P_TOP + (P_HEIGHT / numLines) * i + 4;
+    ctx.fillText(label, 30, y);
+  });
+
+  // --- 4. DIBUJAR BARRAS DE NOTAS (ALTURAS REALES) ---
   const datos = (textSegments && textSegments.length > 0) ? textSegments : transcriptionSegments;
   
   if (Array.isArray(datos) && datos.length > 0) {
     datos.forEach((seg) => {
       const words = Array.isArray(seg.words) ? seg.words : [];
-      
       words.forEach(w => {
         const start = w.start || w.startTime || seg.start || 0;
         const end = w.end || (start + (w.duration || 0.5));
@@ -3724,49 +3737,37 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
         const width = (end - start) * pixelsPerSecond;
         const targetMidi = w.midi || seg.midi || 60;
         const y = midiToY(targetMidi);
-        const h = 26; // Grosor de la barra
+        const h = 24; 
 
         const isActive = currentTime >= start && currentTime <= end;
         const isPast = currentTime > end;
 
-        // LÓGICA DE ACIERTO: ¿Está el usuario cantando la nota correcta?
+        // Lógica de acierto (Cambio a Verde)
         let isCorrect = false;
         if (isActive && currentFreq > 0) {
-          const userMidi = frequencyToMidi(currentFreq);
-          isCorrect = Math.abs(userMidi - targetMidi) <= 2; // Tolerancia de 2 semitonos
+          const userMidi = Math.round(12 * Math.log2(currentFreq / 440) + 69);
+          isCorrect = Math.abs(userMidi - targetMidi) <= 2;
         }
 
-        // COLORES DINÁMICOS
-        if (isPast) {
-          ctx.fillStyle = "#4b5563"; // Gris (Pasado)
-        } else if (isActive) {
-          ctx.fillStyle = isCorrect ? "#22c55e" : "#3b82f6"; // Verde si acierta, azul si no
-        } else {
-          ctx.fillStyle = "#1e40af"; // Azul oscuro (Futuro)
-        }
+        // Estilo de barra
+        ctx.fillStyle = isPast ? "#4b5563" : (isActive ? (isCorrect ? "#22c55e" : "#3b82f6") : "#1e40af");
+        ctx.strokeStyle = isActive ? "white" : "transparent";
+        ctx.lineWidth = 2;
 
-        // Dibujar Barra
         ctx.beginPath();
-        if (ctx.roundRect) ctx.roundRect(x, y - h/2, Math.max(width, 25), h, 6);
+        if (ctx.roundRect) ctx.roundRect(x, y - h/2, Math.max(width, 25), h, 5);
         else ctx.fillRect(x, y - h/2, Math.max(width, 25), h);
         ctx.fill();
+        if (isActive) ctx.stroke();
 
-        // Borde brillante si está activa
-        if (isActive) {
-          ctx.strokeStyle = "white";
-          ctx.lineWidth = 3;
-          ctx.stroke();
-        }
-
-        // Texto de la palabra
         ctx.fillStyle = "white";
-        ctx.font = isActive ? "bold 15px Arial" : "13px Arial";
+        ctx.font = "bold 13px Arial";
         ctx.textAlign = "center";
         ctx.fillText(w.word || w.text || "", x + Math.max(width, 25)/2, y + 5);
       });
     });
 
-    // --- 3. TELEPROMPTER DE DOBLE LÍNEA ---
+    // --- 5. TELEPROMPTER DOBLE LÍNEA (PARTE INFERIOR) ---
     const idx = datos.findIndex(s => currentTime >= (s.start || 0) && currentTime <= (s.end || (s.start + 1)));
     if (idx !== -1) {
       ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
@@ -3779,15 +3780,15 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
       
       if (datos[idx + 1]) {
         ctx.fillStyle = "#94a3b8";
-        ctx.font = "italic 17px Arial";
+        ctx.font = "italic 16px Arial";
         ctx.fillText(datos[idx + 1].text || "", canvas.width / 2, canvas.height - 20, canvas.width - 60);
       }
     }
   }
 
-  // --- 4. VOZ DEL USUARIO (Punto Grande y Rastro) ---
+  // --- 6. INDICADOR DE VOZ (PUNTO GRANDE Y RASTRO) ---
   if (currentFreq > 0) {
-    const userMidi = frequencyToMidi(currentFreq);
+    const userMidi = Math.round(12 * Math.log2(currentFreq / 440) + 69);
     const userY = midiToY(userMidi);
     
     // Rastro (Trail)
@@ -3799,27 +3800,25 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     pitchHistory.forEach((f, i) => {
       if (f) {
         const x = lineX - (pitchHistory.length - i) * 3;
-        const y = midiToY(frequencyToMidi(f));
+        const midi = Math.round(12 * Math.log2(f / 440) + 69);
+        const yPos = midiToY(midi);
         if (x < 0) return;
-        if (!started) { ctx.moveTo(x, y); started = true; } else { ctx.lineTo(x, y); }
+        if (!started) { ctx.moveTo(x, yPos); started = true; } else { ctx.lineTo(x, yPos); }
       }
     });
     ctx.stroke();
 
-    // Punto Amarillo Grande con Brillo (Glow)
+    // Punto Amarillo Brillante
     ctx.beginPath();
     ctx.fillStyle = "#facc15";
-    // Dibujamos un pequeño resplandor sin usar shadowBlur (que es lento)
-    ctx.globalAlpha = 0.3;
-    ctx.arc(lineX, userY, 14, 0, Math.PI * 2); ctx.fill();
-    ctx.globalAlpha = 1.0;
-    ctx.arc(lineX, userY, 8, 0, Math.PI * 2); ctx.fill();
+    ctx.arc(lineX, userY, 9, 0, Math.PI * 2); 
+    ctx.fill();
     ctx.strokeStyle = "white";
     ctx.lineWidth = 2;
     ctx.stroke();
   }
 
-  // Línea roja de tiempo
+  // Línea roja de tiempo actual
   ctx.strokeStyle = "#ef4444";
   ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(lineX, 0); ctx.lineTo(lineX, canvas.height - 90); ctx.stroke();
