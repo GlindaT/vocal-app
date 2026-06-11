@@ -3410,7 +3410,7 @@ async function applyTapSync() {
   
   cargarLetrasEnMonitor();
   
- // 🎤 1. CREAR EL "PAQUETE MAESTRO" (El archivo que tiene todo)
+  // 🎤 1. CREAR EL "PAQUETE MAESTRO" (El archivo que tiene todo)
   if (studioTrackBlob) {
     try {
       const karaokeItem = {
@@ -3482,6 +3482,7 @@ function redoTapSync() {
 // ==========================================
 // INIT
 // ==========================================
+  
 document.addEventListener("DOMContentLoaded", async () => {
   try {
     //await migrateLegacyNames();
@@ -3668,7 +3669,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 // ==========================================
 // MONITOR DE KARAOKE (CANVAS)
 // ==========================================
-// Constantes fuera de la función para no recalcularlas 60 veces por segundo
+  
+// 1. Constantes globales (Fuera de la función)
 const MIDI_MIN = 48;
 const MIDI_MAX = 84;
 const PENTAGRAM_TOP = 30;
@@ -3678,252 +3680,178 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
 
-  // 1. Guardar historial de afinación (pitch)
-  // Asegúrate de que let pitchHistory = [] esté definido al inicio de tu script.js
+  // --- 1. GESTIÓN DE HISTORIAL ---
+  // (Asegúrate de tener definido 'let pitchHistory = [];' al inicio de tu archivo)
   pitchHistory.push(currentFreq > 0 ? currentFreq : null);
   if (pitchHistory.length > 60) pitchHistory.shift();
 
-  // 2. Limpieza total del cuadro anterior
+  // --- 2. LIMPIEZA Y PENTAGRAMA ---
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   const pentagramBottom = canvas.height - 60;
   const pentagramHeight = pentagramBottom - PENTAGRAM_TOP;
   const midiRange = MIDI_MAX - MIDI_MIN;
 
-  // 3. Dibujar fondo del pentagrama
-  ctx.strokeStyle = "rgba(51, 51, 51, 0.5)"; // Color más suave para las líneas
+  // Líneas del pentagrama
+  ctx.strokeStyle = "rgba(51, 51, 51, 0.5)";
   ctx.lineWidth = 1;
-  const numLines = 12;
-  
-  for (let i = 0; i <= numLines; i++) {
-    const y = PENTAGRAM_TOP + (pentagramHeight / numLines) * i;
+  for (let i = 0; i <= 12; i++) {
+    const y = PENTAGRAM_TOP + (pentagramHeight / 12) * i;
     ctx.beginPath();
-    ctx.moveTo(40, y); // Empezamos después de las etiquetas
+    ctx.moveTo(40, y);
     ctx.lineTo(canvas.width, y);
     ctx.stroke();
   }
 
-  // 4. Indicadores de notas musicales
+  // Etiquetas de notas
   ctx.fillStyle = "#888";
   ctx.font = "bold 10px Arial";
   ctx.textAlign = "right";
   const noteLabels = ["C6", "A5", "F5", "D5", "B4", "G4", "E4", "C4", "A3", "F3", "D3", "C3"];
   noteLabels.forEach((label, i) => {
-    const y = PENTAGRAM_TOP + (pentagramHeight / numLines) * i + 4;
+    const y = PENTAGRAM_TOP + (pentagramHeight / 12) * i + 4;
     ctx.fillText(label, 30, y);
   });
 
-  // 5. Función de mapeo (convertir nota musical a posición en pantalla)
+  // Función interna de mapeo
   const midiToY = (midi) => {
     const safeMidi = Math.max(MIDI_MIN, Math.min(MIDI_MAX, midi || MIDI_MIN));
     const normalized = (MIDI_MAX - safeMidi) / midiRange;
     return PENTAGRAM_TOP + normalized * pentagramHeight;
   };
 
-  // 6. Selección de datos (Manual vs IA)
+  // --- 3. DIBUJAR BARRAS DE NOTAS (Si hay datos) ---
   const datosActivos = (textSegments && textSegments.length > 0) ? textSegments : transcriptionSegments;
+  const esFlujoManual = (textSegments && textSegments.length > 0);
 
   if (Array.isArray(datosActivos) && datosActivos.length > 0) {
-    const pixelsPerSecond = (canvas.width - 40) / 6; 
-    const lineX = 40; // El "ahora" se dibuja en el píxel 40
+    const pixelsPerSecond = (canvas.width - 40) / 6;
+    const lineX = 40;
+    const timeWindowStart = currentTime - 1;
+    const timeWindowEnd = currentTime + 5;
 
-    // Dibujar línea de tiempo actual
+    // Línea de tiempo actual (Roja)
     ctx.strokeStyle = "#ef4444";
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(lineX, pentagramTop);
+    ctx.moveTo(lineX, PENTAGRAM_TOP);
     ctx.lineTo(lineX, pentagramBottom);
     ctx.stroke();
 
-    // Extraemos la lista plana de todas las palabras a procesar
+    // Aplanar palabras a procesar
     let palabrasAProcesar = [];
-
     if (esFlujoManual) {
-      // Formato manual .txt: El array ya contiene las palabras de forma directa
       palabrasAProcesar = datosActivos.map(word => ({
         start: word.startTime || 0,
         end: (word.startTime || 0) + (word.duration || 0.5),
-        midi: word.pitch || 60, // Default C4 si no se analizó el tono
+        midi: word.pitch || 60,
         texto: word.text || ""
       }));
     } else {
-      // Formato de IA: Extraemos las palabras desde el objeto anidado original
-      datosActivos.forEach((segment) => {
+      datosActivos.forEach(segment => {
         const words = Array.isArray(segment.words) ? segment.words : [];
-        words.forEach((w) => {
-          palabrasAProcesar.push({
-            start: w.start,
-            end: w.end,
-            midi: w.midi || segment.midi || 60,
-            texto: w.word || ""
-          });
+        words.forEach(w => {
+          palabrasAProcesar.push({ start: w.start, end: w.end, midi: w.midi || segment.midi || 60, texto: w.word || "" });
         });
       });
     }
-    // --- DIBUJAR BARRAS DE NOTAS ---
-    
-    // MEJORA: En lugar de aplanar aquí, asume que 'palabrasAProcesar' ya viene listo
-    // Pero si decides mantenerlo así, optimiza la iteración:
+
+    // Dibujar cada barra
     palabrasAProcesar.forEach((word) => {
-      // 1. Filtro de ventana visible (Crucial para el rendimiento)
       if (word.end < timeWindowStart || word.start > timeWindowEnd) return;
       
-      // 2. Cálculos de posición
       const wordStartX = lineX + (word.start - currentTime) * pixelsPerSecond;
       const wordEndX = lineX + (word.end - currentTime) * pixelsPerSecond;
-      const barWidth = wordEndX - wordStartX;
-      
       const barY = midiToY(word.midi);
-      const barHeight = 20; // Un poco más delgada para mayor elegancia
-      
       const isActive = currentTime >= word.start && currentTime <= word.end;
       const isPast = currentTime > word.end;
       
-      // 3. Lógica de acierto (Pitch Detection)
       let isCorrect = false;
       if (isActive && currentFreq > 0) {
-        const userMidi = frequencyToMidi(currentFreq);
-        isCorrect = Math.abs(userMidi - word.midi) <= 2; 
+        isCorrect = Math.abs(frequencyToMidi(currentFreq) - word.midi) <= 2;
       }
-      
-      // 4. Estilos dinámicos
-      ctx.fillStyle = isPast ? "#4b5563" : (isActive ? (isCorrect ? "#22c55e" : "#3b82f6") : "#1e40af");
-      ctx.strokeStyle = isActive ? "#ffffff" : "transparent"; // Borde blanco si está activa
-      ctx.lineWidth = 2;
 
-      // 5. Dibujo de la barra (con fallback para navegadores viejos)
+      ctx.fillStyle = isPast ? "#4b5563" : (isActive ? (isCorrect ? "#22c55e" : "#3b82f6") : "#1e40af");
       if (ctx.roundRect) {
         ctx.beginPath();
-        ctx.roundRect(wordStartX, barY - barHeight/2, Math.max(barWidth, 5), barHeight, 5);
+        ctx.roundRect(wordStartX, barY - 10, Math.max(wordEndX - wordStartX, 5), 20, 5);
         ctx.fill();
-        if (isActive) ctx.stroke();
       } else {
-        // Fallback para navegadores antiguos
-        ctx.fillRect(wordStartX, barY - barHeight/2, Math.max(barWidth, 5), barHeight);
+        ctx.fillRect(wordStartX, barY - 10, Math.max(wordEndX - wordStartX, 5), 20);
       }
-      
-      // 6. Texto (solo si la barra es lo suficientemente grande para leer)
-      if (barWidth > 10 || isActive) {
-        ctx.fillStyle = "#ffffff";
-        ctx.font = isActive ? "bold 13px Inter, Arial" : "11px Inter, Arial";
+
+      if (isActive || (wordEndX - wordStartX) > 15) {
+        ctx.fillStyle = "white";
+        ctx.font = "11px Arial";
         ctx.textAlign = "left";
-        ctx.textBaseline = "middle";
-        
-        // Cortar texto si es muy largo para la barra
-        let displayWord = word.texto;
-        const textWidth = ctx.measureText(displayWord).width;
-        if (textWidth > barWidth + 20 && !isActive) {
-           displayWord = displayWord.substring(0, 5) + "..";
-        }
-        
-        ctx.fillText(displayWord, wordStartX + 5, barY);
+        ctx.fillText(word.texto, wordStartX + 5, barY + 4);
       }
     });
-  }
+  } // Aquí se cierra el bloque de las barras de notas
 
-  // --- 1. DIBUJAR LA VOZ DEL USUARIO ---
+  // --- 4. DIBUJAR VOZ DEL USUARIO ---
   if (currentFreq > 0) {
-    const userMidi = frequencyToMidi(currentFreq);
-    const userY = midiToY(userMidi);
-    
-    // Punto actual (Sin sombras pesadas para ganar velocidad)
+    const userY = midiToY(frequencyToMidi(currentFreq));
     ctx.beginPath();
     ctx.fillStyle = "#facc15";
     ctx.arc(40, userY, 6, 0, Math.PI * 2);
     ctx.fill();
-    // Un pequeño borde blanco para que resalte
     ctx.strokeStyle = "white";
     ctx.lineWidth = 2;
     ctx.stroke();
-    
-    // Estela de la voz (Historial)
+
     ctx.beginPath();
     ctx.strokeStyle = "rgba(250, 204, 21, 0.4)";
     ctx.lineWidth = 3;
-    ctx.lineCap = "round";
-    
     let started = false;
     pitchHistory.forEach((freq, i) => {
       if (freq) {
-        const midi = frequencyToMidi(freq);
-        const y = midiToY(midi);
-        // El historial se dibuja hacia atrás (izquierda) desde la línea de tiempo (40)
-        const x = 40 - (pitchHistory.length - i) * 3; 
-        
-        if (x < 0) return; // No dibujar fuera del canvas
-
-        if (!started) {
-          ctx.moveTo(x, y);
-          started = true;
-        } else {
-          ctx.lineTo(x, y);
-        }
+        const x = 40 - (pitchHistory.length - i) * 3;
+        const y = midiToY(frequencyToMidi(freq));
+        if (x < 0) return;
+        if (!started) { ctx.moveTo(x, y); started = true; } else { ctx.lineTo(x, y); }
       }
     });
     ctx.stroke();
   }
 
-  // --- TELEPROMPTER DE DOBLE LÍNEA ---
+  // --- 5. TELEPROMPTER DE DOBLE LÍNEA ---
   let lineaActual = "";
   let lineaSiguiente = "";
 
   if (esFlujoManual) {
-    // 1. Encontrar la palabra que suena AHORA
     const palabraActual = textSegments.find(w => currentTime >= w.startTime && currentTime <= (w.startTime + w.duration));
-
     if (palabraActual) {
-      const idRenglonActual = palabraActual.renglon;
-
-      // 2. Construir la frase actual
-      lineaActual = textSegments
-        .filter(w => w.renglon === idRenglonActual)
-        .map(w => w.text)
-        .join(" ");
-
-      // 3. Buscar la primera palabra que pertenezca al SIGUIENTE renglón
-      const primeraPalabraSiguiente = textSegments.find(w => w.renglon > idRenglonActual);
-      
-      if (primeraPalabraSiguiente) {
-        lineaSiguiente = textSegments
-          .filter(w => w.renglon === primeraPalabraSiguiente.renglon)
-          .map(w => w.text)
-          .join(" ");
-      }
+      lineaActual = textSegments.filter(w => w.renglon === palabraActual.renglon).map(w => w.text).join(" ");
+      const siguiente = textSegments.find(w => w.renglon > palabraActual.renglon);
+      if (siguiente) lineaSiguiente = textSegments.filter(w => w.renglon === siguiente.renglon).map(w => w.text).join(" ");
     } else {
-      // Si no hay nada sonando ahora, buscamos la que viene para mostrarla como "Siguiente"
       const proxima = textSegments.find(w => w.startTime > currentTime);
       if (proxima) {
         lineaActual = "Preparado...";
-        lineaSiguiente = textSegments
-          .filter(w => w.renglon === proxima.renglon)
-          .map(w => w.text)
-          .join(" ");
+        lineaSiguiente = textSegments.filter(w => w.renglon === proxima.renglon).map(w => w.text).join(" ");
       }
+    }
+  } else if (transcriptionSegments.length > 0) {
+    // Soporte para flujo de IA
+    const segIdx = transcriptionSegments.findIndex(seg => currentTime >= seg.start && currentTime <= seg.end);
+    if (segIdx !== -1) {
+      lineaActual = transcriptionSegments[segIdx].text;
+      if (transcriptionSegments[segIdx + 1]) lineaSiguiente = transcriptionSegments[segIdx + 1].text;
     }
   }
 
-  // --- RENDERIZADO EN EL CANVAS (Dos líneas) ---
   if (lineaActual || lineaSiguiente) {
-    const boxHeight = 70; // Aumentamos un poco el alto para que quepan dos líneas
     const boxY = canvas.height - 80;
-
-    // Fondo oscuro
     ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
-    ctx.fillRect(0, boxY, canvas.width, boxHeight + 20);
-
+    ctx.fillRect(0, boxY, canvas.width, 90);
     ctx.textAlign = "center";
-
-    // DIBUJAR LÍNEA ACTUAL (Grande y brillante)
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = "white";
     ctx.font = "bold 22px Arial";
-    ctx.fillText(lineaActual, canvas.width / 2, boxY + 25, canvas.width - 40);
-
-    // DIBUJAR LÍNEA SIGUIENTE (Más pequeña y grisácea)
-    if (lineaSiguiente) {
-      ctx.fillStyle = "#94a3b8"; // Color azul-gris tenue
-      ctx.font = "italic 16px Arial";
-      ctx.fillText(lineaSiguiente, canvas.width / 2, boxY + 55, canvas.width - 60);
-    }
+    ctx.fillText(lineaActual, canvas.width / 2, boxY + 30, canvas.width - 40);
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "italic 16px Arial";
+    ctx.fillText(lineaSiguiente, canvas.width / 2, boxY + 65, canvas.width - 60);
   }
 }
   
@@ -4510,7 +4438,7 @@ function dataUrlToBlob(dataUrl) {
   return new Blob([arr], { type: mime });
 }
 
-async function exportKaraokeSong(id) {
+  async function exportKaraokeSong(id) {
   try {
     const item = await getLibraryItemById(id);
     if (!item) {
@@ -4578,4 +4506,4 @@ async function importKaraokeFile(file) {
     alert("❌ Archivo .vocalApp inválido o corrupto");
   }
 }
-
+  
