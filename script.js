@@ -4511,3 +4511,13 @@ async function importKaraokeFile(file) {
     alert("❌ Archivo .vocalApp inválido o corrupto");
   }
 }
+
+function actualizarSelectoresGlobales() {
+  // Aquí ponemos todas las funciones que actualizan los menús desplegables
+  if (typeof loadVoiceOptionsInStudio === "function") loadVoiceOptionsInStudio();
+  if (typeof loadTrackOptionsInStudio === "function") loadTrackOptionsInStudio();
+  if (typeof loadTrackOptionsInKaraoke === "function") loadTrackOptionsInKaraoke();
+  if (typeof loadTextOptionsInStudio === "function") loadTextOptionsInStudio();
+  
+  console.log("🔄 Selectores de la interfaz actualizados");
+}
