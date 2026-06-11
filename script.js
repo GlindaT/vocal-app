@@ -3671,189 +3671,110 @@ document.addEventListener("DOMContentLoaded", async () => {
 // ==========================================
   
   
-// 1. Constantes globales (Fuera de la función)
-const MIDI_MIN = 48;
-const MIDI_MAX = 84;
-const PENTAGRAM_TOP = 30;
-
 function drawKaraokeMonitor(currentTime, currentFreq) {
   const canvas = $("karaokeCanvas");
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
 
-  // --- 1. GESTIÓN DE HISTORIAL ---
-  // (Asegúrate de tener definido 'let pitchHistory = [];' al inicio de tu archivo)
-  pitchHistory.push(currentFreq > 0 ? currentFreq : null);
-  if (pitchHistory.length > 60) pitchHistory.shift();
+  // --- CONFIGURACIÓN ---
+  const P_TOP = 40;
+  const P_BOTTOM = canvas.height - 100;
+  const P_HEIGHT = P_BOTTOM - P_TOP;
+  const MIDI_MIN = 48; 
+  const MIDI_MAX = 84;
+  const lineX = 60;
+  const pixelsPerSecond = 150;
 
-  // --- 2. LIMPIEZA Y PENTAGRAMA ---
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  const pentagramBottom = canvas.height - 60;
-  const pentagramHeight = pentagramBottom - PENTAGRAM_TOP;
-  const midiRange = MIDI_MAX - MIDI_MIN;
-
-  // Líneas del pentagrama
-  ctx.strokeStyle = "rgba(51, 51, 51, 0.5)";
-  ctx.lineWidth = 1;
-  for (let i = 0; i <= 12; i++) {
-    const y = PENTAGRAM_TOP + (pentagramHeight / 12) * i;
-    ctx.beginPath();
-    ctx.moveTo(40, y);
-    ctx.lineTo(canvas.width, y);
-    ctx.stroke();
-  }
-
-  // Etiquetas de notas
-  ctx.fillStyle = "#888";
-  ctx.font = "bold 10px Arial";
-  ctx.textAlign = "right";
-  const noteLabels = ["C6", "A5", "F5", "D5", "B4", "G4", "E4", "C4", "A3", "F3", "D3", "C3"];
-  noteLabels.forEach((label, i) => {
-    const y = PENTAGRAM_TOP + (pentagramHeight / 12) * i + 4;
-    ctx.fillText(label, 30, y);
-  });
-
-  // Función interna de mapeo
   const midiToY = (midi) => {
-    const safeMidi = Math.max(MIDI_MIN, Math.min(MIDI_MAX, midi || MIDI_MIN));
-    const normalized = (MIDI_MAX - safeMidi) / midiRange;
-    return PENTAGRAM_TOP + normalized * pentagramHeight;
+    const val = (midi && midi > 0) ? midi : 60;
+    const normalized = (MIDI_MAX - val) / (MIDI_MAX - MIDI_MIN);
+    return P_TOP + (normalized * P_HEIGHT);
   };
 
-  // --- 3. DIBUJAR BARRAS DE NOTAS (Si hay datos) ---
-  const datosActivos = (textSegments && textSegments.length > 0) ? textSegments : transcriptionSegments;
-  const esFlujoManual = (textSegments && textSegments.length > 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  if (Array.isArray(datosActivos) && datosActivos.length > 0) {
-    const pixelsPerSecond = (canvas.width - 40) / 6;
-    const lineX = 40;
-    const timeWindowStart = currentTime - 1;
-    const timeWindowEnd = currentTime + 5;
+  // Rejilla
+  ctx.strokeStyle = "#222";
+  for (let i = 0; i <= 12; i++) {
+    const y = P_TOP + (P_HEIGHT / 12) * i;
+    ctx.beginPath(); ctx.moveTo(50, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+  }
 
-    // Línea de tiempo actual (Roja)
-    ctx.strokeStyle = "#ef4444";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(lineX, PENTAGRAM_TOP);
-    ctx.lineTo(lineX, pentagramBottom);
-    ctx.stroke();
-
-    // Aplanar palabras a procesar
-    let palabrasAProcesar = [];
-    if (esFlujoManual) {
-      palabrasAProcesar = datosActivos.map(word => ({
-        start: word.startTime || 0,
-        end: (word.startTime || 0) + (word.duration || 0.5),
-        midi: word.pitch || 60,
-        texto: word.text || ""
-      }));
-    } else {
-      datosActivos.forEach(segment => {
-        const words = Array.isArray(segment.words) ? segment.words : [];
-        words.forEach(w => {
-          palabrasAProcesar.push({ start: w.start, end: w.end, midi: w.midi || segment.midi || 60, texto: w.word || "" });
-        });
-      });
-    }
-
-    // Dibujar cada barra
-    palabrasAProcesar.forEach((word) => {
-      if (word.end < timeWindowStart || word.start > timeWindowEnd) return;
+  // --- DATOS ---
+  // Combinamos tus dos fuentes posibles
+  let rawSegments = (textSegments && textSegments.length > 0) ? textSegments : transcriptionSegments;
+  
+  if (Array.isArray(rawSegments) && rawSegments.length > 0) {
+    // Dibujar Barras (Estructura de palabras de tu analyzePitch)
+    rawSegments.forEach((seg, segIdx) => {
+      const words = Array.isArray(seg.words) ? seg.words : [];
       
-      const wordStartX = lineX + (word.start - currentTime) * pixelsPerSecond;
-      const wordEndX = lineX + (word.end - currentTime) * pixelsPerSecond;
-      const barY = midiToY(word.midi);
-      const isActive = currentTime >= word.start && currentTime <= word.end;
-      const isPast = currentTime > word.end;
-      
-      let isCorrect = false;
-      if (isActive && currentFreq > 0) {
-        isCorrect = Math.abs(frequencyToMidi(currentFreq) - word.midi) <= 2;
-      }
+      words.forEach(w => {
+        const start = w.start || w.startTime || seg.start || 0;
+        const end = w.end || (start + (w.duration || 0.5));
+        
+        if (end < currentTime - 1 || start > currentTime + 6) return;
 
-      ctx.fillStyle = isPast ? "#4b5563" : (isActive ? (isCorrect ? "#22c55e" : "#3b82f6") : "#1e40af");
-      if (ctx.roundRect) {
+        const x = lineX + (start - currentTime) * pixelsPerSecond;
+        const width = (end - start) * pixelsPerSecond;
+        const y = midiToY(w.midi || seg.midi || 60);
+        const h = 25;
+
+        const isActive = currentTime >= start && currentTime <= end;
+        ctx.fillStyle = currentTime > end ? "#4b5563" : (isActive ? "#3b82f6" : "#1e40af");
+        
         ctx.beginPath();
-        ctx.roundRect(wordStartX, barY - 10, Math.max(wordEndX - wordStartX, 5), 20, 5);
+        if (ctx.roundRect) ctx.roundRect(x, y - h/2, Math.max(width, 25), h, 5);
+        else ctx.fillRect(x, y - h/2, Math.max(width, 25), h);
         ctx.fill();
-      } else {
-        ctx.fillRect(wordStartX, barY - 10, Math.max(wordEndX - wordStartX, 5), 20);
-      }
 
-      if (isActive || (wordEndX - wordStartX) > 15) {
+        if (isActive) {
+          ctx.strokeStyle = "white";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+
         ctx.fillStyle = "white";
-        ctx.font = "11px Arial";
-        ctx.textAlign = "left";
-        ctx.fillText(word.texto, wordStartX + 5, barY + 4);
-      }
+        ctx.font = "bold 13px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(w.word || w.text || "", x + Math.max(width, 25)/2, y + 5);
+      });
     });
-  } // Aquí se cierra el bloque de las barras de notas
 
-  // --- 4. DIBUJAR VOZ DEL USUARIO ---
+    // --- TELEPROMPTER (Usando tu lógica de segmentos como líneas) ---
+    const segIdx = rawSegments.findIndex(s => currentTime >= (s.start || s.startTime) && currentTime <= (s.end || (s.start + (s.duration || 1))));
+    
+    if (segIdx !== -1) {
+      const actual = rawSegments[segIdx].text || "";
+      const siguiente = rawSegments[segIdx + 1] ? (rawSegments[segIdx + 1].text || "") : "";
+
+      ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
+      ctx.fillRect(0, canvas.height - 90, canvas.width, 90);
+      
+      ctx.textAlign = "center";
+      ctx.fillStyle = "white";
+      ctx.font = "bold 20px Arial";
+      ctx.fillText(actual, canvas.width / 2, canvas.height - 55, canvas.width - 40);
+      
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "italic 16px Arial";
+      ctx.fillText(siguiente, canvas.width / 2, canvas.height - 20, canvas.width - 60);
+    }
+  }
+
+  // --- VOZ ---
   if (currentFreq > 0) {
     const userY = midiToY(frequencyToMidi(currentFreq));
     ctx.beginPath();
     ctx.fillStyle = "#facc15";
-    ctx.arc(40, userY, 6, 0, Math.PI * 2);
+    ctx.arc(lineX, userY, 8, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = "white";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.strokeStyle = "rgba(250, 204, 21, 0.4)";
-    ctx.lineWidth = 3;
-    let started = false;
-    pitchHistory.forEach((freq, i) => {
-      if (freq) {
-        const x = 40 - (pitchHistory.length - i) * 3;
-        const y = midiToY(frequencyToMidi(freq));
-        if (x < 0) return;
-        if (!started) { ctx.moveTo(x, y); started = true; } else { ctx.lineTo(x, y); }
-      }
-    });
-    ctx.stroke();
   }
 
-  // --- 5. TELEPROMPTER DE DOBLE LÍNEA ---
-  let lineaActual = "";
-  let lineaSiguiente = "";
-
-  if (esFlujoManual) {
-    const palabraActual = textSegments.find(w => currentTime >= w.startTime && currentTime <= (w.startTime + w.duration));
-    if (palabraActual) {
-      lineaActual = textSegments.filter(w => w.renglon === palabraActual.renglon).map(w => w.text).join(" ");
-      const siguiente = textSegments.find(w => w.renglon > palabraActual.renglon);
-      if (siguiente) lineaSiguiente = textSegments.filter(w => w.renglon === siguiente.renglon).map(w => w.text).join(" ");
-    } else {
-      const proxima = textSegments.find(w => w.startTime > currentTime);
-      if (proxima) {
-        lineaActual = "Preparado...";
-        lineaSiguiente = textSegments.filter(w => w.renglon === proxima.renglon).map(w => w.text).join(" ");
-      }
-    }
-  } else if (transcriptionSegments.length > 0) {
-    // Soporte para flujo de IA
-    const segIdx = transcriptionSegments.findIndex(seg => currentTime >= seg.start && currentTime <= seg.end);
-    if (segIdx !== -1) {
-      lineaActual = transcriptionSegments[segIdx].text;
-      if (transcriptionSegments[segIdx + 1]) lineaSiguiente = transcriptionSegments[segIdx + 1].text;
-    }
-  }
-
-  if (lineaActual || lineaSiguiente) {
-    const boxY = canvas.height - 80;
-    ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
-    ctx.fillRect(0, boxY, canvas.width, 90);
-    ctx.textAlign = "center";
-    ctx.fillStyle = "white";
-    ctx.font = "bold 22px Arial";
-    ctx.fillText(lineaActual, canvas.width / 2, boxY + 30, canvas.width - 40);
-    ctx.fillStyle = "#94a3b8";
-    ctx.font = "italic 16px Arial";
-    ctx.fillText(lineaSiguiente, canvas.width / 2, boxY + 65, canvas.width - 60);
-  }
+  // Línea de tiempo
+  ctx.strokeStyle = "#ef4444";
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(lineX, 0); ctx.lineTo(lineX, canvas.height - 90); ctx.stroke();
 }
   
 // ==========================================
