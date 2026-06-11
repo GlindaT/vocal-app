@@ -142,131 +142,240 @@ function migrateLegacyNames() {
 // ==========================================
 function initDB() {
   return new Promise((resolve, reject) => {
+    // 1. Abrimos la base de datos (nombre, versión)
     const request = indexedDB.open("vocalAppDB", 1);
 
+    // Se ejecuta si la versión cambia o es la primera vez
     request.onupgradeneeded = function (event) {
       const database = event.target.result;
 
       if (!database.objectStoreNames.contains("library")) {
+        // Creamos el almacén de objetos (como una tabla)
         const store = database.createObjectStore("library", {
           keyPath: "id",
           autoIncrement: true
         });
 
+        // Creamos índices para hacer búsquedas eficientes
         store.createIndex("type", "type", { unique: false });
         store.createIndex("date", "date", { unique: false });
       }
     };
 
+    // Si todo sale bien
     request.onsuccess = function (event) {
-      db = event.target.result;
+      db = event.target.result; // Asignamos a la variable previamente declarada
       resolve(db);
     };
 
-    request.onerror = function () {
-      reject("❌ Error al abrir IndexedDB");
+    // Si hay un error, pasamos el detalle del error
+    request.onerror = function (event) {
+      reject(`❌ Error al abrir IndexedDB: ${event.target.error}`);
     };
   });
 }
 
 function addLibraryItem(item) {
   return new Promise((resolve, reject) => {
+    // Verificamos si la base de datos está lista
+    if (!db) {
+      reject("❌ La base de datos no está inicializada.");
+      return;
+    }
+
+    // Creamos la transacción (modo lectura y escritura)
     const transaction = db.transaction(["library"], "readwrite");
     const store = transaction.objectStore("library");
+    
+    // Intentamos añadir el ítem
     const request = store.add(item);
 
-    request.onsuccess = function () {
-      resolve();
+    // Si tiene éxito, resolvemos devolviendo el ID generado
+    request.onsuccess = function (event) {
+      const newId = event.target.result; 
+      console.log("✅ Ítem guardado con éxito, ID:", newId);
+      resolve(newId); 
     };
 
-    request.onerror = function () {
-      reject("❌ Error al guardar en IndexedDB");
+    // Si hay un error específico en la petición
+    request.onerror = function (event) {
+      reject(`❌ Error al guardar: ${event.target.error}`);
+    };
+    
+    // Opcional: También podrías escuchar el error de la transacción completa
+    transaction.onerror = function (event) {
+      reject(`❌ Error en la transacción: ${event.target.error}`);
     };
   });
 }
 
 function getAllLibraryItems() {
   return new Promise((resolve, reject) => {
+    // 1. Verificación de seguridad
+    if (!db) {
+      reject("❌ No hay conexión con la base de datos.");
+      return;
+    }
+
+    // 2. Abrimos transacción en modo solo lectura ("readonly")
+    // Esto es más eficiente que "readwrite" para solo leer.
     const transaction = db.transaction(["library"], "readonly");
     const store = transaction.objectStore("library");
+    
+    // 3. Solicitamos todos los objetos
     const request = store.getAll();
 
-    request.onsuccess = function () {
-      resolve(request.result);
+    request.onsuccess = function (event) {
+      // Resolvemos con el array de resultados
+      const items = event.target.result;
+      console.log(`✅ Se recuperaron ${items.length} elementos.`);
+      resolve(items);
     };
 
-    request.onerror = function () {
-      reject("❌ Error al leer Biblioteca");
+    request.onerror = function (event) {
+      // Devolvemos el error real del sistema
+      reject(`❌ Error al leer la Biblioteca: ${event.target.error}`);
     };
   });
 }
 
 function updateLibraryItem(id, changes) {
   return new Promise((resolve, reject) => {
+    // 1. Validación de base de datos
+    if (!db) {
+      return reject("❌ Error: Base de datos no inicializada.");
+    }
+
+    // 2. Aseguramos que el ID sea numérico (si así lo configuraste en initDB)
+    const numericId = Number(id);
+
     const transaction = db.transaction(["library"], "readwrite");
     const store = transaction.objectStore("library");
-    const getReq = store.get(id);
+    
+    // 3. Buscamos el registro actual
+    const getReq = store.get(numericId);
 
     getReq.onsuccess = () => {
       const item = getReq.result;
-      if (!item) return reject("Archivo no encontrado");
+      
+      if (!item) {
+        return reject(`❌ No se encontró el ítem con ID: ${id}`);
+      }
 
+      // 4. Fusionamos los datos antiguos con los nuevos cambios
       const updatedItem = { ...item, ...changes };
+
+      // 5. Guardamos el objeto actualizado
       const putReq = store.put(updatedItem);
 
-      putReq.onsuccess = () => resolve();
-      putReq.onerror = () => reject("Error al actualizar la BD");
+      putReq.onsuccess = () => {
+        console.log("✅ Registro actualizado con éxito");
+        resolve(updatedItem); // Devolvemos el objeto final
+      };
+
+      putReq.onerror = (event) => {
+        reject(`❌ Error al guardar cambios: ${event.target.error}`);
+      };
     };
 
-    getReq.onerror = () => reject("Error al buscar en BD");
+    getReq.onerror = (event) => {
+      reject(`❌ Error al buscar en la base de datos: ${event.target.error}`);
+    };
   });
 }
 
 function deleteLibraryItemFromDB(id) {
   return new Promise((resolve, reject) => {
+    // 1. Verificación de seguridad
+    if (!db) {
+      return reject("❌ No hay conexión con la base de datos.");
+    }
+
+    // 2. Normalización del ID (convertir a número)
+    const numericId = Number(id);
+    
+    // 3. Crear transacción de escritura
     const transaction = db.transaction(["library"], "readwrite");
     const store = transaction.objectStore("library");
-    const request = store.delete(id);
+    
+    // 4. Ejecutar borrado
+    const request = store.delete(numericId);
 
     request.onsuccess = function () {
+      console.log(`✅ Registro con ID ${numericId} eliminado (si existía).`);
       resolve();
     };
 
-    request.onerror = function () {
-      reject("❌ Error al eliminar archivo");
+    request.onerror = function (event) {
+      // Capturamos el error real
+      reject(`❌ Error al eliminar el registro: ${event.target.error}`);
     };
   });
 }
 
 function getLibraryItemsByType(type) {
   return new Promise((resolve, reject) => {
+    // 1. Validación de la base de datos
+    if (!db) {
+      return reject("❌ La base de datos no está disponible.");
+    }
+
+    // 2. Transacción de solo lectura
     const transaction = db.transaction(["library"], "readonly");
     const store = transaction.objectStore("library");
+
+    // 3. Verificamos si el índice existe para evitar que la app explote
+    if (!store.indexNames.contains("type")) {
+      return reject("❌ El índice 'type' no existe en la base de datos.");
+    }
+
     const index = store.index("type");
+    
+    // 4. Buscamos todos los que coincidan con el tipo
     const request = index.getAll(type);
 
-    request.onsuccess = function () {
-      resolve(request.result);
+    request.onsuccess = function (event) {
+      const results = event.target.result;
+      console.log(`🔍 Buscando '${type}': se encontraron ${results.length} coincidencias.`);
+      resolve(results);
     };
 
-    request.onerror = function () {
-      reject("❌ Error al filtrar archivos por tipo");
+    request.onerror = function (event) {
+      reject(`❌ Error al filtrar por tipo: ${event.target.error}`);
     };
   });
 }
 
 function getLibraryItemById(id) {
   return new Promise((resolve, reject) => {
+    // 1. Verificación de conexión
+    if (!db) {
+      return reject("❌ Error: La base de datos no está inicializada.");
+    }
+
+    // 2. Forzamos que el ID sea un número para evitar fallos de búsqueda
+    const numericId = Number(id);
+
     const transaction = db.transaction(["library"], "readonly");
     const store = transaction.objectStore("library");
-    const request = store.get(id);
+    
+    // 3. Petición de obtención
+    const request = store.get(numericId);
 
-    request.onsuccess = function () {
-      resolve(request.result);
+    request.onsuccess = function (event) {
+      const result = event.target.result;
+      
+      if (result) {
+        // Si el elemento existe, lo devolvemos
+        resolve(result);
+      } else {
+        // Si no existe, podemos rechazar o resolver con null
+        reject(`❌ No se encontró ningún elemento con el ID: ${numericId}`);
+      }
     };
 
-    request.onerror = function () {
-      reject("❌ Error al obtener archivo");
+    request.onerror = function (event) {
+      reject(`❌ Error al obtener el archivo: ${event.target.error}`);
     };
   });
 }
@@ -787,19 +896,37 @@ function saveStudioRecording() {
 // BIBLIOTECA
 // ==========================================
 async function saveToLibrary(blob, options = {}) {
-  try {
-    await addLibraryItem({
-      name: options.name || "Audio",
-      type: options.type || "audio",
-      audioBlob: blob,
-      date: new Date().toLocaleString("es-ES"),
-      transcription: options.transcription || [] // Añadir campo para evitar errores
-    });
+  // 1. Validación básica
+  if (!blob) {
+    console.error("❌ No hay audio para guardar");
+    return;
+  }
 
-    await renderLibrary(); // Antes decía loadLibrary (error)
+  try {
+    // 2. Creamos el objeto con datos más inteligentes
+    const newItem = {
+      name: options.name || `Grabación ${new Date().toLocaleTimeString()}`,
+      type: options.type || "Grabaciones", // Carpeta por defecto
+      audioBlob: blob,
+      // Guardamos la fecha como número (timestamp) para poder ordenar fácilmente
+      date: Date.now(), 
+      transcription: options.transcription || []
+    };
+
+    // 3. Llamamos a tu función de base de datos
+    await addLibraryItem(newItem);
+
+    // 4. Actualizamos la interfaz
+    // Asegúrate de que esta función exista y esté bien escrita
+    if (typeof renderLibrary === "function") {
+      await renderLibrary();
+    }
+
+    console.log("✅ Guardado en biblioteca correctamente");
+
   } catch (error) {
-    console.error(error);
-    alert("❌ No se pudo guardar en Biblioteca");
+    console.error("Error detallado:", error);
+    alert("❌ No se pudo guardar en Biblioteca: " + error);
   }
 }
 
@@ -810,11 +937,13 @@ async function renderLibrary(filter = 'todos') {
   container.innerHTML = "<p>Cargando archivos...</p>";
 
   try {
-    let library = await getAllLibraryItems();
-
-    let filteredItems = library;
-    if (filter !== 'todos') {
-      filteredItems = library.filter(item => item.type === filter);
+    // 1. Mejora de eficiencia: Si no es 'todos', usamos el índice de la DB
+    let filteredItems;
+    if (filter === 'todos') {
+      filteredItems = await getAllLibraryItems();
+    } else {
+      // getLibraryItemsByType es la función que definimos antes, ¡mucho más rápida!
+      filteredItems = await getLibraryItemsByType(filter);
     }
 
     container.innerHTML = "";
@@ -824,73 +953,93 @@ async function renderLibrary(filter = 'todos') {
     } else {
       filteredItems.forEach((item) => {
         const div = document.createElement("div");
-        div.className = "library-item card"; 
-        div.style.marginBottom = "10px";
+        div.className = "library-item card";
+        
+        // Convertimos el timestamp (Date.now) a algo bonito para el usuario
+        const fechaLegible = typeof item.date === 'number' 
+          ? new Date(item.date).toLocaleString() 
+          : item.date;
 
-        // VERIFICACIÓN CLAVE: Diseñar la tarjeta según el tipo de archivo
         if (item.type === "texto") {
-          // El número de palabras ayuda al usuario a verificar que se segmentó bien
           const totalPalabras = item.lyrics ? item.lyrics.length : 0;
-          
           div.innerHTML = `
             <p><strong>📄 ${item.name}</strong></p>
-            <small>Tipo: LETRA (.TXT) | ${item.date} | ${totalPalabras} palabras</small>
+            <small>Tipo: LETRA | ${fechaLegible} | ${totalPalabras} palabras</small>
             <div style="margin: 10px 0; display: flex; gap: 10px;">
-              <button type="button" data-id="${item.id}" class="send-to-monitor-btn" style="background:#2563eb; color:white; padding:5px 10px; border-radius:4px;">👁️ Enviar al Monitor</button>
+              <button type="button" data-id="${item.id}" class="send-to-monitor-btn" style="...">👁️ Enviar al Monitor</button>
             </div>
-            <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#e11d48;">🗑️ Eliminar</button>
+            <button type="button" data-id="${item.id}" class="delete-library-btn" style="...">🗑️ Eliminar</button>
           `;
         } else {
-          // Flujo original seguro para pistas y audios con Blob existente
+          // Crear URL temporal para el audio
           const audioURL = item.audioBlob ? URL.createObjectURL(item.audioBlob) : "";
           
           div.innerHTML = `
             <p><strong>🎵 ${item.name}</strong></p>
-            <small>Tipo: ${item.type.toUpperCase()} | ${item.date}</small>
+            <small>Tipo: ${item.type.toUpperCase()} | ${fechaLegible}</small>
             <audio controls src="${audioURL}" style="width:100%; margin: 10px 0;"></audio>
-            <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#e11d48;">🗑️ Eliminar</button>
+            <button type="button" data-id="${item.id}" class="delete-library-btn" style="...">🗑️ Eliminar</button>
           `;
         }
-        
         container.appendChild(div);
       });
     }
 
-    // Reactivar botones de borrar
-    document.querySelectorAll(".delete-library-btn").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const id = Number(btn.dataset.id);
-        await deleteLibraryItem(id);
-        renderLibrary(filter); 
-      });
-    });
+    // 2. Delegación de eventos (Mejorado)
+    // En lugar de reactivar botones, usamos una pequeña función de ayuda
+    asignarEventosBiblioteca(filter);
 
-    // NUEVO EVENTO: Escuchar clics en el botón de enviar al monitor
-    document.querySelectorAll(".send-to-monitor-btn").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const id = Number(btn.dataset.id);
-        await cargarTextoEnMonitor(id); // Llamada al siguiente paso del flujo
-      });
-    });
-
-    await loadVoiceOptionsInStudio();
-    await loadTrackOptionsInStudio();
-    await loadTrackOptionsInKaraoke();
-    await loadTextOptionsInStudio();
+    // 3. Actualizar el resto de la app
+    actualizarSelectoresGlobales();
 
   } catch (error) {
-    console.error(error);
+    console.error("Error en renderLibrary:", error);
     container.innerHTML = "<p>❌ Error al cargar la biblioteca.</p>";
   }
 }
 
-async function deleteLibraryItem(id) {
+// Función separada para no ensuciar renderLibrary
+function asignarEventosBiblioteca(filter) {
+  // Evento Borrar
+  document.querySelectorAll(".delete-library-btn").forEach((btn) => {
+    btn.onclick = async () => {
+      if (confirm("¿Estás seguro de eliminar este archivo?")) {
+        const id = Number(btn.dataset.id);
+        await deleteLibraryItemFromDB(id); // Nombre corregido
+        renderLibrary(filter); 
+      }
+    };
+  });
+
+  // Evento Monitor
+  document.querySelectorAll(".send-to-monitor-btn").forEach((btn) => {
+    btn.onclick = async () => {
+      await cargarTextoEnMonitor(Number(btn.dataset.id));
+    };
+  });
+}
+
+// Añadimos 'currentFilter' para que no nos saque de la carpeta donde estamos
+async function deleteLibraryItem(id, currentFilter = 'todos') {
+  // 1. Confirmación de seguridad
+  const seguro = confirm("¿Estás seguro de que quieres eliminar este archivo? Esta acción no se puede deshacer.");
+  if (!seguro) return;
+
   try {
-    await deleteLibraryItemFromDB(id);
-    await renderLibrary('todos');
+    // 2. Convertimos el ID por seguridad
+    const numericId = Number(id);
+
+    // 3. Llamada a la función de base de datos
+    await deleteLibraryItemFromDB(numericId);
+
+    // 4. Refrescamos la biblioteca manteniendo la carpeta donde estaba el usuario
+    await renderLibrary(currentFilter);
+    
+    console.log(`✅ Archivo ${numericId} eliminado correctamente.`);
+
   } catch (error) {
-    console.error(error);
-    alert("❌ No se pudo eliminar el archivo");
+    console.error("Error al eliminar:", error);
+    alert("❌ No se pudo eliminar el archivo. Inténtalo de nuevo.");
   }
 }
 
@@ -899,57 +1048,43 @@ async function saveManualFileToLibrary() {
   const typeSelect = $("libraryFileType");
   const nameInput = $("libraryFileName");
 
-  const file = fileInput ? fileInput.files[0] : null;
-  const type = typeSelect ? typeSelect.value : "audio";
-  const customName = nameInput ? nameInput.value.trim() : "";
+  const file = fileInput?.files[0];
+  const type = typeSelect?.value || "audio";
+  const customName = nameInput?.value.trim() || "";
 
-  // Validación dinámica según el tipo de archivo
   if (!file) {
-    const mensajeError = (type === "texto") ? "⚠️ Selecciona un archivo .txt" : "⚠️ Selecciona un archivo de audio";
-    alert(mensajeError);
+    alert(type === "texto" ? "⚠️ Selecciona un .txt" : "⚠️ Selecciona un audio");
     return;
   }
 
-  const finalName = customName || file.name;
-
   try {
-    // OBJETO BASE PARA LA BIBLIOTECA
     const libraryItem = {
-      name: finalName,
-      type: type,
-      date: new Date().toLocaleString("es-ES")
+      name: customName || file.name,
+      type: type, // Si aquí eliges "pista", se queda como "pista"
+      date: Date.now() // Usamos timestamp numérico
     };
 
-    // BIFURCACIÓN DE FLUJO SEGÚN EL TIPO
     if (type === "texto") {
-      // 1. Leer el archivo .txt plano como string de texto
       const textoPlano = await leerArchivoTexto(file);
-      
-      // 2. Segmentar el texto en un array de palabras formateadas con tiempos en 0
-      const letrasSegmentadas = segmentarTextoPlano(textoPlano);
-      
-      // 3. Guardar el array estructurado en lugar de un Blob de audio
-      libraryItem.lyrics = letrasSegmentadas;
-      libraryItem.isSincronizada = false; // Bandera para el flujo de taps
+      libraryItem.lyrics = segmentarTextoPlano(textoPlano);
+      libraryItem.isSincronizada = false;
     } else {
-      // Flujo original para audio y pista
       libraryItem.audioBlob = file;
+      // Podrías añadir una propiedad para saber si ya es un karaoke listo
+      libraryItem.isReadyKaraoke = (type === "karaoke");
     }
 
-    // Guardar en la base de datos local (IndexDB / LocalStorage / API)
     await addLibraryItem(libraryItem);
-
-    // Renderizar y limpiar interfaz
     await renderLibrary('todos');
 
+    // Limpieza
     if (fileInput) fileInput.value = "";
     if (nameInput) nameInput.value = "";
-    if (typeSelect) typeSelect.value = "pista"; // Reseteo por defecto
-
-    alert("✅ Archivo guardado en Biblioteca");
+    
+    alert(`✅ Guardado en la carpeta ${type.toUpperCase()}`);
   } catch (error) {
     console.error(error);
-    alert("❌ No se pudo guardar el archivo");
+    alert("❌ Error al guardar");
   }
 }
 
@@ -3275,74 +3410,70 @@ async function applyTapSync() {
   
   cargarLetrasEnMonitor();
   
-  // 🎤 GUARDAR COMO ARCHIVO "KARAOKE LISTO" CON LA PISTA INSTRUMENTAL
+ // 🎤 1. CREAR EL "PAQUETE MAESTRO" (El archivo que tiene todo)
   if (studioTrackBlob) {
     try {
-      const karaokeName = `Karaoke - ${studioTrackFileName || "Sin nombre"}`;
-      
       const karaokeItem = {
-        name: karaokeName,
+        name: `Karaoke - ${studioTrackFileName || "Sin nombre"}`,
         type: "karaoke",
         audioBlob: studioTrackBlob, 
         vocalsBlob: selectedVoiceBlob || null,
-        textBlob: selectedTextBlob || null,
-        date: new Date().toLocaleString("es-ES"),
-        metadata: {
-          title: studioTrackFileName || "Sin nombre",
-          artist: "",
+        // Usamos el campo que tu Monitor Canvas prefiera (lyrics o transcription)
+        lyrics: analyzedSegments, 
+        date: Date.now(),
+        metadata: { 
           syncedManually: true,
-          tapStyleUsed: modoSeleccionado
+          originalTrack: studioTrackFileName 
         }
       };
 
-      if (isTextoManual) {
-        karaokeItem.lyrics = analyzedSegments; 
-      } else {
-        karaokeItem.transcription = analyzedSegments; 
-      }
-
       await addLibraryItem(karaokeItem);
-      console.log("... Karaoke listo guardado en Biblioteca con distribución de palabras");
-      
-      try { await loadMyKaraokeSongs(); } catch (e) {}
-      try { await renderLibrary("todos"); } catch (e) {}
+      console.log("✅ Paquete Maestro de Karaoke creado.");
     } catch (err) {
-      console.error("... Error guardando karaoke:", err);
+      console.error("Error al crear nuevo karaoke:", err);
     }
-  } else {
-    console.warn("... No hay pista cargada en Estudio - solo se guardará localmente");
   }
-  
-  // Guardar de vuelta en el archivo origen de la biblioteca
+
+  // 🎯 2. ACTUALIZAR EL ORIGEN (Para que el usuario no vea "pistas" viejas)
   const currentId = selectedVoiceId || selectedTextId;
   if (currentId) {
-    const updateData = isTextoManual 
-      ? { lyrics: analyzedSegments, isSincronizada: true }
-      : { transcription: analyzedSegments };
+    // Preparamos los datos de actualización
+    const updateData = { 
+      isSincronizada: true,
+      type: "karaoke" // <--- Esto resuelve tu duda visual
+    };
 
-    updateLibraryItem(currentId, updateData)
-      .then(() => console.log("... Sincronización guardada en origen"))
-      .catch(err => console.error("Error al actualizar origen:", err));
+    // Guardamos los segmentos en el campo correcto según el origen
+    if (isTextoManual) {
+      updateData.lyrics = analyzedSegments;
+    } else {
+      updateData.transcription = analyzedSegments;
+    }
+
+    // ¡IMPORTANTE!: Si el origen era un TXT, le "pegamos" el audio de la pista 
+    // para que sea un karaoke completo.
+    if (isTextoManual && studioTrackBlob) {
+      updateData.audioBlob = studioTrackBlob;
+    }
+
+    try {
+      await updateLibraryItem(currentId, updateData);
+      console.log("✅ El archivo original se ha convertido en Karaoke.");
+    } catch (err) {
+      console.error("Error al actualizar origen:", err);
+    }
   }
+
+  // 3. LIMPIEZA Y REFRESCO
+  await renderLibrary(window.currentFilter || 'todos');
   
-  if ($("startTapSyncBtn")) $("startTapSyncBtn").style.display = "inline-block";
-  if ($("tapSyncResult")) $("tapSyncResult").style.display = "none";
-  
-  tapSyncLines = [];
-  tapSyncTimestamps = [];
-  tapSyncCurrentIndex = 0;
-  
-  if (status) {
-    status.textContent = studioTrackBlob
-      ? "Estado: ... Karaoke listo guardado en Biblioteca (con pista)"
-      : "Estado: ... Sincronización aplicada (sin pista cargada)";
-  }
-  
+  // Actualizamos los selectores para que el nuevo karaoke aparezca en los desplegables
+  if (typeof loadMyKaraokeSongs === "function") await loadMyKaraokeSongs();
+
   alert(studioTrackBlob
-    ? "... ¡Karaoke listo! Lo encontrarás en la Biblioteca -> carpeta Karaoke, y en 'Mis Canciones' del Karaoke."
-    : "... Tiempos aplicados. ... Carga una pista en Estudio antes de sincronizar para guardar el karaoke con la pista instrumental.");
-}
-
+    ? "¡Karaoke listo! Ahora aparece en la carpeta Karaoke."
+    : "Sincronización guardada. (Recuerda que sin pista de audio no se puede crear el archivo final de Karaoke).");
+  
 function redoTapSync() {
   if ($("tapSyncResult")) $("tapSyncResult").style.display = "none";
   startTapSync();
@@ -3537,70 +3668,64 @@ document.addEventListener("DOMContentLoaded", async () => {
 // ==========================================
 // MONITOR DE KARAOKE (CANVAS)
 // ==========================================
+// Constantes fuera de la función para no recalcularlas 60 veces por segundo
+const MIDI_MIN = 48;
+const MIDI_MAX = 84;
+const PENTAGRAM_TOP = 30;
+
 function drawKaraokeMonitor(currentTime, currentFreq) {
   const canvas = $("karaokeCanvas");
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
 
-  // Guardamos la frecuencia actual
+  // 1. Guardar historial de afinación (pitch)
+  // Asegúrate de que let pitchHistory = [] esté definido al inicio de tu script.js
   pitchHistory.push(currentFreq > 0 ? currentFreq : null);
   if (pitchHistory.length > 60) pitchHistory.shift();
 
-  // Limpiamos el canvas
+  // 2. Limpieza total del cuadro anterior
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Configuración del pentagrama
-  const pentagramTop = 30;
   const pentagramBottom = canvas.height - 60;
-  const pentagramHeight = pentagramBottom - pentagramTop;
-  
-  // Rango de notas (MIDI): C3 (48) a C6 (84)
-  const midiMin = 48;
-  const midiMax = 84;
-  const midiRange = midiMax - midiMin;
+  const pentagramHeight = pentagramBottom - PENTAGRAM_TOP;
+  const midiRange = MIDI_MAX - MIDI_MIN;
 
-  // --- DIBUJAR LÍNEAS DEL PENTAGRAMA ---
-  ctx.strokeStyle = "#333";
+  // 3. Dibujar fondo del pentagrama
+  ctx.strokeStyle = "rgba(51, 51, 51, 0.5)"; // Color más suave para las líneas
   ctx.lineWidth = 1;
   const numLines = 12;
+  
   for (let i = 0; i <= numLines; i++) {
-    const y = pentagramTop + (pentagramHeight / numLines) * i;
+    const y = PENTAGRAM_TOP + (pentagramHeight / numLines) * i;
     ctx.beginPath();
-    ctx.moveTo(0, y);
+    ctx.moveTo(40, y); // Empezamos después de las etiquetas
     ctx.lineTo(canvas.width, y);
     ctx.stroke();
   }
 
-  // --- DIBUJAR INDICADORES DE NOTAS A LA IZQUIERDA ---
-  ctx.fillStyle = "#666";
-  ctx.font = "10px Arial";
+  // 4. Indicadores de notas musicales
+  ctx.fillStyle = "#888";
+  ctx.font = "bold 10px Arial";
   ctx.textAlign = "right";
   const noteLabels = ["C6", "A5", "F5", "D5", "B4", "G4", "E4", "C4", "A3", "F3", "D3", "C3"];
   noteLabels.forEach((label, i) => {
-    const y = pentagramTop + (pentagramHeight / numLines) * i + 4;
-    ctx.fillText(label, 25, y);
+    const y = PENTAGRAM_TOP + (pentagramHeight / numLines) * i + 4;
+    ctx.fillText(label, 30, y);
   });
 
-  // Función para convertir MIDI a posición Y
-  function midiToY(midi) {
-    if (!midi || midi < midiMin) midi = midiMin;
-    if (midi > midiMax) midi = midiMax;
-    const normalized = (midiMax - midi) / midiRange;
-    return pentagramTop + normalized * pentagramHeight;
-  }
+  // 5. Función de mapeo (convertir nota musical a posición en pantalla)
+  const midiToY = (midi) => {
+    const safeMidi = Math.max(MIDI_MIN, Math.min(MIDI_MAX, midi || MIDI_MIN));
+    const normalized = (MIDI_MAX - safeMidi) / midiRange;
+    return PENTAGRAM_TOP + normalized * pentagramHeight;
+  };
 
-  // --- DETERMINAR QUÉ FUENTE DE DATOS USAR ---
-  // Si existe la variable de texto manual cargada, le damos prioridad; si no, usamos la de IA
+  // 6. Selección de datos (Manual vs IA)
   const datosActivos = (textSegments && textSegments.length > 0) ? textSegments : transcriptionSegments;
-  const esFlujoManual = (textSegments && textSegments.length > 0);
 
   if (Array.isArray(datosActivos) && datosActivos.length > 0) {
-    
-    // Ventana de tiempo visible (5 segundos hacia adelante, 1 hacia atrás)
-    const timeWindowStart = currentTime - 1;
-    const timeWindowEnd = currentTime + 5;
-    const pixelsPerSecond = (canvas.width - 40) / 6; // 6 segundos de ventana
-    const lineX = 40; // Línea de tiempo actual
+    const pixelsPerSecond = (canvas.width - 40) / 6; 
+    const lineX = 40; // El "ahora" se dibuja en el píxel 40
 
     // Dibujar línea de tiempo actual
     ctx.strokeStyle = "#ef4444";
@@ -3636,108 +3761,98 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
       });
     }
 
-    // --- DIBUJAR BARRAS DE NOTAS (ULTRASTAR STYLE) ---
+     // --- DIBUJAR BARRAS DE NOTAS ---
+    
+    // MEJORA: En lugar de aplanar aquí, asume que 'palabrasAProcesar' ya viene listo
+    // Pero si decides mantenerlo así, optimiza la iteración:
     palabrasAProcesar.forEach((word) => {
-      // Verificar si está en la ventana visible
+      // 1. Filtro de ventana visible (Crucial para el rendimiento)
       if (word.end < timeWindowStart || word.start > timeWindowEnd) return;
       
-      // Calcular posición X basada en el tiempo
+      // 2. Cálculos de posición
       const wordStartX = lineX + (word.start - currentTime) * pixelsPerSecond;
       const wordEndX = lineX + (word.end - currentTime) * pixelsPerSecond;
-      const barWidth = Math.max(wordEndX - wordStartX, 25); // Un poco más ancho para legibilidad
+      const barWidth = wordEndX - wordStartX;
       
-      // Posición Y basada en la nota MIDI
       const barY = midiToY(word.midi);
-      const barHeight = 22;
+      const barHeight = 20; // Un poco más delgada para mayor elegancia
       
-      // Determinar si la palabra está activa
       const isActive = currentTime >= word.start && currentTime <= word.end;
       const isPast = currentTime > word.end;
       
-      // Determinar si el usuario está cantando la nota correcta
+      // 3. Lógica de acierto (Pitch Detection)
       let isCorrect = false;
       if (isActive && currentFreq > 0) {
         const userMidi = frequencyToMidi(currentFreq);
-        isCorrect = Math.abs(userMidi - word.midi) <= 2; // Tolerancia de 2 semitonos
+        isCorrect = Math.abs(userMidi - word.midi) <= 2; 
       }
       
-      // Colores según estado
-      let barColor, textColor, borderColor;
-      if (isPast) {
-        barColor = "#4b5563"; // Gris pasado
-        textColor = "#9ca3af";
-        borderColor = "#6b7280";
-      } else if (isActive) {
-        if (isCorrect) {
-          barColor = "#22c55e"; // Verde - ¡Le atinó a la nota!
-          textColor = "#ffffff";
-          borderColor = "#4ade80";
-        } else {
-          barColor = "#3b82f6"; // Azul - Palabra activa
-          textColor = "#ffffff";
-          borderColor = "#60a5fa";
-        }
-      } else {
-        barColor = "#1e40af"; // Azul oscuro - Próxima nota
-        textColor = "#93c5fd";
-        borderColor = "#3b82f6";
-      }
-      
-      // Dibujar barra con bordes redondeados
-      ctx.fillStyle = barColor;
-      ctx.beginPath();
-      ctx.roundRect(wordStartX, barY - barHeight/2, barWidth, barHeight, 8);
-      ctx.fill();
-      
-      // Borde
-      ctx.strokeStyle = borderColor;
-      ctx.lineWidth = isActive ? 2 : 1;
-      ctx.stroke();
-      
-      // Texto de la palabra encima de la barra
-      ctx.fillStyle = textColor;
-      ctx.font = isActive ? "bold 12px Arial" : "11px Arial";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      
-      let displayWord = word.texto;
-      if (displayWord.length > 10) {
-        displayWord = displayWord.substring(0, 8) + "..";
-      }
-      ctx.fillText(displayWord, wordStartX + barWidth/2, barY);
-    });
+      // 4. Estilos dinámicos
+      ctx.fillStyle = isPast ? "#4b5563" : (isActive ? (isCorrect ? "#22c55e" : "#3b82f6") : "#1e40af");
+      ctx.strokeStyle = isActive ? "#ffffff" : "transparent"; // Borde blanco si está activa
+      ctx.lineWidth = 2;
 
-  } else {
-    ctx.fillStyle = "#666";
-    ctx.font = "16px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText("Sincroniza una canción en 'Estudio' para ver las notas", canvas.width / 2, canvas.height / 2);
+      // 5. Dibujo de la barra (con fallback para navegadores viejos)
+      if (ctx.roundRect) {
+        ctx.beginPath();
+        ctx.roundRect(wordStartX, barY - barHeight/2, Math.max(barWidth, 5), barHeight, 5);
+        ctx.fill();
+        if (isActive) ctx.stroke();
+      } else {
+        // Fallback para navegadores antiguos
+        ctx.fillRect(wordStartX, barY - barHeight/2, Math.max(barWidth, 5), barHeight);
+      }
+      
+      // 6. Texto (solo si la barra es lo suficientemente grande para leer)
+      if (barWidth > 10 || isActive) {
+        ctx.fillStyle = "#ffffff";
+        ctx.font = isActive ? "bold 13px Inter, Arial" : "11px Inter, Arial";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        
+        // Cortar texto si es muy largo para la barra
+        let displayWord = word.texto;
+        const textWidth = ctx.measureText(displayWord).width;
+        if (textWidth > barWidth + 20 && !isActive) {
+           displayWord = displayWord.substring(0, 5) + "..";
+        }
+        
+        ctx.fillText(displayWord, wordStartX + 5, barY);
+      }
+    });
   }
 
-  // --- DIBUJAR LA VOZ DEL USUARIO (LÍNEA/PUNTO) ---
+  // --- 1. DIBUJAR LA VOZ DEL USUARIO ---
   if (currentFreq > 0) {
     const userMidi = frequencyToMidi(currentFreq);
     const userY = midiToY(userMidi);
     
+    // Punto actual (Sin sombras pesadas para ganar velocidad)
     ctx.beginPath();
     ctx.fillStyle = "#facc15";
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = "#facc15";
-    ctx.arc(40, userY, 8, 0, Math.PI * 2);
+    ctx.arc(40, userY, 6, 0, Math.PI * 2);
     ctx.fill();
-    ctx.shadowBlur = 0;
+    // Un pequeño borde blanco para que resalte
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 2;
+    ctx.stroke();
     
+    // Estela de la voz (Historial)
     ctx.beginPath();
-    ctx.strokeStyle = "rgba(250, 204, 21, 0.6)";
+    ctx.strokeStyle = "rgba(250, 204, 21, 0.4)";
     ctx.lineWidth = 3;
+    ctx.lineCap = "round";
     
     let started = false;
     pitchHistory.forEach((freq, i) => {
       if (freq) {
         const midi = frequencyToMidi(freq);
         const y = midiToY(midi);
-        const x = 40 - (pitchHistory.length - i) * 2;
+        // El historial se dibuja hacia atrás (izquierda) desde la línea de tiempo (40)
+        const x = 40 - (pitchHistory.length - i) * 3; 
         
+        if (x < 0) return; // No dibujar fuera del canvas
+
         if (!started) {
           ctx.moveTo(x, y);
           started = true;
@@ -3749,39 +3864,70 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     ctx.stroke();
   }
 
-  // --- DIBUJAR TEXTO FLUIDO EN LA PARTE INFERIOR (CRAWL DE LETRA) ---
-  // Buscamos las palabras que están por sonar en un rango cercano a la pantalla
-  let fraseActual = "";
-  let fraseSiguiente = "";
+  // --- TELEPROMPTER DE DOBLE LÍNEA ---
+  let lineaActual = "";
+  let lineaSiguiente = "";
 
   if (esFlujoManual) {
-    // Para el flujo manual .txt, construimos un bloque dinámico de lectura
-    const palabrasFrase = textSegments.filter(w => currentTime >= w.startTime - 2 && currentTime <= w.startTime + 4);
-    fraseActual = palabrasFrase.map(w => w.text).join(" ");
-  } else {
-    // Para el flujo tradicional de la IA por segmentos de línea enteros
-    const currentSegment = transcriptionSegments.find(seg => 
-      currentTime >= seg.start && currentTime <= seg.end + 0.5
-    );
-    if (currentSegment) fraseActual = currentSegment.text || "";
+    // 1. Encontrar la palabra que suena AHORA
+    const palabraActual = textSegments.find(w => currentTime >= w.startTime && currentTime <= (w.startTime + w.duration));
 
-    const nextSegment = transcriptionSegments.find(seg => seg.start > currentTime);
-    if (nextSegment && !currentSegment) fraseSiguiente = "Próximo: " + (nextSegment.text || "");
+    if (palabraActual) {
+      const idRenglonActual = palabraActual.renglon;
+
+      // 2. Construir la frase actual
+      lineaActual = textSegments
+        .filter(w => w.renglon === idRenglonActual)
+        .map(w => w.text)
+        .join(" ");
+
+      // 3. Buscar la primera palabra que pertenezca al SIGUIENTE renglón
+      const primeraPalabraSiguiente = textSegments.find(w => w.renglon > idRenglonActual);
+      
+      if (primeraPalabraSiguiente) {
+        lineaSiguiente = textSegments
+          .filter(w => w.renglon === primeraPalabraSiguiente.renglon)
+          .map(w => w.text)
+          .join(" ");
+      }
+    } else {
+      // Si no hay nada sonando ahora, buscamos la que viene para mostrarla como "Siguiente"
+      const proxima = textSegments.find(w => w.startTime > currentTime);
+      if (proxima) {
+        lineaActual = "Preparado...";
+        lineaSiguiente = textSegments
+          .filter(w => w.renglon === proxima.renglon)
+          .map(w => w.text)
+          .join(" ");
+      }
+    }
   }
 
-  // Renderizar la caja de texto inferior en el Canvas si hay texto por cantar
-  if (fraseActual || fraseSiguiente) {
-    ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-    ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
-    
-    ctx.fillStyle = fraseActual ? "#ffffff" : "#94a3b8";
-    ctx.font = fraseActual ? "bold 20px Arial" : "16px Arial";
+  // --- RENDERIZADO EN EL CANVAS (Dos líneas) ---
+  if (lineaActual || lineaSiguiente) {
+    const boxHeight = 70; // Aumentamos un poco el alto para que quepan dos líneas
+    const boxY = canvas.height - 80;
+
+    // Fondo oscuro
+    ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
+    ctx.fillRect(0, boxY, canvas.width, boxHeight + 20);
+
     ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(fraseActual || fraseSiguiente, canvas.width / 2, canvas.height - 25);
+
+    // DIBUJAR LÍNEA ACTUAL (Grande y brillante)
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 22px Arial";
+    ctx.fillText(lineaActual, canvas.width / 2, boxY + 25, canvas.width - 40);
+
+    // DIBUJAR LÍNEA SIGUIENTE (Más pequeña y grisácea)
+    if (lineaSiguiente) {
+      ctx.fillStyle = "#94a3b8"; // Color azul-gris tenue
+      ctx.font = "italic 16px Arial";
+      ctx.fillText(lineaSiguiente, canvas.width / 2, boxY + 55, canvas.width - 60);
+    }
   }
 }
-
+  
 // ==========================================
 // DETECCIÓN DE PITCH PARA KARAOKE
 // ==========================================
@@ -4208,16 +4354,14 @@ async function loadMyKaraokeSongs() {
   if (!container) return;
   
   try {
-    // Obtener canciones tipo "karaoke" de la biblioteca
-    const karaokeSongs = await getLibraryItemsByType("karaoke");
-    
-    const allSongs = [...karaokeSongs,];
+    // 1. Solo traemos lo que es realmente un Karaoke listo
+    const allSongs = await getLibraryItemsByType("karaoke");
     
     if (allSongs.length === 0) {
       container.innerHTML = `
-        <div style="text-align: center; padding: 20px; color: var(--text-muted);">
+        <div class="empty-message">
           <p>No tienes canciones listas aún.</p>
-          <p style="font-size: 13px;">Importa de UltraStar o sincroniza una en Estudio.</p>
+          <p>Sincroniza una pista en la pestaña Estudio para verla aquí.</p>
         </div>
       `;
       return;
@@ -4227,49 +4371,55 @@ async function loadMyKaraokeSongs() {
     
     allSongs.forEach(song => {
       const div = document.createElement("div");
-      div.className = "my-karaoke-item";
+      div.className = "my-karaoke-item card"; // Añadimos 'card' para estilo
       
       const title = song.metadata?.title || song.name || "Sin título";
-      const artist = song.metadata?.artist || "";
+      const artist = song.metadata?.artist || "Artista desconocido";
       
       div.innerHTML = `
         <div class="my-karaoke-item-info">
-          <p class="my-karaoke-item-title">${title}</p>
-          <p class="my-karaoke-item-artist">${artist || "Artista desconocido"}</p>
+          <p class="my-karaoke-item-title">🎤 ${title}</p>
+          <p class="my-karaoke-item-artist">${artist}</p>
         </div>
         <div class="my-karaoke-item-actions">
-          <button type="button" class="load-karaoke-btn" data-id="${song.id}" style="background: #22c55e;">▶️ Cantar</button>
-          <button type="button" class="share-karaoke-btn" data-id="${song.id}" style="background: #8b5cf6; padding: 8px 10px;" title="Compartir como .vocalApp">📤</button>
-          <button type="button" class="delete-karaoke-btn" data-id="${song.id}" style="background: #ef4444; padding: 8px 10px;">🗑️</button>
+          <button type="button" class="btn-play" data-id="${song.id}">▶️ Cantar</button>
+          <button type="button" class="btn-share" data-id="${song.id}" title="Exportar">📤</button>
+          <button type="button" class="btn-delete" data-id="${song.id}">🗑️</button>
         </div>
       `;
-      
       container.appendChild(div);
     });
     
-    // Agregar eventos
-    container.querySelectorAll(".load-karaoke-btn").forEach(btn => {
-      btn.addEventListener("click", () => loadKaraokeSong(Number(btn.dataset.id)));
-    });
-    
-    container.querySelectorAll(".share-karaoke-btn").forEach(btn => {
-      btn.addEventListener("click", () => exportKaraokeSong(Number(btn.dataset.id)));
-    });
-
-    container.querySelectorAll(".delete-karaoke-btn").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        if (confirm("¿Eliminar esta canción de tu biblioteca?")) {
-          await deleteLibraryItemFromDB(Number(btn.dataset.id));
-          await loadMyKaraokeSongs();
-        }
-      });
-    });
+    // 2. Asignación de eventos limpia
+    configurarEventosListaKaraoke(container);
     
   } catch (error) {
-    console.error("Error cargando mis canciones:", error);
-    container.innerHTML = `<p style="color: #ef4444;">Error al cargar canciones</p>`;
+    console.error("Error al cargar lista de karaoke:", error);
+    container.innerHTML = `<p class="error">❌ No se pudieron cargar tus canciones.</p>`;
   }
 }
+
+// Función auxiliar para mantener el código organizado
+function configurarEventosListaKaraoke(container) {
+  container.addEventListener("click", async (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    
+    const id = Number(btn.dataset.id);
+    
+    if (btn.classList.contains("btn-play")) {
+      loadKaraokeSong(id);
+    } else if (btn.classList.contains("btn-share")) {
+      exportKaraokeSong(id);
+    } else if (btn.classList.contains("btn-delete")) {
+      // Usamos la función con confirmación que ya tienes
+      await deleteLibraryItem(id); 
+      loadMyKaraokeSongs(); // Refrescamos esta lista
+    }
+  });
+}
+
+let currentKaraokeAudioURL = null;
 
 async function loadKaraokeSong(id) {
   try {
@@ -4279,60 +4429,64 @@ async function loadKaraokeSong(id) {
       return;
     }
     
-    // 1. Cargar pista instrumental en el reproductor de canto
+    // 1. GESTIÓN DE AUDIO
     const track = $("karaokeTrack");
-    if (track && song.audioBlob) {
-      track.src = URL.createObjectURL(song.audioBlob);
-      track.volume = 0.6;
-      karaokeSelectedTrackBlob = song.audioBlob;
-      karaokeSelectedTrackName = song.name;
+    if (track) {
+      // Liberamos la memoria del audio anterior si existe
+      if (currentKaraokeAudioURL) URL.revokeObjectURL(currentKaraokeAudioURL);
+      
+      if (song.audioBlob) {
+        currentKaraokeAudioURL = URL.createObjectURL(song.audioBlob);
+        track.src = currentKaraokeAudioURL;
+        track.volume = 0.6;
+        karaokeSelectedTrackBlob = song.audioBlob;
+        karaokeSelectedTrackName = song.name;
+      } else {
+        alert("⚠️ Esta canción no tiene un archivo de audio asociado.");
+      }
     }
     
-    // 2. 🎯 BIFURCACIÓN DE LECTURA DE LETRAS (Bug del Canvas solucionado)
-    // Verificamos si la canción proviene de tu flujo manual .txt o de la IA tradicional
-    if (Array.isArray(song.lyrics) && song.lyrics.length > 0) {
-      // FORMATO MANUAL: Mapeamos los datos para que el Canvas original los lea de forma transparente
-      transcriptionSegments = song.lyrics;
-      baseTranscriptionSegments = song.lyrics;
-      
-      // Activamos también tus variables globales de texto por seguridad
-      textSegments = song.lyrics;
-      baseTextSegments = song.lyrics;
-      
-      cargarLetrasEnMonitor();
-      console.log("🎤 Letras manuales cargadas exitosamente en el reproductor de Karaoke");
-    } else if (song.transcription && song.transcription.length > 0) {
-      // FORMATO IA ORIGINAL: Mantiene la lógica intacta para Whisper
-      transcriptionSegments = song.transcription;
-      baseTranscriptionSegments = song.transcription;
-      textSegments = [];
-      baseTextSegments = [];
+    // 2. 🎯 BIFURCACIÓN DE LETRAS
+    // Simplificamos la lógica: priorizamos 'lyrics' y luego 'transcription'
+    const segments = (Array.isArray(song.lyrics) && song.lyrics.length > 0) 
+                     ? song.lyrics 
+                     : song.transcription;
+
+    if (segments && segments.length > 0) {
+      // Sincronizamos todas las variables que el Canvas podría estar mirando
+      transcriptionSegments = segments;
+      baseTranscriptionSegments = segments;
+      textSegments = segments;
+      baseTextSegments = segments;
       
       cargarLetrasEnMonitor();
-      console.log("🎤 Transcripción de IA cargada exitosamente en el reproductor de Karaoke");
+      console.log(`🎤 Letras (${song.lyrics ? 'Manuales' : 'IA'}) cargadas correctamente.`);
     } else {
-      // Si la canción por algún motivo no tiene ninguna letra asociada
-      transcriptionSegments = [];
-      baseTranscriptionSegments = [];
-      textSegments = [];
-      baseTextSegments = [];
+      limpiarVariablesMonitor();
       console.warn("⚠️ Esta canción no contiene letras sincronizadas.");
     }
     
+    // 3. INTERFAZ Y NAVEGACIÓN
     const title = song.metadata?.title || song.name;
-    if ($("karaokeStatus")) {
-      $("karaokeStatus").textContent = `Estado: "${title}" cargada. ¡Lista para cantar! 🎤`;
+    const status = $("karaokeStatus");
+    if (status) {
+      status.textContent = `Estado: "${title}" cargada. ¡A cantar! 🎤`;
     }
     
-    // Scroll fluido al monitor Canvas para centrar la vista del usuario
-    if ($("karaokeCanvas")) {
-      $("karaokeCanvas").scrollIntoView({ behavior: "smooth", block: "center" });
-    }
+    // Scroll suave al monitor
+    $("karaokeCanvas")?.scrollIntoView({ behavior: "smooth", block: "center" });
     
   } catch (error) {
     console.error("Error cargando canción en el módulo Karaoke:", error);
-    alert("❌ Error al cargar la canción");
+    alert("❌ Error crítico al cargar la canción");
   }
+}
+
+function limpiarVariablesMonitor() {
+  transcriptionSegments = [];
+  baseTranscriptionSegments = [];
+  textSegments = [];
+  baseTextSegments = [];
 }
 
 // ==========================================
