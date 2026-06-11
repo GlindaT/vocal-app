@@ -3760,8 +3760,7 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
         });
       });
     }
-
-     // --- DIBUJAR BARRAS DE NOTAS ---
+    // --- DIBUJAR BARRAS DE NOTAS ---
     
     // MEJORA: En lugar de aplanar aquí, asume que 'palabrasAProcesar' ya viene listo
     // Pero si decides mantenerlo así, optimiza la iteración:
@@ -4579,3 +4578,4 @@ async function importKaraokeFile(file) {
     alert("❌ Archivo .vocalApp inválido o corrupto");
   }
 }
+
