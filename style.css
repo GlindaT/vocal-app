@@ -228,11 +228,11 @@ audio {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  margin-top: 15px;
+  margin-top: 10px;
 }
 
 #studioStatus {
-  margin-top: 15px;
+  margin-top: 10px;
   color: var(--text-muted);
   font-weight: bold;
 }
@@ -243,9 +243,9 @@ textarea {
   color: var(--text-main);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 12px;
+  padding: 10px;
   resize: vertical;
-  margin-top: 10px;
+  margin-top: 8px;
   font-family: Arial, sans-serif;
 }
 
@@ -301,7 +301,7 @@ input[type="text"] {
   margin: 14px 0;
   text-align: center;
   color: var(--text-muted);
-  transition: all 0.25s ease;
+  transition: all 0.20s ease;
 }
 
 .karaoke-line.past {
@@ -350,11 +350,6 @@ input[type="text"] {
 .save-notification.show {
   opacity: 1; /* Se hace visible cuando JS le pone esta clase */
 }
-.karaoke-line.active {
-  color: #22c55e;
-  font-weight: bold;
-  transform: scale(1.05);
-}
 
 /* ==========================================
    RESALTADO POR PALABRA
@@ -383,6 +378,13 @@ input[type="text"] {
 /* ==========================================
    MONITOR KARAOKE ULTRASTAR
 ========================================== */
+
+.karaoke-line.active {
+  color: #22c55e;
+  font-weight: bold;
+  transform: scale(1.05);
+}
+
 .karaoke-live-line {
   font-size: 26px;
   color: #475569; /* Gris oscuro para las que no han sonado */
