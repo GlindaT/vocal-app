@@ -3766,14 +3766,14 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     datos.forEach((seg) => {
       const words = Array.isArray(seg.words) ? seg.words : [];
       words.forEach(word => {
-        const start = w.start || w.startTime || seg.start || 0;
-        const end = w.end || (start + (w.duration || 0.5));
+        const start = word.start || word.startTime || seg.start || 0;
+        const end = word.end || (start + (word.duration || 0.5));
         // Ventana: vemos 1s atrás y el resto del ancho del canvas adelante
         if (end < currentTime - 1 || start > currentTime + (canvas.width / pixelsPerSecond)) return;
 
         const x = lineX + (start - currentTime) * pixelsPerSecond;
         const width = (end - start) * pixelsPerSecond;
-        const midi = w.midi || seg.midi || 60;
+        const midi = word.midi || seg.midi || 60;
         const y = midiToY(midi);
         const h = 24;
 
@@ -3866,42 +3866,42 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
 // ==========================================
   
 async function startKaraokePitchDetection() {
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  
+  // Obtener micrófono seleccionado
+  const micId = getSelectedMicId(1);
     
-    // Obtener micrófono seleccionado
-    const micId = getSelectedMicId(1);
+  const audioConstraints = { 
+    audio: micId ? { deviceId: { exact: micId } } : true 
+  };
     
-    const audioConstraints = { 
-        audio: micId ? { deviceId: { exact: micId } } : true 
-    };
-    
-    const stream = await navigator.mediaDevices.getUserMedia(audioConstraints);
-    const mic = audioCtx.createMediaStreamSource(stream);
-    const analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 2048;
-    mic.connect(analyser);
+  const stream = await navigator.mediaDevices.getUserMedia(audioConstraints);
+  const mic = audioCtx.createMediaStreamSource(stream);
+  const analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 2048;
+  mic.connect(analyser);
 
-    function loop() {
-        const track = $("karaokeTrack");
-        const currentTime = track ? track.currentTime : 0;
+  function loop() {
+    const track = $("karaokeTrack");
+    const currentTime = track ? track.currentTime : 0;
 
-        const buffer = new Float32Array(analyser.fftSize);
-        analyser.getFloatTimeDomainData(buffer);
-        const pitch = autoCorrelate(buffer, audioCtx.sampleRate);
+    const buffer = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(buffer);
+    const pitch = autoCorrelate(buffer, audioCtx.sampleRate);
 
-        drawKaraokeMonitor(currentTime, pitch);
+    drawKaraokeMonitor(currentTime, pitch);
 
-        // Si la pista terminó, paramos
-        if (track && track.ended) return;
+    // Si la pista terminó, paramos
+    if (track && track.ended) return;
 
-        // Seguimos el loop mientras se graba
-        if (karaokeMediaRecorder && karaokeMediaRecorder.state === "recording") {
-            requestAnimationFrame(loop);
-        }
+    // Seguimos el loop mientras se graba
+    if (karaokeMediaRecorder && karaokeMediaRecorder.state === "recording") {
+      requestAnimationFrame(loop);
     }
-
-    loop();
+  }
+  loop();
 }
+
 /*
 // ==========================================
 // IMPORTADOR ULTRASTAR
@@ -3928,6 +3928,7 @@ function closeUltrastarModal() {
     parsedUltrastar = null;
   }
 }
+*/
 
 function parseUltrastarTxt(content) {
   const lines = content.split("\n");
@@ -4060,6 +4061,7 @@ function ultrastarToSegments(parsed) {
   return segments;
 }
 
+/*
 async function handleUltrastarTxtChange(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -4156,7 +4158,9 @@ async function confirmUltrastarImport() {
     alert("❌ Error al importar la canción. Revisa la consola para más detalles.");
   }
 }
+
 */
+
 // ==========================================
 // CATÁLOGO Y MIS CANCIONES
 // ==========================================
