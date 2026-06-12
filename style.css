@@ -149,7 +149,7 @@ input::placeholder {
 ========================================== */
 audio {
    width: 100%;
-   height: 36px;
+   height: 30px;
    margin-top: 10px;
 }
 
@@ -216,8 +216,9 @@ audio {
 }
 
 .success {
-  color: #22c55e !important; /* Verde */
-  transform: scale(1.2);
+   color: #22c55e !important; /* Verde */
+   transform: scale(1.2);
+   transition: 0.2s;
 }
 
 /* ==========================================
