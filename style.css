@@ -117,12 +117,13 @@ button {
 
 /* Botón principal */
 button {
-  background: var(--accent);
-  color: black;
+   background: var(--accent);
+   color: black;
 }
 
 button:hover {
-  background: var(--accent-hover);
+   background: var(--accent-hover);
+   color: var(--text-main);
 }
 
 .sidebar button {
