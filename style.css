@@ -42,13 +42,13 @@ body {
 .sidebar {
   width: 220px;
   background: var(--bg-sidebar);
-  padding: 20px;
+  padding: 20px; /* Añade espacio interior de 20px por todos los lados. */
   display: flex;
   flex-direction: column;
   overflow-y: auto;
 }
 
-.sidebar h2 {
+.sidebar h2 {  /* Este bloque aplica estilo a cualquier h2 que esté dentro de .sidebar. */
   margin-bottom: 20px;
 }
 
@@ -57,7 +57,7 @@ body {
 ========================================== */
 .sidebar button {
   background: none;
-  border: none;
+  border: 1px var(--border);
   color: var(--text-muted);
   padding: 12px;
   text-align: left;
