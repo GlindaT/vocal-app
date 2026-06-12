@@ -3696,7 +3696,7 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     return P_TOP + (normalized * P_HEIGHT);
   };
 
-  obtenerPaletaTema() {
+  /*obtenerPaletaTema() {
     const temaActual = localStorage.getItem("singIt_stage") || "theme-clasico";
     let config = { fondo: "#111827", lineas: "#333333", etiquetas: "#666666", barraFutura: "#1e40af", bordeFuturo: "#3b82f6" };
 
@@ -3713,7 +3713,7 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
       config = { fondo: "#1e0b36", lineas: "rgba(255, 0, 127, 0.25)", etiquetas: "#38bdf8", barraFutura: "#4c1d95", bordeFuturo: "#ff007f" };
     }
     return config;
-  }
+  }*/
 
   // 1. LIMPIAR TODO EL CANVAS
   ctx.fillStyle = paleta.fondo
