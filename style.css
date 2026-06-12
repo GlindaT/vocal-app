@@ -58,7 +58,7 @@ body {
 .sidebar button {
   background: none;
   border: 1px solid var(--text-main);
-  color: var(--text-main);
+  color: var(--text-muted);
   padding: 12px;
   text-align: left;
   cursor: pointer;
