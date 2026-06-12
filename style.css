@@ -49,7 +49,7 @@ body {
 }
 
 .sidebar h2 {  /* Este bloque aplica estilo a cualquier h2 que esté dentro de .sidebar. */
-  margin-bottom: 20px;
+  margin-bottom: 10px;
 }
 
 /* ==========================================
@@ -107,7 +107,7 @@ body {
    BOTONES GENERALES
 ========================================== */
 button {
-  border: 1px;
+  border: none;
   border-radius: 8px;
   padding: 10px 18px;
   font-weight: bold;
