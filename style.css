@@ -1,19 +1,20 @@
 /* ==========================================
    VARIABLES (ESCALABLE)
 ========================================== */
+
 :root {
-  --bg-main: #0f172a;
-  --bg-sidebar: #1e293b;
-  --bg-card: #1e293b;
-
-  --text-main: #ffffff;
-  --text-muted: #94a3b8;
-
-  --accent: #22c55e;
-  --accent-hover: #16a34a;
-
-  --danger: #ef4444;
-  --border: #334155;
+   --bg-main: #0f172a;  /* Las propiedades que empiezan con -- son variables personalizadas de CSS. Se suele usar en zonas como: body,contenedor principal, fondo general de la app o web */
+   --bg-sidebar: #1e293b; /* Define otro color de fondo, también oscuro, para la barra lateral o sidebar. */
+   --bg-card: #1e293b;  /* Define el color de fondo para tarjetas o bloques de contenido. */
+   
+   --text-main: #ffffff; /* Define el color principal del texto: blanco. Se usa en títulos, párrafos importantes, botones, etc. */
+   --text-muted: #94a3b8; /* Define un color de texto más suave o apagado.Se usa para texto secundario */
+   
+   --accent: #22c55e;  /* Define el color de acento principal, en este caso un verde.Se suele usar para destacar elementos importantes */
+   --accent-hover: #0d7835; /* Cuando el usuario pasa el ratón por encima de un botón o enlace, ese elemento puede cambiar a este color para dar feedback visual. */
+   
+   --danger: #ef4444; /* Define un color rojo para acciones o estados de peligro. */
+   --border: #334155; /* Se usa para separar visualmente elementos sin que el borde sea demasiado llamativo. */
 }
 
 /* ==========================================
