@@ -3765,7 +3765,7 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
   if (Array.isArray(datos) && datos.length > 0) {
     datos.forEach((seg) => {
       const words = Array.isArray(seg.words) ? seg.words : [];
-      words.forEach(word => {
+      words.forEach(w => {
         const start = w.start || w.startTime || seg.start || 0;
         const end = w.end || (start + (w.duration || 0.5));
         // Ventana: vemos 1s atrás y el resto del ancho del canvas adelante
