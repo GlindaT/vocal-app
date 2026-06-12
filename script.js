@@ -3750,7 +3750,6 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
       words.forEach(word => {
         const start = word.start || word.startTime || seg.start || 0;
         const end = word.end || (start + (word.duration || 0.5));
-        
         // Ventana: vemos 1s atrás y el resto del ancho del canvas adelante
         if (end < currentTime - 1 || start > currentTime + (canvas.width / pixelsPerSecond)) return;
 
@@ -3767,11 +3766,11 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
         let barColor = "#1e40af"; // Futuro
         if (isPast) barColor = "#4b5563"; // Pasado
         if (isActive) {
-            // Lógica de acierto (Verde)
-            const userMidi = Math.round(12 * Math.log2(currentFreq / 440) + 69);
-            const isCorrect = currentFreq > 0 && Math.abs(userMidi - midi) <= 2;
-            barColor = isCorrect ? "#22c55e" : "#3b82f6";
-        });
+          // Lógica de acierto (Verde)
+          const userMidi = Math.round(12 * Math.log2(currentFreq / 440) + 69);
+          const isCorrect = currentFreq > 0 && Math.abs(userMidi - midi) <= 2;
+          barColor = isCorrect ? "#22c55e" : "#3b82f6";
+        };
 
         ctx.fillStyle = barColor;
         ctx.beginPath();
