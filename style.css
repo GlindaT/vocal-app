@@ -14,7 +14,7 @@
    --accent-hover: #0d7835; /* Cuando el usuario pasa el ratón por encima de un botón o enlace, ese elemento puede cambiar a este color para dar feedback visual. */
    
    --danger: #ef4444; /* Define un color rojo para acciones o estados de peligro. */
-   --border: #334155; /* Se usa para separar visualmente elementos sin que el borde sea demasiado llamativo. */
+   --border: #6b7585; /* Se usa para separar visualmente elementos sin que el borde sea demasiado llamativo. */
 }
 
 /* ==========================================
