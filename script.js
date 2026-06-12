@@ -3669,21 +3669,20 @@ document.addEventListener("DOMContentLoaded", async () => {
 // ==========================================
 // MONITOR DE KARAOKE (CANVAS)
 // ==========================================
-  
-  
+
 function drawKaraokeMonitor(currentTime, currentFreq) {
   const canvas = $("karaokeCanvas");
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
 
   // --- CONFIGURACIÓN ---
-  const P_TOP = 30;
+  const P_TOP = 40;
   const P_BOTTOM = canvas.height - 110;
   const P_HEIGHT = P_BOTTOM - P_TOP;
-  const MIDI_MIN = 48; 
+  const MIDI_MIN = 36; 
   const MIDI_MAX = 84;
-  const lineX = 60; // Línea roja (Ahora)
-  const pixelsPerSecond = 150; 
+  const lineX = 80; // Línea roja (Ahora)
+  const pixelsPerSecond = (canvas.width - 50) / 6; 
 
   // Historial de voz
   if (typeof pitchHistory !== 'undefined') {
@@ -3692,33 +3691,54 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
   }
 
   const midiToY = (midi) => {
-    const val = (midi && midi > 0) ? midi : 64; 
+    const val = (midi && midi > 0) ? midi : 60; 
     const normalized = (MIDI_MAX - val) / (MIDI_MAX - MIDI_MIN);
     return P_TOP + (normalized * P_HEIGHT);
   };
 
+  obtenerPaletaTema() {
+    const temaActual = localStorage.getItem("singIt_stage") || "theme-clasico";
+    let config = { fondo: "#111827", lineas: "#333333", etiquetas: "#666666", barraFutura: "#1e40af", bordeFuturo: "#3b82f6" };
+
+    if (temaActual === "theme-moderno") {
+      config = { fondo: "#082f49", lineas: "rgba(6, 182, 212, 0.2)", etiquetas: "#06b6d4", barraFutura: "#1e3a8a", bordeFuturo: "#06b6d4" };
+    } else if (temaActual === "theme-disco") {
+      config = { fondo: "#2e1065", lineas: "rgba(219, 39, 119, 0.25)", etiquetas: "#facc15", barraFutura: "#701a75", bordeFuturo: "#db2777" };
+    } else if (temaActual === "theme-acustico") {
+      config = { fondo: "#451a03", lineas: "rgba(120, 53, 15, 0.4)", etiquetas: "#fcd34d", barraFutura: "#78350f", bordeFuturo: "#b45309" };
+    } else if (temaActual === "theme-fiesta") {
+      const hue = (Date.now() / 20) % 360;
+      config = { fondo: `hsl(${hue}, 40%, 12%)`, lineas: "rgba(255, 255, 255, 0.15)", etiquetas: "#ff007f", barraFutura: `hsl(${(hue + 180) % 360}, 50%, 25%)`, bordeFuturo: `hsl(${(hue + 180) % 360}, 70%, 50%)` };
+    } else if (temaActual === "theme-retrowave") {
+      config = { fondo: "#1e0b36", lineas: "rgba(255, 0, 127, 0.25)", etiquetas: "#38bdf8", barraFutura: "#4c1d95", bordeFuturo: "#ff007f" };
+    }
+    return config;
+  }
+
   // 1. LIMPIAR TODO EL CANVAS
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = paleta.fondo
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   // 2. DIBUJAR PENTAGRAMA (A todo lo ancho)
-  ctx.strokeStyle = "#333";
+  ctx.strokeStyle = paleta.lineas;
   ctx.lineWidth = 1;
-  for (let i = 0; i <= 12; i++) {
-    const y = P_TOP + (P_HEIGHT / 12) * i;
+  const numLines = 10;
+  for (let i = 0; i <= numLines; i++) {
+    const y = P_TOP + (P_HEIGHT / numLines) * i;
     ctx.beginPath();
-    ctx.moveTo(45, y);
+    ctx.moveTo(35, y);
     ctx.lineTo(canvas.width, y); // Dibuja hasta el final del canvas
     ctx.stroke();
   }
 
   // Notas a la izquierda
-  ctx.fillStyle = "#888";
-  ctx.font = "bold 10px Arial";
+  ctx.fillStyle = paleta.etiquetas;
+  ctx.font = "bold 20px Arial";
   ctx.textAlign = "right";
   const noteLabels = ["C6", "A5", "F5", "D5", "B4", "G4", "E4", "C4", "A3", "F3", "D3", "C3"];
   noteLabels.forEach((label, i) => {
-    const y = P_TOP + (P_HEIGHT / 12) * i + 4;
-    ctx.fillText(label, 35, y);
+    const y = P_TOP + (P_HEIGHT / numLines) * i + 6;
+    ctx.fillText(label, 28, y);
   });
 
   // 3. DIBUJAR BARRAS DE NOTAS
@@ -3727,9 +3747,9 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
   if (Array.isArray(datos) && datos.length > 0) {
     datos.forEach((seg) => {
       const words = Array.isArray(seg.words) ? seg.words : [];
-      words.forEach(w => {
-        const start = w.start || w.startTime || seg.start || 0;
-        const end = w.end || (start + (w.duration || 0.5));
+      words.forEach(word => {
+        const start = word.start || word.startTime || seg.start || 0;
+        const end = word.end || (start + (word.duration || 0.5));
         
         // Ventana: vemos 1s atrás y el resto del ancho del canvas adelante
         if (end < currentTime - 1 || start > currentTime + (canvas.width / pixelsPerSecond)) return;
@@ -3751,7 +3771,7 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
             const userMidi = Math.round(12 * Math.log2(currentFreq / 440) + 69);
             const isCorrect = currentFreq > 0 && Math.abs(userMidi - midi) <= 2;
             barColor = isCorrect ? "#22c55e" : "#3b82f6";
-        }
+        });
 
         ctx.fillStyle = barColor;
         ctx.beginPath();
@@ -3790,7 +3810,6 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
       }
     }
   }
-
   // 5. VOZ DEL USUARIO (Rastro y Punto)
   if (currentFreq > 0) {
     const userMidi = Math.round(12 * Math.log2(currentFreq / 440) + 69);
