@@ -57,7 +57,7 @@ body {
 ========================================== */
 .sidebar button {
   background: none;
-  border: 1px solid var(--text-main);
+  border: 1px solid var(--border);
   color: var(--text-muted);
   padding: 12px;
   text-align: left;
