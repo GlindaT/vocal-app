@@ -3766,14 +3766,14 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     datos.forEach((seg) => {
       const words = Array.isArray(seg.words) ? seg.words : [];
       words.forEach(word => {
-        const start = word.start || word.startTime || seg.start || 0;
-        const end = word.end || (start + (word.duration || 0.5));
+        const start = w.start || w.startTime || seg.start || 0;
+        const end = w.end || (start + (w.duration || 0.5));
         // Ventana: vemos 1s atrás y el resto del ancho del canvas adelante
         if (end < currentTime - 1 || start > currentTime + (canvas.width / pixelsPerSecond)) return;
 
         const x = lineX + (start - currentTime) * pixelsPerSecond;
         const width = (end - start) * pixelsPerSecond;
-        const midi = word.midi || seg.midi || 60;
+        const midi = w.midi || seg.midi || 60;
         const y = midiToY(midi);
         const h = 24;
 
@@ -4061,7 +4061,7 @@ function ultrastarToSegments(parsed) {
   return segments;
 }
 
-/*
+
 async function handleUltrastarTxtChange(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -4114,17 +4114,16 @@ async function confirmUltrastarImport() {
       audioBlob: audioFile,
       date: new Date().toLocaleString("es-ES")
     });
-    
-    // Si hay voz separada, guardarla también
-  //  if (vocalsFile) {
-   //   await addLibraryItem({
-      //  name: `Voz - ${parsedUltrastar.title} (${parsedUltrastar.artist})`,
-    //    type: "voz",
-    //    audioBlob: vocalsFile,
-    //    date: new Date().toLocaleString("es-ES"),
-     //   transcription: segments
-    //  });
- //   } 
+    //Si hay voz separada, guardarla también
+    if (vocalsFile) {
+      await addLibraryItem({
+        name: `Voz - ${parsedUltrastar.title} (${parsedUltrastar.artist})`,
+        type: "voz",
+        audioBlob: vocalsFile,
+        date: new Date().toLocaleString("es-ES"),
+        transcription: segments
+      });
+    } 
     
     // Guardar como "karaoke listo"
     await addLibraryItem({
@@ -4159,7 +4158,6 @@ async function confirmUltrastarImport() {
   }
 }
 
-*/
 
 // ==========================================
 // CATÁLOGO Y MIS CANCIONES
