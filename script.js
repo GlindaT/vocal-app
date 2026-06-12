@@ -3674,6 +3674,10 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
   const canvas = $("karaokeCanvas");
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
+  const hueFiesta = (currentTime * 50) % 360;
+  const paleta = obtenerPaletaTema(hueFiesta);
+  ctx.fillStyle = paleta.fondo;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   // --- CONFIGURACIÓN ---
   const P_TOP = 40;
@@ -3696,22 +3700,36 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
     return P_TOP + (normalized * P_HEIGHT);
   };
   
-  obtenerPaletaTema() {
+  function obtenerPaletaTema(hue = 0) {
     const temaActual = localStorage.getItem("singIt_stage") || "theme-clasico";
+    
+    // Configuración por defecto (theme-clasico)
     let config = { fondo: "#111827", lineas: "#333333", etiquetas: "#666666", barraFutura: "#1e40af", bordeFuturo: "#3b82f6" };
 
-    if (temaActual === "theme-moderno") {
+    switch (temaActual) {
+      case "theme-moderno":
       config = { fondo: "#082f49", lineas: "rgba(6, 182, 212, 0.2)", etiquetas: "#06b6d4", barraFutura: "#1e3a8a", bordeFuturo: "#06b6d4" };
-    } else if (temaActual === "theme-disco") {
+      break;
+      case "theme-disco":
       config = { fondo: "#2e1065", lineas: "rgba(219, 39, 119, 0.25)", etiquetas: "#facc15", barraFutura: "#701a75", bordeFuturo: "#db2777" };
-    } else if (temaActual === "theme-acustico") {
+      break;
+      case "theme-acustico":
       config = { fondo: "#451a03", lineas: "rgba(120, 53, 15, 0.4)", etiquetas: "#fcd34d", barraFutura: "#78350f", bordeFuturo: "#b45309" };
-    } else if (temaActual === "theme-fiesta") {
-      const hue = (Date.now() / 20) % 360;
-      config = { fondo: `hsl(${hue}, 40%, 12%)`, lineas: "rgba(255, 255, 255, 0.15)", etiquetas: "#ff007f", barraFutura: `hsl(${(hue + 180) % 360}, 50%, 25%)`, bordeFuturo: `hsl(${(hue + 180) % 360}, 70%, 50%)` };
-    } else if (temaActual === "theme-retrowave") {
+      break;
+      case "theme-fiesta":
+      config = { 
+        fondo: `hsl(${hue}, 40%, 12%)`, 
+        lineas: "rgba(255, 255, 255, 0.15)", 
+        etiquetas: "#ff007f", 
+        barraFutura: `hsl(${(hue + 180) % 360}, 50%, 25%)`, 
+        bordeFuturo: `hsl(${(hue + 180) % 360}, 70%, 50%)` 
+      };
+      break;
+      case "theme-retrowave":
       config = { fondo: "#1e0b36", lineas: "rgba(255, 0, 127, 0.25)", etiquetas: "#38bdf8", barraFutura: "#4c1d95", bordeFuturo: "#ff007f" };
+      break;
     }
+    
     return config;
   }
 
