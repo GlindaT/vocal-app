@@ -3806,6 +3806,7 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
       words.forEach(w => {
         const start = w.start || w.startTime || seg.start || 0;
         const end = w.end || (start + (w.duration || 0.5));
+        
         // Ventana: vemos 1s atrás y el resto del ancho del canvas adelante
         if (end < currentTime - 1 || start > currentTime + (canvas.width / pixelsPerSecond)) return;
 
@@ -3818,35 +3819,45 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
         const isActive = currentTime >= start && currentTime <= end;
         const isPast = currentTime > end;
 
-        // Color de la barra
-        let barColor = "#1e40af"; // Futuro
-        if (isPast) barColor = "#4b5563"; // Pasado
+        // --- SOLUCIÓN: LÓGICA DE COLORES BASADA EN EL TEMA DINÁMICO ---
+        let barColor = paleta.barraFutura; // 1. Por defecto toma el color del Tema elegido (Futuro)
+        let strokeColor = paleta.bordeFuturo; // Guardamos el borde del tema para usarlo abajo
+
+        if (isPast) {
+          barColor = "#4b5563"; // Pasado (Gris neutro para que se note que ya pasó)
+        }
+        
         if (isActive) {
-          // Lógica de acierto (Verde)
+          // Lógica de acierto (Verde si afina, si falla usa el color del tema)
           const userMidi = Math.round(12 * Math.log2(currentFreq / 440) + 69);
           const isCorrect = currentFreq > 0 && Math.abs(userMidi - midi) <= 2;
-          barColor = isCorrect ? "#22c55e" : "#3b82f6";
-        };
+          
+          barColor = isCorrect ? "#22c55e" : paleta.bordeFuturo; // Si falla, brilla con el borde del tema
+          strokeColor = "white"; // Borde blanco destacado para la nota que se está cantando actualmente
+        }
 
+        // Dibujar el rectángulo de la barra
         ctx.fillStyle = barColor;
         ctx.beginPath();
         if (ctx.roundRect) ctx.roundRect(x, y - h/2, Math.max(width, 25), h, 5);
         else ctx.fillRect(x, y - h/2, Math.max(width, 25), h);
         ctx.fill();
 
-        if (isActive) {
-          ctx.strokeStyle = "white";
-          ctx.lineWidth = 2;
+        // Dibujar el contorno/borde de la barra (Solo si está activa o es una nota futura)
+        if (isActive || !isPast) {
+          ctx.strokeStyle = strokeColor;
+          ctx.lineWidth = isActive ? 3 : 1; // Más grueso si es la nota activa
           ctx.stroke();
         }
 
+        // Dibujar el texto de la sílaba/palabra
         ctx.fillStyle = "white";
         ctx.font = "bold 15px Arial";
         ctx.textAlign = "center";
         ctx.fillText(w.word || w.text || "", x + Math.max(width, 25)/2, y + 5);
       });
     });
-
+    
     // 4. TELEPROMPTER DOBLE LÍNEA (Abajo)
     const idx = datos.findIndex(s => currentTime >= (s.start || 0) && currentTime <= (s.end || (s.start + 1)));
     if (idx !== -1) {
