@@ -921,7 +921,7 @@ async function saveToLibrary(blob, options = {}) {
     // Asegúrate de que esta función exista y esté bien escrita
    // if (typeof renderLibrary === "function") {
      // await renderLibrary();
-  /  }
+  //  }
 
     console.log("✅ Guardado en biblioteca correctamente");
 
@@ -954,7 +954,7 @@ async function renderLibrary(filter = 'todos') {
    // } else {
       // getLibraryItemsByType es la función que definimos antes, ¡mucho más rápida!
      // filteredItems = await getLibraryItemsByType(filter);
-  /  }
+  //  }
     let library = await getAllLibraryItems();
     let filteredItems = filter !== 'todos' ? library.filter(item => item.type === filter) : library;
     
