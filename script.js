@@ -3740,34 +3740,32 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
   
   function obtenerPaletaTema(hue = 0) {
     const temaActual = localStorage.getItem("vocalApp_stage") || "theme-clasico";
-    
-    // Configuración por defecto (theme-clasico)
-    let config = { fondo: "#111827", lineas: "#333333", etiquetas: "#666666", barraFutura: "#1e40af", bordeFuturo: "#3b82f6" };
+  
+    // Añadimos tamanoTexto a cada tema (por defecto 15)
+    let config = { fondo: "#111827", lineas: "#333333", etiquetas: "#666666", barraFutura: "#1e40af", bordeFuturo: "#3b82f6", tamanoTexto: "15px" };
 
     switch (temaActual) {
       case "theme-moderno":
-      config = { fondo: "#082f49", lineas: "rgba(6, 182, 212, 0.2)", etiquetas: "#06b6d4", barraFutura: "#1e3a8a", bordeFuturo: "#06b6d4" };
-      break;
+        config = { fondo: "#082f49", lineas: "rgba(6, 182, 212, 0.2)", etiquetas: "#06b6d4", barraFutura: "#1e3a8a", bordeFuturo: "#06b6d4", tamanoTexto: "16px" };
+        break;
       case "theme-disco":
-      config = { fondo: "#2e1065", lineas: "rgba(219, 39, 119, 0.25)", etiquetas: "#facc15", barraFutura: "#701a75", bordeFuturo: "#db2777" };
-      break;
+        // El tema disco suele verse genial con letras un poco más grandes
+        config = { fondo: "#2e1065", lineas: "rgba(219, 39, 119, 0.25)", etiquetas: "#facc15", barraFutura: "#701a75", bordeFuturo: "#db2777", tamanoTexto: "18px" };
+        break;
       case "theme-acustico":
-      config = { fondo: "#451a03", lineas: "rgba(120, 53, 15, 0.4)", etiquetas: "#fcd34d", barraFutura: "#78350f", bordeFuturo: "#b45309" };
-      break;
+        config = { fondo: "#451a03", lineas: "rgba(120, 53, 15, 0.4)", etiquetas: "#fcd34d", barraFutura: "#78350f", bordeFuturo: "#b45309", tamanoTexto: "14px" };
+        break;
       case "theme-fiesta":
-      config = { 
-        fondo: `hsl(${hue}, 40%, 12%)`, 
-        lineas: "rgba(255, 255, 255, 0.15)", 
-        etiquetas: "#ff007f", 
-        barraFutura: `hsl(${(hue + 180) % 360}, 50%, 25%)`, 
-        bordeFuturo: `hsl(${(hue + 180) % 360}, 70%, 50%)` 
-      };
-      break;
-      case "theme-retrowave":
-      config = { fondo: "#1e0b36", lineas: "rgba(255, 0, 127, 0.25)", etiquetas: "#38bdf8", barraFutura: "#4c1d95", bordeFuturo: "#ff007f" };
-      break;
+        config = { 
+          fondo: `hsl(${hue}, 40%, 12%)`, 
+          lineas: "rgba(255, 255, 255, 0.15)", 
+          etiquetas: "#ff007f", 
+          barraFutura: `hsl(${(hue + 180) % 360}, 50%, 25%)`, 
+          bordeFuturo: `hsl(${(hue + 180) % 360}, 70%, 50%)`,
+          tamanoTexto: "19px" 
+        };
+        break;
     }
-    
     return config;
   }
 
@@ -3852,7 +3850,8 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
 
         // Dibujar el texto de la sílaba/palabra
         ctx.fillStyle = "white";
-        ctx.font = "bold 15px Arial";
+        // REMPLAZO: Usamos el tamaño dinámico configurado en la paleta del tema
+        ctx.font = `bold ${paleta.tamanoTexto || "15px"} Arial`; 
         ctx.textAlign = "center";
         ctx.fillText(w.word || w.text || "", x + Math.max(width, 25)/2, y + 5);
       });
