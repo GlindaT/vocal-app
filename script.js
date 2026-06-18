@@ -2050,7 +2050,7 @@ async function loadSelectedTrackFromLibraryKaraoke() {
 
     const track = $("karaokeTrack");
     track.src = URL.createObjectURL(item.audioBlob);
-    track.volume = 0.4;
+    track.volume = 0.6;
 
     $("karaokeStatus").textContent = `Estado: Pista cargada (${item.name}). ¡Inicia grabación!`;
     cargarLetrasEnMonitor();
@@ -3726,7 +3726,7 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
   };
   
   function obtenerPaletaTema(hue = 0) {
-    const temaActual = localStorage.getItem("singIt_stage") || "theme-clasico";
+    const temaActual = localStorage.getItem("vocalApp_stage") || "theme-clasico";
     
     // Configuración por defecto (theme-clasico)
     let config = { fondo: "#111827", lineas: "#333333", etiquetas: "#666666", barraFutura: "#1e40af", bordeFuturo: "#3b82f6" };
@@ -3828,7 +3828,7 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
         }
 
         ctx.fillStyle = "white";
-        ctx.font = "bold 13px Arial";
+        ctx.font = "bold 15px Arial";
         ctx.textAlign = "center";
         ctx.fillText(w.word || w.text || "", x + Math.max(width, 25)/2, y + 5);
       });
@@ -3842,12 +3842,12 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
       
       ctx.textAlign = "center";
       ctx.fillStyle = "white";
-      ctx.font = "bold 24px Arial";
+      ctx.font = "bold 30px Arial";
       ctx.fillText(datos[idx].text || "", canvas.width / 2, canvas.height - 65);
       
       if (datos[idx + 1]) {
         ctx.fillStyle = "#94a3b8";
-        ctx.font = "italic 18px Arial";
+        ctx.font = "italic 22px Arial";
         ctx.fillText(datos[idx + 1].text || "", canvas.width / 2, canvas.height - 25);
       }
     }
