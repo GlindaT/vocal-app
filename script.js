@@ -904,23 +904,24 @@ async function saveToLibrary(blob, options = {}) {
 
   try {
     // 2. Creamos el objeto con datos más inteligentes
-    const newItem = {
-      name: options.name || `Grabación ${new Date().toLocaleTimeString()}`,
-      type: options.type || "Grabaciones", // Carpeta por defecto
-      audioBlob: blob,
+    await addLibraryItem({
+      name: options.name || "Archivo",
+      type: options.type || "audio",
+      audioBlob: blob || null,
+      textoPlano: options.textoPlano || null,
       // Guardamos la fecha como número (timestamp) para poder ordenar fácilmente
       date: Date.now(), 
       transcription: options.transcription || []
-    };
+    });
 
     // 3. Llamamos a tu función de base de datos
-    await addLibraryItem(newItem);
+    await renderLibrary(options.type || 'todos');
 
     // 4. Actualizamos la interfaz
     // Asegúrate de que esta función exista y esté bien escrita
-    if (typeof renderLibrary === "function") {
-      await renderLibrary();
-    }
+   // if (typeof renderLibrary === "function") {
+     // await renderLibrary();
+  /  }
 
     console.log("✅ Guardado en biblioteca correctamente");
 
@@ -934,18 +935,29 @@ async function renderLibrary(filter = 'todos') {
   const container = $("libraryList");
   if (!container) return;
 
+  document.querySelectorAll(".folder-btn").forEach(btn => {
+    const clickAttr = btn.getAttribute("onclick") || "";
+    if (clickAttr.includes(`'${filter}'`)) {
+      btn.classList.add("active"); 
+    } else {
+      btn.classList.remove("active"); 
+    }
+  });
+
   container.innerHTML = "<p>Cargando archivos...</p>";
 
   try {
     // 1. Mejora de eficiencia: Si no es 'todos', usamos el índice de la DB
-    let filteredItems;
-    if (filter === 'todos') {
-      filteredItems = await getAllLibraryItems();
-    } else {
+   // let filteredItems;
+   // if (filter === 'todos') {
+   //   filteredItems = await getAllLibraryItems();
+   // } else {
       // getLibraryItemsByType es la función que definimos antes, ¡mucho más rápida!
-      filteredItems = await getLibraryItemsByType(filter);
-    }
-
+     // filteredItems = await getLibraryItemsByType(filter);
+  /  }
+    let library = await getAllLibraryItems();
+    let filteredItems = filter !== 'todos' ? library.filter(item => item.type === filter) : library;
+    
     container.innerHTML = "";
 
     if (filteredItems.length === 0) {
@@ -954,6 +966,7 @@ async function renderLibrary(filter = 'todos') {
       filteredItems.forEach((item) => {
         const div = document.createElement("div");
         div.className = "library-item card";
+        div.style.marginBottom = "10px";
         
         // Convertimos el timestamp (Date.now) a algo bonito para el usuario
         const fechaLegible = typeof item.date === 'number' 
@@ -965,10 +978,10 @@ async function renderLibrary(filter = 'todos') {
           div.innerHTML = `
             <p><strong>📄 ${item.name}</strong></p>
             <small>Tipo: LETRA | ${fechaLegible} | ${totalPalabras} palabras</small>
-            <div style="margin: 10px 0; display: flex; gap: 10px;">
-              <button type="button" data-id="${item.id}" class="send-to-monitor-btn" style="...">👁️ Enviar al Monitor</button>
+            <div style="display: flex; gap: 10px;">
+              <button type="button" data-id="${item.id}" class="load-monitor-btn" style="background:#3b82f6; color:white;">📥 Cargar en Monitor</button>
+              <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#e11d48;">🗑️ Eliminar</button>
             </div>
-            <button type="button" data-id="${item.id}" class="delete-library-btn" style="...">🗑️ Eliminar</button>
           `;
         } else {
           // Crear URL temporal para el audio
@@ -1012,10 +1025,22 @@ function asignarEventosBiblioteca(filter) {
   });
 
   // Evento Monitor
-  document.querySelectorAll(".send-to-monitor-btn").forEach((btn) => {
-    btn.onclick = async () => {
-      await cargarTextoEnMonitor(Number(btn.dataset.id));
-    };
+  document.querySelectorAll(".load-monitor-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = Number(btn.dataset.id);
+      const item = library.find(i => i.id === id);
+
+      if (item && item.textoPlano) {
+        const monitor = document.getElementById("lyricsText") || document.getElementById("miniMonitorTextArea");
+
+        if (monitor) {
+          monitor.value = item.textoPlano;
+        }
+        await cargarTextoEnMonitor(Number(btn.dataset.id));
+      } else {
+        alert("No se encontró el contenedor");
+      }
+    });
   });
 }
 
