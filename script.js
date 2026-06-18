@@ -3514,26 +3514,31 @@ document.addEventListener("DOMContentLoaded", async () => {
     await initDB();
     initSettings();
 
-    // 1. Función corregida para aplicar el tema visual
+    // Lista con todos tus temas de CSS para poder limpiarlos correctamente
+    const allKaraokeThemes = ['theme-clasico', 'theme-moderno', 'theme-disco', 'theme-acustico', 'theme-fiesta'];
+
     function applyKaraokeTheme() {
-      // Si no hay nada guardado, por defecto usamos "theme-clasico"
+      // Si el usuario nunca ha elegido uno, por defecto arranca en 'theme-clasico'
       const theme = localStorage.getItem("vocalApp_stage") || "theme-clasico";
-      const monitor = $("karaokeLiveLyrics"); // Asegúrate de que tu contenedor de letras tenga id="karaokeLiveLyrics"
+      const monitor = $("karaokeLiveLyrics");
       
       if (monitor) {
-        // Reemplazamos la clase directamente con el valor exacto guardado
-        monitor.className = "karaoke-lyrics " + theme;
+        // 1. Quitamos CUALQUIER tema que se haya quedado pegado antes
+        monitor.classList.remove(...allKaraokeThemes);
+        
+        // 2. Agregamos el tema seleccionado manteniendo tu clase base si existe
+        monitor.classList.add(theme);
       }
     }
 
-    // Ejecutar al cargar la app para recordar el último tema usado
+    // Ejecutar al cargar la app para recordar la configuración guardada
     applyKaraokeTheme();
 
-    // 2. Escuchar el selector correcto del HTML: "karaokeThemeSelect"
+    // Escuchar cambios en el selector de la pestaña de configuración
     safeAdd("karaokeThemeSelect", "change", (e) => {
-      // Guarda automáticamente en localStorage el valor (ej: "theme-fiesta")
-      saveSetting("vocalApp_stage", e.target); 
-      // Aplica el cambio visual de inmediato en pantalla
+      // Guarda automáticamente en localStorage (ej: "theme-disco")
+      saveSetting("vocalApp_stage", e.target);
+      // Aplica el cambio visual inmediatamente en el monitor
       applyKaraokeTheme();
     });
 
