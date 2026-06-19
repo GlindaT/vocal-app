@@ -1829,7 +1829,7 @@ async function procesarSincronizacionAutomaticaYPitch() {
   // === CONFIGURACIÓN DE SEGURIDAD (MODO DESARROLLADOR) ===
   // Cambia esto a 'false' SOLO cuando vayas a lanzar la app a producción y quieras usar la IA real.
   // Mientras esté en 'true', procesará CUALQUIER canción al instante y GRATIS sin tocar OpenAI.
-  const MODO_DESARROLLADOR_GRATIS = true; 
+  const MODO_DESARROLLADOR_GRATIS = false; 
 
   if (!selectedVoiceBlob) {
     alert("⚠️ Primero selecciona y carga una voz en la sección 'Voz desde Biblioteca'");
