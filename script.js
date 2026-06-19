@@ -1025,8 +1025,8 @@ function asignarEventosBiblioteca(filter) {
     };
   });
 }
-
-  /* Evento Monitor
+/*
+  // Evento Monitor
   document.querySelectorAll(".load-monitor-btn").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const id = Number(btn.dataset.id);
@@ -1042,10 +1042,10 @@ function asignarEventosBiblioteca(filter) {
       //} else {
         alert("No se encontró el contenedor");
       });
-    /*});*/
+    });
   });
-}*/
-
+}
+*/
 // Añadimos 'currentFilter' para que no nos saque de la carpeta donde estamos
 async function deleteLibraryItem(id, currentFilter = 'todos') {
   // 1. Confirmación de seguridad
