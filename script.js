@@ -1854,6 +1854,21 @@ async function procesarSincronizacionAutomaticaYPitch() {
     const samplesPerChunk = CHUNK_SECONDS * sampleRate;
 
     let todasLasPalabrasIA = [];
+    // === [NUEVO] DETECCIÓN AUTOMÁTICA DE IDIOMA ===
+    let idiomaDetectado = "es"; // Por defecto español
+    
+    // Lista de palabras ultra comunes en inglés
+    const palabrasIngles = ["the", "and", "you", "that", "was", "for", "with", "this", "have"];
+    const palabrasLetra = letraPegada.toLowerCase().split(/\s+/);
+    
+    // Si la letra contiene palabras comunes en inglés, cambiamos el código de idioma
+    const esIngles = palabrasLetra.some(palabra => palabrasIngles.includes(palabra));
+    if (esIngles) {
+      idiomaDetectado = "en";
+      console.log("🇺🇸 Idioma detectado automáticamente: Inglés");
+    } else {
+      console.log("🇪🇸 Idioma detectado automáticamente: Español");
+    }
 
     // 2. Recorrer el audio en porciones de 25 segundos
     for (let start = 0; start < totalSamples; start += samplesPerChunk) {
@@ -1876,7 +1891,8 @@ async function procesarSincronizacionAutomaticaYPitch() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           audioBase64: base64Audio,
-          letraText: letraPegada // El prompt guía ayuda a mantener el contexto entre pedazos
+          letraText: letraPegada,
+          language: idiomaDetectado // <-- Pasamos "es" o "en" dinámicamente
         })
       });
 
@@ -1964,10 +1980,20 @@ async function procesarSincronizacionAutomaticaYPitch() {
             // SOLUCIÓN CRÍTICA: Forzamos el tipo a "karaoke" para que aparezca en la lista inferior
             datosParaGuardar.type = "karaoke"; 
             
+            // CORRECCIÓN DE AUDIO: Si tienes cargada la pista instrumental en el estudio,
+            // reemplazamos el audio de la voz por el de la música para que sea el que se escuche al cantar.
+            if (typeof studioTrackBlob !== "undefined" && studioTrackBlob) {
+              datosParaGuardar.audioBlob = studioTrackBlob; 
+              // Conservamos el nombre de la pista instrumental para la interfaz
+              if (typeof studioTrackFileName !== "undefined" && studioTrackFileName) {
+                datosParaGuardar.name = "Karaoke - " + studioTrackFileName;
+              }
+            }
+            
             baseTranscriptionSegments = transcriptionSegments;
           }
 
-          // 3. Guardamos la actualización definitiva en tu IndexedDB nativa
+          // Guardamos la actualización definitiva en tu IndexedDB
           await updateLibraryItem(currentId, datosParaGuardar);
           console.log("✅ Sincronización automática inyectada en la BD para el ID:", currentId);
         }
