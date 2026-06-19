@@ -23,15 +23,14 @@ export default async function handler(req, res) {
     const formData = new FormData();
     formData.append("file", audioBlob, "chunk.wav");
     formData.append("model", "whisper-1");
-    formData.append("language", "es");
+    formData.append("language", "es"); // Forzamos español estricto
     formData.append("response_format", "verbose_json");
     
-    // 2. Modificación: Pasamos el texto como prompt guía para evitar transcripciones erróneas
+    // CORRECCIÓN CRÍTICA: Cambiado de prompt a initial_prompt para Whisper
     if (letraText) {
-      formData.append("prompt", letraText);
+      formData.append("initial_prompt", letraText);
     }
     
-    // 3. Modificación: Cambiamos a nivel de palabra para obtener los tiempos exactos de cada barra
     formData.append("timestamp_granularities[]", "word");
 
     const openAIResponse = await fetch("https://api.openai.com/v1/audio/transcriptions", {
