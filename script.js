@@ -1935,7 +1935,7 @@ async function procesarSincronizacionAutomaticaYPitch() {
             isReadyKaraoke: true // Forzamos flag para habilitarlo en listas finales
           };
 
-          // 2. RAMIFICACIÓN DE PROPIEDADES (Espejo de finishTapSync)
+          / 2. RAMIFICACIÓN DE PROPIEDADES (Espejo de finishTapSync)
           if (itemOriginal.type === "texto") {
             // Estructura plana palabra por palabra para archivos de texto plano
             datosParaGuardar.lyrics = transcriptionSegments.flatMap((line, lineIndex) => 
@@ -1950,6 +1950,9 @@ async function procesarSincronizacionAutomaticaYPitch() {
               }))
             );
             
+            // Forzamos el tipo para que la pestaña Karaoke lo detecte
+            datosParaGuardar.type = "karaoke"; 
+            
             // Asignamos variables de trabajo globales para letras manuales
             textSegments = datosParaGuardar.lyrics;
             baseTextSegments = datosParaGuardar.lyrics;
@@ -1957,6 +1960,9 @@ async function procesarSincronizacionAutomaticaYPitch() {
           } else {
             // Estructura jerárquica para archivos de audio de voz con transcripción
             datosParaGuardar.transcription = transcriptionSegments;
+            
+            // SOLUCIÓN CRÍTICA: Forzamos el tipo a "karaoke" para que aparezca en la lista inferior
+            datosParaGuardar.type = "karaoke"; 
             
             baseTranscriptionSegments = transcriptionSegments;
           }
