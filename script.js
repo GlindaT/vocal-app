@@ -1826,85 +1826,79 @@ function procesarResultadoAutomatico(apiResponseWords) {
 
 // Otra función
 async function procesarSincronizacionAutomaticaYPitch() {
+  // 1. VERIFICACIONES DE SEGURIDAD BASADAS EN TU INTERFAZ
   if (!selectedVoiceBlob) {
-    alert("⚠️ Primero selecciona y carga una voz desde Biblioteca");
+    alert("⚠️ Primero selecciona y carga una voz en la sección 'Voz desde Biblioteca'");
     return;
   }
 
   const textInput = $("lyricsText");
   const letraPegada = textInput ? textInput.value.trim() : "";
   if (!letraPegada) {
-    alert("⚠️ Pega la letra de la canción en el editor para guiar al alineador automático");
+    alert("⚠️ Pega la letra de la canción en el cuadro inferior antes de continuar");
     return;
   }
 
   const status = $("selectedVoiceStatus");
-  if (status) status.textContent = "Estado: Preparando audio (cortando en porciones ligeras)... 🚀";
+  if (status) status.textContent = "Estado: Preparando audio y detectando idioma... 🚀";
 
   try {
-    // 1. Inicializar el contexto de audio para hacer los cortes binarios
+    // 2. DETECCIÓN AUTOMÁTICA DE IDIOMA (Español o Inglés)
+    let idiomaDetectado = "es";
+    const palabrasIngles = ["the", "and", "you", "that", "was", "for", "with", "this", "have"];
+    const palabrasLetra = letraPegada.toLowerCase().split(/\s+/);
+    const esIngles = palabrasLetra.some(palabra => palabrasIngles.includes(palabra));
+    
+    if (esIngles) {
+      idiomaDetectado = "en";
+      console.log("🇺🇸 Sincronización configurada en Inglés");
+    }
+
+    // 3. PROCESAMIENTO DEL AUDIO DE LA VOZ EN MEMORIA
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const arrayBuffer = await selectedVoiceBlob.arrayBuffer();
     const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
 
-    // Configuración de los trozos (Chunks de 25 segundos para no saturar Vercel)
     const CHUNK_SECONDS = 25;
     const sampleRate = audioBuffer.sampleRate;
     const totalSamples = audioBuffer.length;
     const samplesPerChunk = CHUNK_SECONDS * sampleRate;
 
     let todasLasPalabrasIA = [];
-    // === [NUEVO] DETECCIÓN AUTOMÁTICA DE IDIOMA ===
-    let idiomaDetectado = "es"; // Por defecto español
-    
-    // Lista de palabras ultra comunes en inglés
-    const palabrasIngles = ["the", "and", "you", "that", "was", "for", "with", "this", "have"];
-    const palabrasLetra = letraPegada.toLowerCase().split(/\s+/);
-    
-    // Si la letra contiene palabras comunes en inglés, cambiamos el código de idioma
-    const esIngles = palabrasLetra.some(palabra => palabrasIngles.includes(palabra));
-    if (esIngles) {
-      idiomaDetectado = "en";
-      console.log("🇺🇸 Idioma detectado automáticamente: Inglés");
-    } else {
-      console.log("🇪🇸 Idioma detectado automáticamente: Español");
-    }
 
-    // 2. Recorrer el audio en porciones de 25 segundos
+    // 4. BUCLE DE FRAGMENTOS PARA SUPERAR EL LÍMITE DE VERCEL (Payload Too Large)
     for (let start = 0; start < totalSamples; start += samplesPerChunk) {
       const end = Math.min(start + samplesPerChunk, totalSamples);
       const chunkNumber = Math.floor(start / samplesPerChunk) + 1;
       const totalChunks = Math.ceil(totalSamples / samplesPerChunk);
-      const timeOffset = start / sampleRate; // El segundo exacto donde inicia este trozo
+      const timeOffset = start / sampleRate;
 
       if (status) {
-        status.textContent = `Estado: Alineando parte ${chunkNumber} de ${totalChunks} con la IA...`;
+        status.textContent = `Estado: Procesando tramo ${chunkNumber} de ${totalChunks} con OpenAI... ⏳`;
       }
 
-      // Convertir el trozo actual a WAV y luego a Base64 de forma ultra liviana
       const wavBlob = audioBufferToWav(audioBuffer, start, end);
       const base64Audio = await blobToBase64(wavBlob);
 
-      // Petición POST a Vercel con el trozo liviano
+      // Petición a tu API segura en Vercel
       const response = await fetch("/api/transcribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           audioBase64: base64Audio,
           letraText: letraPegada,
-          language: idiomaDetectado // <-- Pasamos "es" o "en" dinámicamente
+          language: idiomaDetectado // Inyección de idioma dinámico
         })
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Error en parte ${chunkNumber}: ${errorText}`);
+        throw new Error(`Fallo en el fragmento ${chunkNumber}: ${errorText}`);
       }
 
       const result = await response.json();
       const listadoPalabrasChunk = Array.isArray(result.words) ? result.words : [];
 
-      // Ajustar los tiempos de las palabras sumándoles el segundo en que inicia el fragmento
       listadoPalabrasChunk.forEach((w) => {
         todasLasPalabrasIA.push({
           word: w.word,
@@ -1915,113 +1909,70 @@ async function procesarSincronizacionAutomaticaYPitch() {
     }
 
     if (!todasLasPalabrasIA.length) {
-      throw new Error("No se recibieron marcas de tiempo para las palabras.");
+      throw new Error("No se obtuvieron marcas de tiempo de la Inteligencia Artificial.");
     }
 
-    if (status) status.textContent = "Estado: Tiempos alineados. Analizando notas musicales (Pitch)... 🎵";
-    
-    // 3. Estructurar el array unificado para tu extractor de notas musicales
+    if (status) status.textContent = "Estado: Tiempos alineados. Extrayendo notas del pentagrama... 🎵";
+
+    // 5. CONSTRUCCIÓN DE LA ESTRUCTURA COMPATIBLE CON TU CANVAS
+    const idCancionActiva = selectedVoiceId || selectedTextId;
     const segmentosBaseIA = [{
       start: todasLasPalabrasIA[0].start,
       end: todasLasPalabrasIA[todasLasPalabrasIA.length - 1].end,
       text: letraPegada,
       words: todasLasPalabrasIA
     }];
-    
-    // Tu función extraerá las notas analizando directamente la pista de voz en estos rangos
+
+    // Tu extractor matemático de frecuencias calcula las notas sobre el audio de la voz
     const segmentosConPitchYNotas = await analyzePitchForSegments(selectedVoiceBlob, segmentosBaseIA);
-    
-    // 4. Dividir las palabras en renglones limpios de 6 palabras para el Karaoke
+
+    // Dividimos en renglones limpios para el karaoke en grupos de 6 palabras
     transcriptionSegments = splitSegmentsIntoKaraokeLines(segmentosConPitchYNotas, 6);
-    
-    // =================================================================
-    // 🎯 INTEGRACIÓN ESTRICTA CON TU SISTEMA DE BIBLIOTECA (IndexedDB)
-    // =================================================================
-    const currentId = selectedVoiceId || selectedTextId;
-    
-    if (currentId) {
-      try {
-        // 1. Recuperamos el ítem original para saber si es de tipo "texto" o "voz"
-        const itemOriginal = await getLibraryItemById(currentId);
-        
-        if (itemOriginal) {
-          let datosParaGuardar = {
-            ...itemOriginal,
-            isSincronizada: true,
-            isReadyKaraoke: true // Forzamos flag para habilitarlo en listas finales
-          };
 
-          // 2. RAMIFICACIÓN DE PROPIEDADES (Espejo de finishTapSync)
-          if (itemOriginal.type === "texto") {
-            // Estructura plana palabra por palabra para archivos de texto plano
-            datosParaGuardar.lyrics = transcriptionSegments.flatMap((line, lineIndex) => 
-              line.words.map((w, wordIndex) => ({
-                id: (lineIndex * 100) + wordIndex,
-                text: w.word,
-                renglon: lineIndex + 1,
-                startTime: w.start,
-                duration: w.end - w.start,
-                pitch: w.midi || 60,
-                words: [{ start: w.start, end: w.end, word: w.word, midi: w.midi || 60 }]
-              }))
-            );
-            
-            // Forzamos el tipo para que la pestaña Karaoke lo detecte
-            datosParaGuardar.type = "karaoke"; 
-            
-            // Asignamos variables de trabajo globales para letras manuales
-            textSegments = datosParaGuardar.lyrics;
-            baseTextSegments = datosParaGuardar.lyrics;
-            
-          } else {
-            // Estructura jerárquica para archivos de audio de voz con transcripción
-            datosParaGuardar.transcription = transcriptionSegments;
-            
-            // SOLUCIÓN CRÍTICA: Forzamos el tipo a "karaoke" para que aparezca en la lista inferior
-            datosParaGuardar.type = "karaoke"; 
-            
-            // CORRECCIÓN DE AUDIO: Si tienes cargada la pista instrumental en el estudio,
-            // reemplazamos el audio de la voz por el de la música para que sea el que se escuche al cantar.
-            if (typeof studioTrackBlob !== "undefined" && studioTrackBlob) {
-              datosParaGuardar.audioBlob = studioTrackBlob; 
-              // Conservamos el nombre de la pista instrumental para la interfaz
-              if (typeof studioTrackFileName !== "undefined" && studioTrackFileName) {
-                datosParaGuardar.name = "Karaoke - " + studioTrackFileName;
-              }
-            }
-            
-            baseTranscriptionSegments = transcriptionSegments;
+    // 6. GUARDADO COMPATIBLE E INYECCIÓN DE LA PISTA DE MÚSICA INSTRUMENTAL
+    if (idCancionActiva) {
+      const itemOriginal = await getLibraryItemById(idCancionActiva);
+      
+      if (itemOriginal) {
+        let datosFinalesKaraoke = {
+          ...itemOriginal,
+          isSincronizada: true,
+          isReadyKaraoke: true,
+          type: "karaoke", // Forzamos el cambio de tipo para que lo listen las pestañas
+          transcription: transcriptionSegments
+        };
+
+        // ENLACE MÁGICO DE AUDIO: Almacenamos la Pista de Música limpia del Paso 1
+        // para que sea la que suene al cantar, manteniendo la voz oculta para las notas
+        if (typeof studioTrackBlob !== "undefined" && studioTrackBlob) {
+          datosFinalesKaraoke.audioBlob = studioTrackBlob;
+          if (typeof studioTrackFileName !== "undefined" && studioTrackFileName) {
+            datosFinalesKaraoke.name = "Karaoke - " + studioTrackFileName;
           }
-
-          // Guardamos la actualización definitiva en tu IndexedDB
-          await updateLibraryItem(currentId, datosParaGuardar);
-          console.log("✅ Sincronización automática inyectada en la BD para el ID:", currentId);
         }
 
-        // --- 4. REFRESCAR LA INTERFAZ Y CARGAR EN EL REPRODUCTOR ---
-        renderKaraokeLyrics(transcriptionSegments);
-        
-        // Ejecutamos todos tus actualizadores de biblioteca nativos
-        if (typeof renderLibrary === "function") {
-          await renderLibrary('todos');
-          await renderLibrary('karaoke'); // Fuerza el refresco de la pestaña específica si existe
-        }
-        if (typeof loadTrackOptionsInStudio === "function") await loadTrackOptionsInStudio();
-        if (typeof cargarLetrasEnMonitor === "function") cargarLetrasEnMonitor();
-
-      } catch (err) {
-        console.error("❌ Error guardando y actualizando el estado de Karaoke en IndexedDB:", err);
+        // Guardamos directamente en tu IndexedDB
+        await updateLibraryItem(idCancionActiva, datosFinalesKaraoke);
+        console.log("✅ Registro convertido a Karaoke e indexado correctamente.");
       }
     }
 
-    if (status) status.textContent = "Estado: ¡Sincronización automática completada con éxito! ✅";
-    alert("✅ ¡Sincronización Inteligente completada! El archivo ya se encuentra procesado y disponible para cantar.");
+    // 7. ACTUALIZACIÓN INMEDIATA DE LA INTERFAZ
+    renderKaraokeLyrics(transcriptionSegments);
+    if (typeof renderLibrary === "function") {
+      await renderLibrary('todos');
+      await renderLibrary('karaoke');
+    }
+    if (typeof loadTrackOptionsInStudio === "function") await loadTrackOptionsInStudio();
+    if (typeof cargarLetrasEnMonitor === "function") cargarLetrasEnMonitor();
+
+    if (status) status.textContent = "Estado: ¡Karaoke creado con éxito! Listo en tu biblioteca ✅";
+    alert("🎯 Sincronización Inteligente Concluida de forma Exitosa.\nLa pista instrumental y las letras están vinculadas. Ya puedes ir a la pestaña 'Karaoke' para cantar.");
 
   } catch (error) {
-    // Captura cualquier fallo global (Red, descompresión de audio, etc.)
-    console.error("Error en sincronización automática:", error);
-    alert(`❌ No se pudo automatizar: ${error.message}`);
-    if (status) status.textContent = "Estado: Error en automatización";
+    console.error("Error global en el flujo:", error);
+    alert(`❌ Detalle del error: ${error.message}`);
+    if (status) status.textContent = "Estado: Error en procesamiento";
   }
 }
 
