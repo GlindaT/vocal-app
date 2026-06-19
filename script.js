@@ -1935,7 +1935,7 @@ async function procesarSincronizacionAutomaticaYPitch() {
             isReadyKaraoke: true // Forzamos flag para habilitarlo en listas finales
           };
 
-          / 2. RAMIFICACIÓN DE PROPIEDADES (Espejo de finishTapSync)
+          // 2. RAMIFICACIÓN DE PROPIEDADES (Espejo de finishTapSync)
           if (itemOriginal.type === "texto") {
             // Estructura plana palabra por palabra para archivos de texto plano
             datosParaGuardar.lyrics = transcriptionSegments.flatMap((line, lineIndex) => 
