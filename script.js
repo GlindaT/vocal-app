@@ -1973,11 +1973,13 @@ async function procesarSincronizacionAutomaticaYPitch() {
         }
 
         // --- 4. REFRESCAR LA INTERFAZ Y CARGAR EN EL REPRODUCTOR ---
-        // Renderizamos las palabras de inmediato en la pantalla del karaoke abajo del monitor
         renderKaraokeLyrics(transcriptionSegments);
         
-        // Si existe tu función nativa para actualizar la lista global de la biblioteca, la llamamos
-        if (typeof renderLibrary === "function") await renderLibrary('todos');
+        // Ejecutamos todos tus actualizadores de biblioteca nativos
+        if (typeof renderLibrary === "function") {
+          await renderLibrary('todos');
+          await renderLibrary('karaoke'); // Fuerza el refresco de la pestaña específica si existe
+        }
         if (typeof loadTrackOptionsInStudio === "function") await loadTrackOptionsInStudio();
         if (typeof cargarLetrasEnMonitor === "function") cargarLetrasEnMonitor();
 
