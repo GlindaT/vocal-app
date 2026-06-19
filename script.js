@@ -1848,27 +1848,43 @@ async function procesarSincronizacionAutomaticaYPitch() {
 
   try {
     let todasLasPalabrasIA = [];
-
+    
     // ===================================================
-    // RAMIFICACIÓN PARA AHORRO DE SALDO (MOCK INTEGRADO)
+    // RAMIFICACIÓN PARA AHORRO DE SALDO (MOCK REALISTA INTEGRADO)
     // ===================================================
+    
     if (MODO_DESARROLLADOR_GRATIS) {
-      if (status) status.textContent = "🤖 Modo Desarrollador: Generando tiempos locales gratis... ⚡";
+      if (status) status.textContent = "🤖 Modo Desarrollador: Distribuyendo palabras de forma musical... ⚡";
       
-      // Simulación local e instantánea de Whisper
+      // 1. Separamos el texto pegado en palabras individuales
       const palabras = letraPegada.split(/\s+/).filter(Boolean);
-      let tiempoActual = 1.0; 
-      const duracionPorPalabra = 0.5; // Ajuste por defecto: media palabra por segundo
-
-      todasLasPalabrasIA = palabras.map((palabra) => {
+      
+      let tiempoActual = 4.0; // Dejamos 4 segundos de intro musical antes de la primera palabra
+      
+      // 2. Mapeamos las palabras con espaciados humanos de karaoke
+      todasLasPalabrasIA = palabras.map((palabra, index) => {
+        // Cada 6 palabras simulamos que termina un renglón/estrofa
+        const esFinDeLinea = (index + 1) % 6 === 0;
+        
+        // Las palabras normales duran medio segundo; la última de la frase se sostiene más tiempo (1.1s)
+        const duracionPalabra = esFinDeLinea ? 1.1 : 0.5;
+        
         const start = tiempoActual;
-        const end = tiempoActual + duracionPorPalabra;
-        tiempoActual = end + 0.1; 
-        return { word: palabra, start: start, end: end };
+        const end = tiempoActual + duracionPalabra;
+        
+        // Si termina la línea, dejamos 2.5 segundos de pausa para respirar. Si no, un microespacio fluido de 0.15s
+        const pausaEntrePalabras = esFinDeLinea ? 2.5 : 0.15;
+        tiempoActual = end + pausaEntrePalabras;
+        
+        return { 
+          word: palabra, 
+          start: Number(start.toFixed(2)), 
+          end: Number(end.toFixed(2)) 
+        };
       });
-
+      
     } else {
-      // FLUJO REAL CON CONSUMO DE SALDO (Se ejecuta solo si cambias el interruptor a false)
+      // FLUJO REAL CON CONSUMO DE SALDO (Se queda exactamente como lo tenías)
       let idiomaDetectado = "es";
       const palabrasIngles = ["the", "and", "you", "that", "was", "for", "with", "this", "have"];
       const palabrasLetra = letraPegada.toLowerCase().split(/\s+/);
