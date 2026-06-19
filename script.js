@@ -956,7 +956,7 @@ async function renderLibrary(filter = 'todos') {
       filteredItems = await getLibraryItemsByType(filter);
     }
     let library = await getAllLibraryItems();
-    //let filteredItems = filter !== 'todos' ? library.filter(item => item.type === filter) : library;
+    const filteredItems = filter !== 'todos' ? library.filter(item => item.type === filter) : library;
     
     container.innerHTML = "";
 
