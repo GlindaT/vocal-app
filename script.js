@@ -1029,7 +1029,7 @@ function asignarEventosBiblioteca(filter) {
   document.querySelectorAll(".load-monitor-btn").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const id = Number(btn.dataset.id);
-      //const item = renderLibrary.find(i => i.id === id);
+      const item = getLibraryItems.find(i => i.id === id);
 
       if (item && item.textoPlano) {
         const monitor = document.getElementById("lyricsText") || document.getElementById("miniMonitorTextArea");
