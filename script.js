@@ -1903,7 +1903,7 @@ async function procesarSincronizacionAutomaticaYPitch() {
     }
 
     if (status) status.textContent = "Estado: Tiempos alineados. Analizando notas musicales (Pitch)... 🎵";
-
+    
     // 3. Estructurar el array unificado para tu extractor de notas musicales
     const segmentosBaseIA = [{
       start: todasLasPalabrasIA[0].start,
@@ -1911,34 +1911,85 @@ async function procesarSincronizacionAutomaticaYPitch() {
       text: letraPegada,
       words: todasLasPalabrasIA
     }];
-
+    
     // Tu función extraerá las notas analizando directamente la pista de voz en estos rangos
     const segmentosConPitchYNotas = await analyzePitchForSegments(selectedVoiceBlob, segmentosBaseIA);
-
+    
     // 4. Dividir las palabras en renglones limpios de 6 palabras para el Karaoke
     transcriptionSegments = splitSegmentsIntoKaraokeLines(segmentosConPitchYNotas, 6);
+    
+    // =================================================================
+    // 🎯 INTEGRACIÓN ESTRICTA CON TU SISTEMA DE BIBLIOTECA (IndexedDB)
+    // =================================================================
+    const currentId = selectedVoiceId || selectedTextId;
+    
+    if (currentId) {
+      try {
+        // 1. Recuperamos el ítem original para saber si es de tipo "texto" o "voz"
+        const itemOriginal = await getLibraryItemById(currentId);
+        
+        if (itemOriginal) {
+          let datosParaGuardar = {
+            ...itemOriginal,
+            isSincronizada: true,
+            isReadyKaraoke: true // Forzamos flag para habilitarlo en listas finales
+          };
 
-    // 5. Renderizar y actualizar el monitor
-    renderKaraokeLyrics(transcriptionSegments);
-    if (typeof cargarLetrasEnMonitor === "function") cargarLetrasEnMonitor();
+          // 2. RAMIFICACIÓN DE PROPIEDADES (Espejo de finishTapSync)
+          if (itemOriginal.type === "texto") {
+            // Estructura plana palabra por palabra para archivos de texto plano
+            datosParaGuardar.lyrics = transcriptionSegments.flatMap((line, lineIndex) => 
+              line.words.map((w, wordIndex) => ({
+                id: (lineIndex * 100) + wordIndex,
+                text: w.word,
+                renglon: lineIndex + 1,
+                startTime: w.start,
+                duration: w.end - w.start,
+                pitch: w.midi || 60,
+                words: [{ start: w.start, end: w.end, word: w.word, midi: w.midi || 60 }]
+              }))
+            );
+            
+            // Asignamos variables de trabajo globales para letras manuales
+            textSegments = datosParaGuardar.lyrics;
+            baseTextSegments = datosParaGuardar.lyrics;
+            
+          } else {
+            // Estructura jerárquica para archivos de audio de voz con transcripción
+            datosParaGuardar.transcription = transcriptionSegments;
+            
+            baseTranscriptionSegments = transcriptionSegments;
+          }
 
-    // 6. Guardar la sincronización en IndexDB
-    if (selectedVoiceId) {
-      await updateLibraryItem(selectedVoiceId, {
-        transcription: segmentosConPitchYNotas
-      });
+          // 3. Guardamos la actualización definitiva en tu IndexedDB nativa
+          await updateLibraryItem(currentId, datosParaGuardar);
+          console.log("✅ Sincronización automática inyectada en la BD para el ID:", currentId);
+        }
+
+        // --- 4. REFRESCAR LA INTERFAZ Y CARGAR EN EL REPRODUCTOR ---
+        // Renderizamos las palabras de inmediato en la pantalla del karaoke abajo del monitor
+        renderKaraokeLyrics(transcriptionSegments);
+        
+        // Si existe tu función nativa para actualizar la lista global de la biblioteca, la llamamos
+        if (typeof renderLibrary === "function") await renderLibrary('todos');
+        if (typeof loadTrackOptionsInStudio === "function") await loadTrackOptionsInStudio();
+        if (typeof cargarLetrasEnMonitor === "function") cargarLetrasEnMonitor();
+
+      } catch (err) {
+        console.error("❌ Error guardando y actualizando el estado de Karaoke en IndexedDB:", err);
+      }
     }
 
-    if (status) status.textContent = "Estado: Sincronización y Pitch completados por tramos con éxito! ✅";
-    alert("✅ El proceso por fragmentos concluyó con éxito. Límite de peso superado.");
+    if (status) status.textContent = "Estado: ¡Sincronización automática completada con éxito! ✅";
+    alert("✅ ¡Sincronización Inteligente completada! El archivo ya se encuentra procesado y disponible para cantar.");
 
   } catch (error) {
+    // Captura cualquier fallo global (Red, descompresión de audio, etc.)
     console.error("Error en sincronización automática:", error);
     alert(`❌ No se pudo automatizar: ${error.message}`);
     if (status) status.textContent = "Estado: Error en automatización";
   }
 }
-
 
 function splitSegmentsIntoKaraokeLines(segments, maxWordsPerLine = 6) {
   const result = [];
