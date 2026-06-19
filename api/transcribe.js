@@ -8,83 +8,78 @@ export default async function handler(req, res) {
     const { audioBase64, letraText, language } = req.body || {};
 
     if (!audioBase64) {
-      return res.status(400).json({ error: "Falta el audio binario en la petición" });
+      return res.status(400).json({ error: "Falta el audio" });
     }
 
     if (!process.env.OPENAI_API_KEY) {
       return res.status(500).json({ error: "Falta configurar la variable OPENAI_API_KEY en Vercel" });
     }
 
-    // 2. Decodificar la cadena Base64 que viene del frontend a un Buffer puro
-    const audioBufferBinario = Buffer.from(audioBase64, "base64");
+    // 2. Convertir el Base64 que viene del frontend a un Buffer binario puro
+    const audioBuffer = Buffer.from(audioBase64, "base64");
 
-    // 3. Crear el empaquetado FormData compatible y robusto para OpenAI
-    const formData = new FormData();
-    
-    // Convertimos el Buffer a un archivo virtual asignándole nombre y tipo estricto
-    const audioBlob = new Blob([audioBufferBinario], { type: "audio/wav" });
-    formData.append("file", audioBlob, "chunk.wav");
-    
-    formData.append("model", "whisper-1");
-    formData.append("language", language || "es");
-    formData.append("response_format", "verbose_json");
-    
-    // Inyección del prompt guía basado en la letra en texto plano
+    // ==========================================================
+    // CONSTRUCCIÓN MANUAL DEL FORMULARIO BINARIO (EVITA CLOUDFLARE)
+    // ==========================================================
+    const boundary = "----WebKitFormBoundaryKaraokeApp2026";
+    const chunks = [];
+
+    // Función auxiliar para escribir texto dentro del Buffer binario
+    const appendField = (name, value) => {
+      chunks.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`));
+    };
+
+    // Inyectamos los parámetros obligatorios de Whisper de forma limpia
+    appendField("model", "whisper-1");
+    appendField("language", language || "es");
+    appendField("response_format", "verbose_json");
+    appendField("timestamp_granularities[]", "word"); // Pedimos marcas palabra por palabra
+
     if (letraText) {
-      formData.append("initial_prompt", letraText);
+      appendField("initial_prompt", letraText); // Guía de texto en español/inglés
     }
-    
-    // Solicitamos estrictamente la granularidad por palabra
-    formData.append("timestamp_granularities[]", "word");
 
-    // 4. Petición directa y limpia al endpoint de OpenAI
+    // Inyectamos el archivo físico de audio WAV al final del formulario
+    chunks.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="chunk.wav"\r\nContent-Type: audio/wav\r\n\r\n`));
+    chunks.push(audioBuffer);
+    chunks.push(Buffer.from(`\r\n--${boundary}--\r\n`));
+
+    // Juntamos todas las piezas binarias en un solo bloque macizo de datos
+    const bodyBuffer = Buffer.concat(chunks);
+
+    // 3. Petición HTTP pura y directa al servidor central de OpenAI
     const openAIResponse = await fetch("https://openai.com", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY.trim()}` // Limpiamos espacios residuales de la clave
+        "Authorization": `Bearer ${process.env.OPENAI_API_KEY.trim()}`,
+        "Content-Type": `multipart/form-data; boundary=${boundary}`,
+        "Content-Length": bodyBuffer.length
       },
-      body: formData
+      body: bodyBuffer
     });
 
-    // 5. Validación segura del tipo de respuesta
-    const contentType = openAIResponse.headers.get("content-type") || "";
-    
+    const responseText = await openAIResponse.text();
+
+    // 4. Verificación segura de la respuesta
     if (!openAIResponse.ok) {
-      let detalleError = "Error desconocido";
-      if (contentType.includes("application/json")) {
-        const errorJson = await openAIResponse.json();
-        detalleError = JSON.stringify(errorJson);
-      } else {
-        detalleError = await openAIResponse.text();
-        // Recortamos por si devuelve un HTML masivo para no saturar la consola del frontend
-        detalleError = detalleError.substring(0, 200) + "... (HTML truncado)";
-      }
-      
       return res.status(openAIResponse.status).json({
-        error: "OpenAI rechazó la solicitud del fragmento de audio",
-        detail: detalleError
+        error: "OpenAI rechazó el fragmento de audio",
+        detail: responseText.substring(0, 200) // Recortamos por seguridad
       });
     }
 
-    // 6. Si todo salió bien, procesamos el JSON esperado
-    if (contentType.includes("application/json")) {
-      const data = await openAIResponse.json();
-      return res.status(200).json({
-        text: data.text || "",
-        words: data.words || []
-      });
-    } else {
-      const respuestaInesperada = await openAIResponse.text();
-      return res.status(502).json({
-        error: "OpenAI devolvió una respuesta que no es JSON válido",
-        detail: respuestaInesperada.substring(0, 200)
-      });
-    }
+    const data = JSON.parse(responseText);
+    
+    // Devolvemos los tiempos milimétricos al frontend
+    return res.status(200).json({
+      text: data.text || "",
+      words: data.words || []
+    });
 
   } catch (error) {
-    console.error("Fallo crítico en el servidor de Vercel:", error);
+    console.error("Error del servidor:", error);
     return res.status(500).json({
-      error: "Error interno en la ejecución de la Serverless Function",
+      error: "Error interno del servidor Vercel",
       detail: error.message
     });
   }
