@@ -949,7 +949,6 @@ async function renderLibrary(filter = 'todos') {
   try {
     // 1. Mejora de eficiencia: Si no es 'todos', usamos el índice de la DB
     let filteredItems;
-    let library;
     if (filter === 'todos') {
       filteredItems = await getAllLibraryItems();
     } else {
@@ -1030,7 +1029,7 @@ function asignarEventosBiblioteca(filter) {
   document.querySelectorAll(".load-monitor-btn").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const id = Number(btn.dataset.id);
-      const item = library.find(i => i.id === id);
+      const item = libraryItem.find(i => i.id === id);
 
       if (item && item.textoPlano) {
         const monitor = document.getElementById("lyricsText") || document.getElementById("miniMonitorTextArea");
