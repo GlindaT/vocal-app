@@ -4,7 +4,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { audioBase64 } = req.body || {};
+    // 1. Modificación: Ahora extraemos también la letra pegada por el usuario
+    const { audioBase64, letraText } = req.body || {};
 
     if (!audioBase64) {
       return res.status(400).json({ error: "Falta el audio" });
@@ -24,7 +25,14 @@ export default async function handler(req, res) {
     formData.append("model", "whisper-1");
     formData.append("language", "es");
     formData.append("response_format", "verbose_json");
-    formData.append("timestamp_granularities[]", "segment");
+    
+    // 2. Modificación: Pasamos el texto como prompt guía para evitar transcripciones erróneas
+    if (letraText) {
+      formData.append("prompt", letraText);
+    }
+    
+    // 3. Modificación: Cambiamos a nivel de palabra para obtener los tiempos exactos de cada barra
+    formData.append("timestamp_granularities[]", "word");
 
     const openAIResponse = await fetch("https://api.openai.com/v1/audio/transcriptions", {
       method: "POST",
@@ -45,7 +53,13 @@ export default async function handler(req, res) {
     }
 
     const data = JSON.parse(responseText);
-    return res.status(200).json(data);
+    
+    // 4. Modificación: Retornamos de forma limpia el array de palabras estructurado
+    // Whisper verbose_json nos devolverá la propiedad 'data.words' que contiene [{word, start, end}, ...]
+    return res.status(200).json({
+      text: data.text,
+      words: data.words || []
+    });
 
   } catch (error) {
     console.error("Error del servidor:", error);
