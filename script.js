@@ -952,8 +952,8 @@ async function renderLibrary(filter = 'todos') {
     if (filter === 'todos') {
       filteredItems = await getAllLibraryItems();
     } else {
-      getLibraryItemsByType es la función que definimos antes, ¡mucho más rápida!
-        filteredItems = await getLibraryItemsByType(filter);
+      //getLibraryItemsByType es la función que definimos antes, ¡mucho más rápida!
+      filteredItems = await getLibraryItemsByType(filter);
     }
     let library = await getAllLibraryItems();
     let filteredItems = filter !== 'todos' ? library.filter(item => item.type === filter) : library;
