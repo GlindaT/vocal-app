@@ -1029,13 +1029,13 @@ function asignarEventosBiblioteca(filter) {
   document.querySelectorAll(".load-monitor-btn").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const id = Number(btn.dataset.id);
-      const item = libraryItems.find(i => i.id === id);
+      //const item = libraryItems.find(i => i.id === id);
 
-      if (item && item.textoPlano) {
+      //if (item && item.textoPlano) {
         const monitor = document.getElementById("lyricsText") || document.getElementById("miniMonitorTextArea");
 
         if (monitor) {
-          monitor.value = item.textoPlano;
+          monitor.value = id.textoPlano;
         }
         await cargarTextoEnMonitor(Number(btn.dataset.id));
       } else {
