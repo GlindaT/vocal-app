@@ -1826,7 +1826,6 @@ function procesarResultadoAutomatico(apiResponseWords) {
 
 // Otra función
 async function procesarSincronizacionAutomaticaYPitch() {
-  // 1. Validaciones básicas utilizando tus variables y elementos globales
   if (!selectedVoiceBlob) {
     alert("⚠️ Primero selecciona y carga una voz desde Biblioteca");
     return;
@@ -1840,77 +1839,98 @@ async function procesarSincronizacionAutomaticaYPitch() {
   }
 
   const status = $("selectedVoiceStatus");
-  if (status) status.textContent = "Estado: Enviando audio a Vercel para alineación por palabra... 🚀";
+  if (status) status.textContent = "Estado: Preparando audio (cortando en porciones ligeras)... 🚀";
 
   try {
-    // 2. Convertimos tu archivo de audio 'selectedVoiceBlob' a Base64 para el backend
-    const base64Audio = await blobToBase64(selectedVoiceBlob);
+    // 1. Inicializar el contexto de audio para hacer los cortes binarios
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const arrayBuffer = await selectedVoiceBlob.arrayBuffer();
+    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
 
-    // 3. Petición POST a tu endpoint seguro en Vercel
-    const response = await fetch("/api/transcribe", { // Asegúrate de usar la ruta de tu API
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        audioBase64: base64Audio,
-        letraText: letraPegada // Enviamos el prompt de texto guía
-      })
-    });
+    // Configuración de los trozos (Chunks de 25 segundos para no saturar Vercel)
+    const CHUNK_SECONDS = 25;
+    const sampleRate = audioBuffer.sampleRate;
+    const totalSamples = audioBuffer.length;
+    const samplesPerChunk = CHUNK_SECONDS * sampleRate;
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Error en el servidor: ${errorText}`);
-    }
+    let todasLasPalabrasIA = [];
 
-    const result = await response.json();
+    // 2. Recorrer el audio en porciones de 25 segundos
+    for (let start = 0; start < totalSamples; start += samplesPerChunk) {
+      const end = Math.min(start + samplesPerChunk, totalSamples);
+      const chunkNumber = Math.floor(start / samplesPerChunk) + 1;
+      const totalChunks = Math.ceil(totalSamples / samplesPerChunk);
+      const timeOffset = start / sampleRate; // El segundo exacto donde inicia este trozo
 
-    // 4. Estructurar la respuesta de Whisper (word-level timestamps)
-    if (!result.words || !result.words.length) {
-      throw new Error("La API no devolvió tiempos detallados por palabra.");
-    }
+      if (status) {
+        status.textContent = `Estado: Alineando parte ${chunkNumber} de ${totalChunks} con la IA...`;
+      }
 
-    if (status) status.textContent = "Estado: Alineación de tiempos recibida. Analizando notas musicales (Pitch)... 🎵";
+      // Convertir el trozo actual a WAV y luego a Base64 de forma ultra liviana
+      const wavBlob = audioBufferToWav(audioBuffer, start, end);
+      const base64Audio = await blobToBase64(wavBlob);
 
-    // REEMPLAZA EL PUNTO 5 DE LA FUNCIÓN ANTERIOR POR ESTE BLOQUE EXACTO:
-    // 5. Transformar los datos de Whisper al formato base estructurado de tu app
-    // OpenAI devuelve un array global en data.words si usamos verbose_json
-    const listadoPalabrasIA = Array.isArray(result.words) ? result.words : [];
-    
-    if (!listadoPalabrasIA.length) {
-      throw new Error("No se encontraron marcas de tiempo individuales para las palabras.");
-    }
-    
-    const segmentosBaseIA = [{
-      start: Number(listadoPalabrasIA[0].start || 0),
-      end: Number(listadoPalabrasIA[listadoPalabrasIA.length - 1].end || 120),
-      text: result.text || letraPegada,
-      // Mapeamos las propiedades exactas que Whisper entrega: { word: "texto", start: 0.5, end: 1.2 }
-      words: listadoPalabrasIA.map(w => ({
-        word: w.word,
-        start: Number(w.start),
-        end: Number(w.end)
-      }))
-    }];
+      // Petición POST a Vercel con el trozo liviano
+      const response = await fetch("/api/transcribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          audioBase64: base64Audio,
+          letraText: letraPegada // El prompt guía ayuda a mantener el contexto entre pedazos
+        })
+      });
 
-    // 6. ¡LA CONEXIÓN MÁGICA!: Pasamos los tiempos reales obtenidos por tu función de Pitch nativa
-    // Tu función extraerá los Hz exactos basándose en los cortes del audio real de la voz.
-    const segmentosConPitchYNotas = await analyzePitchForSegments(selectedVoiceBlob, segmentosBaseIA);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Error en parte ${chunkNumber}: ${errorText}`);
+      }
 
-    // 7. Dividir los segmentos en líneas para el Karaoke en grupos de 6 palabras
-    transcriptionSegments = splitSegmentsIntoKaraokeLines(segmentosConPitchYNotas, 6);
+      const result = await response.json();
+      const listadoPalabrasChunk = Array.isArray(result.words) ? result.words : [];
 
-    // 8. Renderizar y actualizar pantallas
-    renderKaraokeLyrics(transcriptionSegments);
-    if (typeof cargarLetrasEnMonitor === "function") cargarLetrasEnMonitor();
-
-    // 9. Guardar la sincronización perfecta y definitiva en tu Base de Datos IndexDB
-    if (selectedVoiceId) {
-      await updateLibraryItem(selectedVoiceId, {
-        transcription: segmentosConPitchYNotas // Guardamos la estructura enriquecida con tiempos e instrumentación MIDI
+      // Ajustar los tiempos de las palabras sumándoles el segundo en que inicia el fragmento
+      listadoPalabrasChunk.forEach((w) => {
+        todasLasPalabrasIA.push({
+          word: w.word,
+          start: Number(w.start) + timeOffset,
+          end: Number(w.end) + timeOffset
+        });
       });
     }
 
-    if (status) status.textContent = "Estado: ¡Sincronización y Pitch automáticos guardados con éxito! ✅";
-    alert("✅ El proceso ha concluido de forma exitosa. Pentagrama y tiempos listos.");
+    if (!todasLasPalabrasIA.length) {
+      throw new Error("No se recibieron marcas de tiempo para las palabras.");
+    }
+
+    if (status) status.textContent = "Estado: Tiempos alineados. Analizando notas musicales (Pitch)... 🎵";
+
+    // 3. Estructurar el array unificado para tu extractor de notas musicales
+    const segmentosBaseIA = [{
+      start: todasLasPalabrasIA[0].start,
+      end: todasLasPalabrasIA[todasLasPalabrasIA.length - 1].end,
+      text: letraPegada,
+      words: todasLasPalabrasIA
+    }];
+
+    // Tu función extraerá las notas analizando directamente la pista de voz en estos rangos
+    const segmentosConPitchYNotas = await analyzePitchForSegments(selectedVoiceBlob, segmentosBaseIA);
+
+    // 4. Dividir las palabras en renglones limpios de 6 palabras para el Karaoke
+    transcriptionSegments = splitSegmentsIntoKaraokeLines(segmentosConPitchYNotas, 6);
+
+    // 5. Renderizar y actualizar el monitor
+    renderKaraokeLyrics(transcriptionSegments);
+    if (typeof cargarLetrasEnMonitor === "function") cargarLetrasEnMonitor();
+
+    // 6. Guardar la sincronización en IndexDB
+    if (selectedVoiceId) {
+      await updateLibraryItem(selectedVoiceId, {
+        transcription: segmentosConPitchYNotas
+      });
+    }
+
+    if (status) status.textContent = "Estado: Sincronización y Pitch completados por tramos con éxito! ✅";
+    alert("✅ El proceso por fragmentos concluyó con éxito. Límite de peso superado.");
 
   } catch (error) {
     console.error("Error en sincronización automática:", error);
