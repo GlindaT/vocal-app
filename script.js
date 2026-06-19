@@ -1785,6 +1785,130 @@ function midiToFrequency(midi) {
   return 440 * Math.pow(2, (midi - 69) / 12);
 }
 
+// Nueva función automatizar
+// Ejemplo de procesamiento en tu script.js al recibir los datos del backend
+function procesarResultadoAutomatico(apiResponseWords) {
+  // apiResponseWords contiene el array de objetos [{word: "hola", start: 0.5, end: 0.9}]
+  
+  const palabrasSincronizadas = apiResponseWords.map((w) => {
+    const inicio = w.start;
+    const fin = w.end;
+
+    // --- LA CONEXIÓN CON TUS NOTAS ---
+    // Invocas tu analizador de pitch nativo de la app para el intervalo de tiempo exacto
+    // de esa palabra en la pista de "voz".
+    const frecuenciaDetectada = analizarFrecuenciaAudioVoz(inicio, fin); 
+    
+    let notaMidi = 60; // Nota base por defecto (Do central) en caso de silencios
+    if (frecuenciaDetectada > 0) {
+      // Fórmula matemática estándar que ya usas para convertir Hertz a notas MIDI
+      notaMidi = Math.round(12 * Math.log2(frecuenciaDetectada / 440) + 69);
+    }
+
+    return {
+      word: w.word,
+      start: inicio,
+      end: fin,
+      midi: notaMidi // Asignamos de forma automática la altura del pentagrama
+    };
+  });
+
+  // Almacenas la estructura en la variable global que lee tu Canvas (ej. textSegments)
+  textSegments = [{
+    start: palabrasSincronizadas[0]?.start || 0,
+    end: palabrasSincronizadas[palabrasSincronizadas.length - 1]?.end || 0,
+    words: palabrasSincronizadas
+  }];
+
+  // Guardas en la base de datos de tu app de karaoke (initDB)
+  guardarSincronizacionAutomaticaEnDB(textSegments);
+}
+
+// Otra función
+async function procesarSincronizacionAutomaticaYPitch() {
+  // 1. Validaciones básicas utilizando tus variables y elementos globales
+  if (!selectedVoiceBlob) {
+    alert("⚠️ Primero selecciona y carga una voz desde Biblioteca");
+    return;
+  }
+
+  const textInput = $("lyricsText");
+  const letraPegada = textInput ? textInput.value.trim() : "";
+  if (!letraPegada) {
+    alert("⚠️ Pega la letra de la canción en el editor para guiar al alineador automático");
+    return;
+  }
+
+  const status = $("selectedVoiceStatus");
+  if (status) status.textContent = "Estado: Enviando audio a Vercel para alineación por palabra... 🚀";
+
+  try {
+    // 2. Convertimos tu archivo de audio 'selectedVoiceBlob' a Base64 para el backend
+    const base64Audio = await blobToBase64(selectedVoiceBlob);
+
+    // 3. Petición POST a tu endpoint seguro en Vercel
+    const response = await fetch("/api/transcribe", { // Asegúrate de usar la ruta de tu API
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        audioBase64: base64Audio,
+        letraText: letraPegada // Enviamos el prompt de texto guía
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Error en el servidor: ${errorText}`);
+    }
+
+    const result = await response.json();
+
+    // 4. Estructurar la respuesta de Whisper (word-level timestamps)
+    if (!result.words || !result.words.length) {
+      throw new Error("La API no devolvió tiempos detallados por palabra.");
+    }
+
+    if (status) status.textContent = "Estado: Alineación de tiempos recibida. Analizando notas musicales (Pitch)... 🎵";
+
+    // 5. Transformar los datos de Whisper al formato base estructurado de tu app
+    const segmentosBaseIA = [{
+      start: result.words[0].start,
+      end: result.words[result.words.length - 1].end,
+      text: result.text || letraPegada,
+      words: result.words.map(w => ({
+        word: w.word,
+        start: Number(w.start),
+        end: Number(w.end)
+      }))
+    }];
+
+    // 6. ¡LA CONEXIÓN MÁGICA!: Pasamos los tiempos reales obtenidos por tu función de Pitch nativa
+    // Tu función extraerá los Hz exactos basándose en los cortes del audio real de la voz.
+    const segmentosConPitchYNotas = await analyzePitchForSegments(selectedVoiceBlob, segmentosBaseIA);
+
+    // 7. Dividir los segmentos en líneas para el Karaoke en grupos de 6 palabras
+    transcriptionSegments = splitSegmentsIntoKaraokeLines(segmentosConPitchYNotas, 6);
+
+    // 8. Renderizar y actualizar pantallas
+    renderKaraokeLyrics(transcriptionSegments);
+    if (typeof cargarLetrasEnMonitor === "function") cargarLetrasEnMonitor();
+
+    // 9. Guardar la sincronización perfecta y definitiva en tu Base de Datos IndexDB
+    if (selectedVoiceId) {
+      await updateLibraryItem(selectedVoiceId, {
+        transcription: segmentosConPitchYNotas // Guardamos la estructura enriquecida con tiempos e instrumentación MIDI
+      });
+    }
+
+    if (status) status.textContent = "Estado: ¡Sincronización y Pitch automáticos guardados con éxito! ✅";
+    alert("✅ El proceso ha concluido de forma exitosa. Pentagrama y tiempos listos.");
+
+  } catch (error) {
+    console.error("Error en sincronización automática:", error);
+    alert(`❌ No se pudo automatizar: ${error.message}`);
+    if (status) status.textContent = "Estado: Error en automatización";
+  }
+}
 
 
 function splitSegmentsIntoKaraokeLines(segments, maxWordsPerLine = 6) {
