@@ -4,29 +4,25 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1. Modificación: Ahora extraemos también la letra pegada por el usuario
-    const { audioBase64, letraText } = req.body || {};
+    // Recibimos el parámetro 'language' enviado desde el frontend
+    const { audioBase64, letraText, language } = req.body || {};
 
     if (!audioBase64) {
       return res.status(400).json({ error: "Falta el audio" });
     }
+    
+    // ... código intermedio de validación y conversión de buffers ...
 
-    if (!process.env.OPENAI_API_KEY) {
-      return res.status(500).json({ error: "Falta configurar OPENAI_API_KEY en el servidor" });
-    }
-
-    // Convertir base64 a binario
-    const audioBuffer = Buffer.from(audioBase64, "base64");
-
-    // Crear archivo compatible para enviar a OpenAI
     const audioBlob = new Blob([audioBuffer], { type: "audio/wav" });
     const formData = new FormData();
     formData.append("file", audioBlob, "chunk.wav");
     formData.append("model", "whisper-1");
-    formData.append("language", "es"); // Forzamos español estricto
+    
+    // MODIFICACIÓN CRÍTICA: Usamos el idioma enviado o caemos en español por defecto
+    formData.append("language", language || "es"); 
+    
     formData.append("response_format", "verbose_json");
     
-    // CORRECCIÓN CRÍTICA: Cambiado de prompt a initial_prompt para Whisper
     if (letraText) {
       formData.append("initial_prompt", letraText);
     }
