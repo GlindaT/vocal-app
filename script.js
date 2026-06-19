@@ -1870,12 +1870,21 @@ async function procesarSincronizacionAutomaticaYPitch() {
 
     if (status) status.textContent = "Estado: Alineación de tiempos recibida. Analizando notas musicales (Pitch)... 🎵";
 
+    // REEMPLAZA EL PUNTO 5 DE LA FUNCIÓN ANTERIOR POR ESTE BLOQUE EXACTO:
     // 5. Transformar los datos de Whisper al formato base estructurado de tu app
+    // OpenAI devuelve un array global en data.words si usamos verbose_json
+    const listadoPalabrasIA = Array.isArray(result.words) ? result.words : [];
+    
+    if (!listadoPalabrasIA.length) {
+      throw new Error("No se encontraron marcas de tiempo individuales para las palabras.");
+    }
+    
     const segmentosBaseIA = [{
-      start: result.words[0].start,
-      end: result.words[result.words.length - 1].end,
+      start: Number(listadoPalabrasIA[0].start || 0),
+      end: Number(listadoPalabrasIA[listadoPalabrasIA.length - 1].end || 120),
       text: result.text || letraPegada,
-      words: result.words.map(w => ({
+      // Mapeamos las propiedades exactas que Whisper entrega: { word: "texto", start: 0.5, end: 1.2 }
+      words: listadoPalabrasIA.map(w => ({
         word: w.word,
         start: Number(w.start),
         end: Number(w.end)
@@ -3710,6 +3719,30 @@ document.addEventListener("DOMContentLoaded", async () => {
         btn.style.background = autoScrollEnabled ? "#f59e0b" : "#6b7280";
       }
     });
+
+    // EVENTO DE SINCRONIZACIÓN AUTOMÁTICA INTELIGENTE (ACTUALIZADO)
+    const autoSyncBtn = $("autoSyncBtn");
+    if (autoSyncBtn) {
+      autoSyncBtn.addEventListener("click", async () => {
+        // 1. Evitamos que el usuario haga múltiples clics bloqueando el botón
+        autoSyncBtn.disabled = true;
+        autoSyncBtn.style.opacity = "0.6";
+        const originalText = autoSyncBtn.innerHTML;
+        autoSyncBtn.innerHTML = "⏳ Procesando Sincronización...";
+        
+        try {
+          // 2. Ejecutamos la nueva lógica que se conecta a Vercel y calcula el Pitch
+          await procesarSincronizacionAutomaticaYPitch();
+        } catch (error) {
+          console.error("Error en el flujo del botón autoSync:", error);
+        } finally {
+          // 3. Pase lo que pase (éxito o error), liberamos el botón al terminar
+          autoSyncBtn.disabled = false;
+          autoSyncBtn.style.opacity = "1";
+          autoSyncBtn.innerHTML = originalText;
+        }
+      });
+    }
 
     // Eventos de sincronización con Taps
     safeAdd("startTapSyncBtn", "click", startTapSync);
