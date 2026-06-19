@@ -919,9 +919,9 @@ async function saveToLibrary(blob, options = {}) {
 
     // 4. Actualizamos la interfaz
     // Asegúrate de que esta función exista y esté bien escrita
-   // if (typeof renderLibrary === "function") {
-     // await renderLibrary();
-  //  }
+    if (typeof renderLibrary === "function") {
+      await renderLibrary();
+    }
 
     console.log("✅ Guardado en biblioteca correctamente");
 
@@ -948,13 +948,13 @@ async function renderLibrary(filter = 'todos') {
 
   try {
     // 1. Mejora de eficiencia: Si no es 'todos', usamos el índice de la DB
-   // let filteredItems;
-   // if (filter === 'todos') {
-   //   filteredItems = await getAllLibraryItems();
-   // } else {
-      // getLibraryItemsByType es la función que definimos antes, ¡mucho más rápida!
-     // filteredItems = await getLibraryItemsByType(filter);
-  //  }
+    let filteredItems;
+    if (filter === 'todos') {
+      filteredItems = await getAllLibraryItems();
+    } else {
+      getLibraryItemsByType es la función que definimos antes, ¡mucho más rápida!
+        filteredItems = await getLibraryItemsByType(filter);
+    }
     let library = await getAllLibraryItems();
     let filteredItems = filter !== 'todos' ? library.filter(item => item.type === filter) : library;
     
@@ -1029,7 +1029,7 @@ function asignarEventosBiblioteca(filter) {
   document.querySelectorAll(".load-monitor-btn").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const id = Number(btn.dataset.id);
-      const item = getLibraryItemsByType.find(i => i.id === id);
+      const item = library.find(i => i.id === id);
 
       if (item && item.textoPlano) {
         const monitor = document.getElementById("lyricsText") || document.getElementById("miniMonitorTextArea");
