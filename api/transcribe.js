@@ -4,32 +4,39 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Recibimos el parámetro 'language' enviado desde el frontend
     const { audioBase64, letraText, language } = req.body || {};
 
     if (!audioBase64) {
       return res.status(400).json({ error: "Falta el audio" });
     }
-    
-    // ... código intermedio de validación y conversión de buffers ...
 
-    const audioBlob = new Blob([audioBuffer], { type: "audio/wav" });
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(500).json({ error: "Falta configurar OPENAI_API_KEY en el servidor" });
+    }
+
+    // 1. Convertir base64 a binario de Node.js
+    const audioBufferBinario = Buffer.from(audioBase64, "base64");
+
+    // 2. Crear archivo blob compatible para enviar a OpenAI
+    const audioBlob = new Blob([audioBufferBinario], { type: "audio/wav" });
     const formData = new FormData();
     formData.append("file", audioBlob, "chunk.wav");
     formData.append("model", "whisper-1");
     
-    // MODIFICACIÓN CRÍTICA: Usamos el idioma enviado o caemos en español por defecto
-    formData.append("language", language || "es"); 
-    
+    // Inyección dinámica del idioma detectado ("es" o "en")
+    formData.append("language", language || "es");
     formData.append("response_format", "verbose_json");
     
+    // Usamos el initial_prompt para guiar la alineación con tu letra pegada
     if (letraText) {
       formData.append("initial_prompt", letraText);
     }
     
+    // Solicitamos marcas de tiempo palabra por palabra
     formData.append("timestamp_granularities[]", "word");
 
-    const openAIResponse = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    // 3. Petición directa a OpenAI
+    const openAIResponse = await fetch("https://openai.com", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
@@ -49,8 +56,7 @@ export default async function handler(req, res) {
 
     const data = JSON.parse(responseText);
     
-    // 4. Modificación: Retornamos de forma limpia el array de palabras estructurado
-    // Whisper verbose_json nos devolverá la propiedad 'data.words' que contiene [{word, start, end}, ...]
+    // Devolvemos el texto global y el array de palabras con sus tiempos exactos
     return res.status(200).json({
       text: data.text,
       words: data.words || []
