@@ -1012,6 +1012,7 @@ async function renderLibrary(filter = 'todos') {
 }
 
 // Función separada para no ensuciar renderLibrary
+
 function asignarEventosBiblioteca(filter) {
   // Evento Borrar
   document.querySelectorAll(".delete-library-btn").forEach((btn) => {
@@ -1028,7 +1029,7 @@ function asignarEventosBiblioteca(filter) {
   document.querySelectorAll(".load-monitor-btn").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const id = Number(btn.dataset.id);
-      const item = library.find(i => i.id === id);
+      const item = renderLibrary.find(i => i.id === id);
 
       if (item && item.textoPlano) {
         const monitor = document.getElementById("lyricsText") || document.getElementById("miniMonitorTextArea");
