@@ -949,6 +949,7 @@ async function renderLibrary(filter = 'todos') {
   try {
     // 1. Mejora de eficiencia: Si no es 'todos', usamos el índice de la DB
     let filteredItems;
+    let library;
     if (filter === 'todos') {
       filteredItems = await getAllLibraryItems();
     } else {
