@@ -1038,10 +1038,10 @@ function asignarEventosBiblioteca(filter) {
           monitor.value = id.textoPlano;
         }
         await cargarTextoEnMonitor(Number(btn.dataset.id));
-      } else {
+      //} else {
         alert("No se encontró el contenedor");
-      }
-    });
+      });
+    /*});*/
   });
 }
 
