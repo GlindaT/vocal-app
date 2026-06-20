@@ -2277,7 +2277,7 @@ async function loadSelectedTrackFromLibraryKaraoke() {
 
     const track = $("karaokeTrack");
     track.src = URL.createObjectURL(item.audioBlob);
-    track.volume = 0.6;
+    track.volume = 0.7;
 
     $("karaokeStatus").textContent = `Estado: Pista cargada (${item.name}). ¡Inicia grabación!`;
     cargarLetrasEnMonitor();
@@ -2629,7 +2629,7 @@ async function mixKaraoke() {
     );
 
     const trackGain = offlineCtx.createGain();
-    trackGain.gain.value = 0.4;
+    trackGain.gain.value = 0.6;
 
     const trackSource = offlineCtx.createBufferSource();
     trackSource.buffer = trackBuffer;
