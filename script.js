@@ -2225,7 +2225,7 @@ function cargarPistaKaraoke(e) {
 
   const track = $("karaokeTrack");
   track.src = URL.createObjectURL(file);
-  track.volume = 0.6;
+  track.volume = 0.5;
 
   $("karaokeStatus").textContent = "Estado: Pista lista. ¡Presiona Iniciar Grabación!";
   cargarLetrasEnMonitor();
@@ -2277,7 +2277,7 @@ async function loadSelectedTrackFromLibraryKaraoke() {
 
     const track = $("karaokeTrack");
     track.src = URL.createObjectURL(item.audioBlob);
-    track.volume = 0.7;
+    track.volume = 0.6;
 
     $("karaokeStatus").textContent = `Estado: Pista cargada (${item.name}). ¡Inicia grabación!`;
     cargarLetrasEnMonitor();
