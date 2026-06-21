@@ -931,6 +931,7 @@ async function saveToLibrary(blob, options = {}) {
   }
 }
 
+/*
 async function renderLibrary(filter = 'todos') {
   const container = $("libraryList");
   if (!container) return;
@@ -1024,13 +1025,12 @@ function asignarEventosBiblioteca(filter) {
       }
     };
   });
-}
-/*
+
   // Evento Monitor
   document.querySelectorAll(".load-monitor-btn").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const id = Number(btn.dataset.id);
-      //const item = libraryItems.find(i => i.id === id);
+      const item = library.find(i => i.id === id);
 
       //if (item && item.textoPlano) {
         const monitor = document.getElementById("lyricsText") || document.getElementById("miniMonitorTextArea");
@@ -1046,6 +1046,120 @@ function asignarEventosBiblioteca(filter) {
   });
 }
 */
+
+async function renderLibrary(filter = 'todos') {
+  const container = $("libraryList");
+  if (!container) return;
+
+  document.querySelectorAll(".folder-btn").forEach(btn => {
+    const clickAttr = btn.getAttribute("onclick") || "";
+    if (clickAttr.includes(`'${filter}'`)) {
+      btn.classList.add("active"); 
+    } else {
+      btn.classList.remove("active"); 
+    }
+  });
+
+  container.innerHTML = "<p>Cargando archivos...</p>";
+  
+  try {
+    let library = await getAllLibraryItems();
+    let filteredItems = filter !== 'todos' ? library.filter(item => item.type === filter) : library;
+
+    container.innerHTML = "";
+
+    if (filteredItems.length === 0) {
+      container.innerHTML = `<p>La carpeta '${filter}' está vacía.</p>`;
+    } else {
+      filteredItems.forEach((item) => {
+        const div = document.createElement("div");
+        div.className = "library-item card"; 
+        div.style.marginBottom = "10px";
+
+        if (item.type === 'ultrastar_txt') {
+          const previewTexto = item.textoPlano ? item.textoPlano.substring(0, 120) + "..." : "Sin contenido";
+          div.innerHTML = `
+            <p><strong>${item.name}</strong></p>
+            <small>Tipo: 📝 TEXTO ULTRASTAR | ${item.date}</small>
+            <div style="background: var(--bg-main); padding: 10px; border-radius: 6px; font-family: monospace; font-size: 12px; margin: 10px 0; white-space: pre-wrap; border: 1px solid var(--border); color: var(--text-muted);">
+              ${previewTexto}
+            </div>
+            <div style="display: flex; gap: 10px;">
+              <button type="button" data-id="${item.id}" class="load-monitor-btn" style="background:#3b82f6; color:white;">📥 Cargar en Monitor</button>
+              <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#e11d48;">🗑️ Eliminar</button>
+            </div>
+          `;
+        } else {
+          const audioURL = item.audioBlob ? URL.createObjectURL(item.audioBlob) : "";
+          div.innerHTML = `
+            <p><strong>${item.name}</strong></p>
+            <small>Tipo: ${item.type.toUpperCase()} | ${item.date}</small>
+            ${audioURL ? `<audio controls src="${audioURL}" style="width:100%; margin: 10px 0;"></audio>` : '<p style="color:red; font-size:12px;">Audio no encontrado</p>'}
+            <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#e11d48;">🗑️ Eliminar</button>
+          `;
+        }
+        container.appendChild(div);
+      });
+    }
+    document.querySelectorAll(".delete-library-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = Number(btn.dataset.id);
+        await deleteLibraryItemFromDB(id);
+        renderLibrary(filter); 
+      });
+    });
+
+    document.querySelectorAll(".load-monitor-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = Number(btn.dataset.id);
+        const item = library.find(i => i.id === id);
+        
+        if (item && item.textoPlano) {
+          const monitor = document.getElementById("lyricsText") || document.getElementById("miniMonitorTextArea");
+          
+          if (monitor) {
+            monitor.value = item.textoPlano;
+
+            /*
+            if (item.transcription) {
+              try {
+                const estudioModulo = await import('./estudio.js');
+                if (typeof estudioModulo.setTranscriptionSegments === 'function') {
+                  estudioModulo.setTranscriptionSegments(item.transcription);
+                }
+                const karaokeModulo = await import('./karaoke.js');
+                if (typeof karaokeModulo.cargarLetrasEnMonitor === 'function') {
+                  karaokeModulo.cargarLetrasEnMonitor();
+                }
+              } catch (e) {
+                console.warn("Módulo no listo para recibir segmentos:", e);
+              }
+            }
+            */
+
+            alert(`✅ Letra de "${item.name}" cargada en el monitor del Estudio.`);
+            monitor.scrollIntoView({ behavior: "smooth", block: "center" });
+          } else {
+            alert("⚠️ No se encontró el contenedor visual del monitor en esta pantalla.");
+          }
+        }
+      });
+    });
+    
+    /*
+    try {
+      const estudioModulo = await import('./estudio.js');
+      if (typeof estudioModulo.loadVoiceOptionsInStudio === "function") await estudioModulo.loadVoiceOptionsInStudio();
+      if (typeof estudioModulo.loadTrackOptionsInStudio === "function") await estudioModulo.loadTrackOptionsInStudio();
+      const karaokeModulo = await import('./karaoke.js');
+      if (typeof karaokeModulo.loadTrackOptionsInKaraoke === "function") await karaokeModulo.loadTrackOptionsInKaraoke();
+    } catch (e) { modules may not be loaded yet } */
+  } catch (error) {
+    console.error(error);
+    container.innerHTML = "<p>❌ Error al cargar la biblioteca.</p>";
+  }
+}
+
 // Añadimos 'currentFilter' para que no nos saque de la carpeta donde estamos
 async function deleteLibraryItem(id, currentFilter = 'todos') {
   // 1. Confirmación de seguridad
@@ -1502,7 +1616,7 @@ async function transcribeSelectedVoice() {
     }
 
     baseTranscriptionSegments = fullSegments;
-    transcriptionSegments = splitSegmentsIntoKaraokeLines(baseTranscriptionSegments, 6);
+    transcriptionSegments = splitSegmentsIntoKaraokeLines(baseTranscriptionSegments, 7);
 
     renderKaraokeLyrics(transcriptionSegments);
     cargarLetrasEnMonitor();
@@ -1855,7 +1969,7 @@ async function procesarSincronizacionAutomaticaYPitch() {
     // RAMIFICACIÓN PARA AHORRO DE SALDO (MOCK REALISTA INTEGRADO)
     // ===================================================
     
-    if (MODO_DESARROLLADOR_GRATIS) {
+   /* if (MODO_DESARROLLADOR_GRATIS) {
       if (status) status.textContent = "🤖 Modo Desarrollador: Distribuyendo palabras de forma musical... ⚡";
       
       // 1. Separamos el texto pegado en palabras individuales
@@ -1886,64 +2000,64 @@ async function procesarSincronizacionAutomaticaYPitch() {
       });
       
     } else {
+    */
       // FLUJO REAL CON CONSUMO DE SALDO (Se queda exactamente como lo tenías)
-      let idiomaDetectado = "es";
-      const palabrasIngles = ["the", "and", "you", "that", "was", "for", "with", "this", "have"];
-      const palabrasLetra = letraPegada.toLowerCase().split(/\s+/);
-      if (palabrasLetra.some(palabra => palabrasIngles.includes(palabra))) {
-        idiomaDetectado = "en";
-      }
-
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const arrayBuffer = await selectedVoiceBlob.arrayBuffer();
-      const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-
-      const CHUNK_SECONDS = 25;
-      const sampleRate = audioBuffer.sampleRate;
-      const totalSamples = audioBuffer.length;
-      const samplesPerChunk = CHUNK_SECONDS * sampleRate;
-
-      for (let start = 0; start < totalSamples; start += samplesPerChunk) {
-        const end = Math.min(start + samplesPerChunk, totalSamples);
-        const chunkNumber = Math.floor(start / samplesPerChunk) + 1;
-        const totalChunks = Math.ceil(totalSamples / samplesPerChunk);
-        const timeOffset = start / sampleRate;
-
-        if (status) {
-          status.textContent = `Estado: Procesando tramo ${chunkNumber} de ${totalChunks} con OpenAI... ⏳`;
-        }
-
-        const wavBlob = audioBufferToWav(audioBuffer, start, end);
-        const base64Audio = await blobToBase64(wavBlob);
-
-        const response = await fetch("/api/transcribe", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            audioBase64: base64Audio,
-            letraText: letraPegada,
-            language: idiomaDetectado
-          })
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`Fallo en el fragmento ${chunkNumber}: ${errorText}`);
-        }
-
-        const result = await response.json();
-        const listadoPalabrasChunk = Array.isArray(result.words) ? result.words : [];
-
-        listadoPalabrasChunk.forEach((w) => {
-          todasLasPalabrasIA.push({
-            word: w.word,
-            start: Number(w.start) + timeOffset,
-            end: Number(w.end) + timeOffset
-          });
-        });
-      }
+    let idiomaDetectado = "es";
+    const palabrasIngles = ["the", "and", "you", "that", "was", "for", "with", "this", "have"];
+    const palabrasLetra = letraPegada.toLowerCase().split(/\s+/);
+    if (palabrasLetra.some(palabra => palabrasIngles.includes(palabra))) {
+      idiomaDetectado = "en";
     }
+    
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const arrayBuffer = await selectedVoiceBlob.arrayBuffer();
+    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
 
+    const CHUNK_SECONDS = 25;
+    const sampleRate = audioBuffer.sampleRate;
+    const totalSamples = audioBuffer.length;
+    const samplesPerChunk = CHUNK_SECONDS * sampleRate;
+
+    for (let start = 0; start < totalSamples; start += samplesPerChunk) {
+      const end = Math.min(start + samplesPerChunk, totalSamples);
+      const chunkNumber = Math.floor(start / samplesPerChunk) + 1;
+      const totalChunks = Math.ceil(totalSamples / samplesPerChunk);
+      const timeOffset = start / sampleRate;
+      
+      if (status) {
+        status.textContent = `Estado: Procesando tramo ${chunkNumber} de ${totalChunks} con OpenAI... ⏳`;
+      }
+      
+      const wavBlob = audioBufferToWav(audioBuffer, start, end);
+      const base64Audio = await blobToBase64(wavBlob);
+
+      const response = await fetch("/api/transcribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          audioBase64: base64Audio,
+          letraText: letraPegada,
+          language: idiomaDetectado
+        })
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Fallo en el fragmento ${chunkNumber}: ${errorText}`);
+      }
+
+      const result = await response.json();
+      const listadoPalabrasChunk = Array.isArray(result.words) ? result.words : [];
+
+      listadoPalabrasChunk.forEach((w) => {
+        todasLasPalabrasIA.push({
+          word: w.word,
+          start: Number(w.start) + timeOffset,
+          end: Number(w.end) + timeOffset
+        });
+      });
+    }
+    
     if (!todasLasPalabrasIA.length) {
       throw new Error("No se obtuvieron marcas de tiempo.");
     }
@@ -1967,8 +2081,8 @@ async function procesarSincronizacionAutomaticaYPitch() {
     // Tu extractor matemático nativo analizará el audio real calculando los Hz
     const segmentosConPitchYNotas = await analyzePitchForSegments(selectedVoiceBlob, segmentosBaseIA);
 
-    // Dividimos en renglones limpios para el karaoke en grupos de 6 palabras
-    transcriptionSegments = splitSegmentsIntoKaraokeLines(segmentosConPitchYNotas, 6);
+    // Dividimos en renglones limpios para el karaoke en grupos de 7 palabras
+    transcriptionSegments = splitSegmentsIntoKaraokeLines(segmentosConPitchYNotas, 7);
 
     // 5. GUARDADO COMPATIBLE E INYECCIÓN DE LA PISTA DE MÚSICA INSTRUMENTAL
     if (idCancionActiva) {
@@ -2005,7 +2119,7 @@ async function procesarSincronizacionAutomaticaYPitch() {
     if (typeof cargarLetrasEnMonitor === "function") cargarLetrasEnMonitor();
 
     if (status) status.textContent = "Estado: ¡Karaoke creado con éxito! Listo en tu biblioteca ✅";
-    alert("🎯 Sincronización Concluida con éxito en Modo Desarrollador (Costo $0.00).\nLa pista musical y los bloques del pentagrama ya están listos.");
+    alert("🎯 Sincronización concluida");
 
   } catch (error) {
     console.error("Error global en el flujo:", error);
@@ -2014,7 +2128,7 @@ async function procesarSincronizacionAutomaticaYPitch() {
   }
 }
 
-function splitSegmentsIntoKaraokeLines(segments, maxWordsPerLine = 6) {
+function splitSegmentsIntoKaraokeLines(segments, maxWordsPerLine = 7) {
   const result = [];
 
   segments.forEach((segment) => {
@@ -3680,7 +3794,7 @@ async function applyTapSync() {
       };
 
       await addLibraryItem(karaokeItem);
-      console.log("✅ Paquete Maestro de Karaoke creado.");
+      console.log("✅ Paquete de Karaoke creado.");
     } catch (err) {
       console.error("Error al crear nuevo karaoke:", err);
     }
@@ -3975,7 +4089,7 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
   const MIDI_MIN = 36; 
   const MIDI_MAX = 84;
   const lineX = 80; // Línea roja (Ahora)
-  const pixelsPerSecond = (canvas.width - 50) / 6; 
+  const pixelsPerSecond = (canvas.width - 50) / 7; 
 
   // Historial de voz
   if (typeof pitchHistory !== 'undefined') {
@@ -4042,7 +4156,7 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
   ctx.textAlign = "right";
   const noteLabels = ["C6", "A5", "F5", "D5", "B4", "G4", "E4", "C4", "A3", "F3", "D3", "C3"];
   noteLabels.forEach((label, i) => {
-    const y = P_TOP + (P_HEIGHT / numLines) * i + 6;
+    const y = P_TOP + (P_HEIGHT / numLines) * i + 7;
     ctx.fillText(label, 28, y);
   });
 
