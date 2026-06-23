@@ -3992,6 +3992,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     safeAdd("pitchPauseBtn", "click", pausePitchShifted);
     safeAdd("pitchStopBtn", "click", stopPitchShifted);
     safeAdd("pitchSaveBtn", "click", savePitchShiftedToLibrary);
+    safeAdd("pitchSendToKaraokeBtn", "click", sendPitchShiftedToKaraokeMonitor);
 
     // afinador
     safeAdd("recordBtn", "click", toggleRecording);
@@ -5056,6 +5057,7 @@ let pitchGainNode = null;
 let pitchIsPlaying = false;
 let pitchIsPaused = false;
 let pitchPausedTime = 0;
+let pitchLastSavedId = null;
 
 function getNetSemitones() {
   const up = parseInt(($("pitchUpSelect")?.value) || "0", 10);
@@ -5131,6 +5133,11 @@ async function loadSelectedPitchKaraoke() {
     const arrayBuffer = await item.audioBlob.arrayBuffer();
     pitchAudioBuffer = await pitchAudioContext.decodeAudioData(arrayBuffer.slice(0));
     pitchSelectedItem = item;
+
+    // Al cargar un nuevo archivo, resetear el último guardado y deshabilitar el botón de \"enviar\"
+    pitchLastSavedId = null;
+    const sendBtn = $("pitchSendToKaraokeBtn");
+    if (sendBtn) sendBtn.disabled = true;
 
     if (status) {
       status.textContent = `Estado: "${item.name}" cargado (${pitchAudioBuffer.duration.toFixed(1)} s, ${pitchAudioBuffer.numberOfChannels} canal${pitchAudioBuffer.numberOfChannels === 1 ? "" : "es"}). Listo para reproducir.`;
@@ -5359,14 +5366,30 @@ async function savePitchShiftedToLibrary() {
 
     await addLibraryItem(libraryItem);
 
+    // Recuperar el id del item recién guardado (el más reciente con ese nombre)
+    try {
+      const all = await getAllLibraryItems();
+      const candidate = all
+        .filter(i => i.name === finalName && i.type === "karaoke")
+        .sort((a, b) => (b.date || 0) - (a.date || 0))[0];
+      pitchLastSavedId = candidate?.id || null;
+    } catch (e) {
+      pitchLastSavedId = null;
+      console.warn("No se pudo recuperar el id del item guardado:", e);
+    }
+
+    // Habilitar el botón \"Enviar al monitor karaoke\"
+    const sendBtn = $("pitchSendToKaraokeBtn");
+    if (sendBtn) sendBtn.disabled = !pitchLastSavedId;
+
     // Refrescar la biblioteca por si el usuario la abre
     if (typeof renderLibrary === "function") {
       try { await renderLibrary(window.currentFilter || 'karaoke'); } catch (e) {}
     }
     // Refrescar la lista del propio cambiar-tono
     await loadPitchKaraokeOptions();
-
-    if (status) status.textContent = `Estado: ✅ guardado como "${finalName}" en la carpeta Karaoke de Biblioteca.`;
+    
+    if (status) status.textContent = `Estado: ✅ guardado como "${finalName}" en la carpeta Karaoke de Biblioteca. Ya puedes enviarlo al monitor karaoke.`;
     alert(`✅ Archivo guardado: "${finalName}"`);
   } catch (e) {
     console.error("Error guardando archivo con tono cambiado:", e);
@@ -5374,6 +5397,36 @@ async function savePitchShiftedToLibrary() {
     alert("❌ Error al guardar: " + e.message);
   } finally {
     if (btn) btn.disabled = false;
+  }
+}
+
+// Envía el último archivo guardado en \"Cambiar tono\" al monitor del Karaoke
+// (mismo flujo que el botón de Biblioteca: solo carga, no inicia grabación ni cambia de pestaña)
+async function sendPitchShiftedToKaraokeMonitor() {
+  if (!pitchLastSavedId) {
+    alert("⚠️ Primero guarda el archivo con tono cambiado para poder enviarlo al monitor.");
+    return;
+  }
+  try {
+    if (typeof loadKaraokeSong !== "function") {
+      alert("⚠️ Función del monitor karaoke no disponible.");
+      return;
+    }
+    // Detener cualquier reproducción de prueba activa para no superponer audios
+    stopPitchShifted();
+
+    await loadKaraokeSong(pitchLastSavedId);
+
+    const status = $("pitchSaveStatus");
+    if (status) {
+      status.textContent = "Estado: ✅ archivo cargado en el monitor karaoke. Cuando estés listo, ve a la pestaña Karaoke y presiona Iniciar grabación.";
+    }
+    alert("✅ Enviado al monitor karaoke.
+
+Cuando estés listo, ve a la pestaña Karaoke y presiona '🎙️ Iniciar Grabación' para empezar a cantar.");
+  } catch (e) {
+    console.error("Error enviando al monitor karaoke desde Cambiar tono:", e);
+    alert("❌ No se pudo enviar al monitor karaoke: " + e.message);
   }
 }
 
