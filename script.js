@@ -2329,6 +2329,7 @@ let karaokeDuoAudioContext = null;
 let karaokeDuoAnalyser1 = null;
 let karaokeDuoAnalyser2 = null;
 let karaokeDuoAnimationId = null;
+let karaokeDuoMonitorActive = false;
 
 function cargarPistaKaraoke(e) {
   const file = e.target.files[0];
@@ -2604,31 +2605,39 @@ function startKaraokeDuoLevelMonitor() {
   const level2 = $("karaokeDuoMic2Level");
 
   stopKaraokeDuoLevelMonitor();
+  karaokeDuoMonitorActive = true;
 
   function updateLevels() {
+    if (!karaokeDuoMonitorActive) return;
+
     if (karaokeDuoAnalyser1 && level1) {
-      level1.style.width = `${getRmsLevel(karaokeDuoAnalyser1)}%`;
+      const data1 = new Uint8Array(karaokeDuoAnalyser1.frequencyBinCount);
+      karaokeDuoAnalyser1.getByteFrequencyData(data1);
+      const avg1 = data1.reduce((a, b) => a + b, 0) / data1.length;
+      level1.style.width = Math.min(100, (avg1 / 128) * 100) + "%";
     }
 
     if (karaokeDuoAnalyser2 && level2) {
-      level2.style.width = `${getRmsLevel(karaokeDuoAnalyser2)}%`;
+      const data2 = new Uint8Array(karaokeDuoAnalyser2.frequencyBinCount);
+      karaokeDuoAnalyser2.getByteFrequencyData(data2);
+      const avg2 = data2.reduce((a, b) => a + b, 0) / data2.length;
+      level2.style.width = Math.min(100, (avg2 / 128) * 100) + "%";
     }
 
-    if (karaokeMediaRecorder && karaokeMediaRecorder.state === "recording") {
-      karaokeDuoAnimationId = requestAnimationFrame(updateLevels);
-    }
+    karaokeDuoAnimationId = requestAnimationFrame(updateLevels);
   }
 
-  updateLevels();
+  karaokeDuoAnimationId = requestAnimationFrame(updateLevels);
 }
 
 function stopKaraokeDuoLevelMonitor() {
+  karaokeDuoMonitorActive = false;
+
   if (karaokeDuoAnimationId) {
     cancelAnimationFrame(karaokeDuoAnimationId);
     karaokeDuoAnimationId = null;
   }
 
-  // Resetear barras
   const level1 = $("karaokeDuoMic1Level");
   const level2 = $("karaokeDuoMic2Level");
   if (level1) level1.style.width = "0%";
