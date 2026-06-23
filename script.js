@@ -5421,9 +5421,7 @@ async function sendPitchShiftedToKaraokeMonitor() {
     if (status) {
       status.textContent = "Estado: ✅ archivo cargado en el monitor karaoke. Cuando estés listo, ve a la pestaña Karaoke y presiona Iniciar grabación.";
     }
-    alert("✅ Enviado al monitor karaoke.
-
-Cuando estés listo, ve a la pestaña Karaoke y presiona '🎙️ Iniciar Grabación' para empezar a cantar.");
+    alert("✅ Enviado al monitor karaoke. Cuando estés listo, ve a la pestaña Karaoke y presiona '🎙️ Iniciar Grabación' para empezar a cantar.");
   } catch (e) {
     console.error("Error enviando al monitor karaoke desde Cambiar tono:", e);
     alert("❌ No se pudo enviar al monitor karaoke: " + e.message);
