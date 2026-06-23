@@ -1091,13 +1091,13 @@ async function renderLibrary(filter = 'todos') {
           `;
         } else {
           const audioURL = item.audioBlob ? URL.createObjectURL(item.audioBlob) : "";
-          const isKaraoke = item.type === \"karaoke\";
+          const isKaraoke = item.type === "karaoke";
           div.innerHTML = `
             <p><strong>${item.name}</strong></p>
             <small>Tipo: ${item.type.toUpperCase()} | ${item.date}</small>
             ${audioURL ? `<audio controls src="${audioURL}" style="width:100%; margin: 10px 0;"></audio>` : '<p style="color:red; font-size:12px;">Audio no encontrado</p>'}
-            <div style=\"display: flex; gap: 10px; flex-wrap: wrap;\">
-            ${isKaraoke ? `<button type=\"button\" data-id=\"${item.id}\" class=\"send-karaoke-btn\" style=\"background:#a855f7; color:white;\">📤 Enviar al monitor karaoke</button>` : ''}
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            ${isKaraoke ? `<button type="button" data-id="${item.id}" class="send-karaoke-btn" style="background:#a855f7; color:white;">📤 Enviar al monitor karaoke</button>` : ''}
             <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#e11d48;">🗑️ Eliminar</button>
             </div>
           `;
