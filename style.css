@@ -806,8 +806,8 @@ textarea {
 }
 
 
-*/Action: file_editor insert_text /app/frontend/public/style.css --new-str "*/
-/* ==========================================
+Now also reduce the new "Cambiar tono" tab elements following the same 30% pattern. Let me update CSS to also include `#cambiarTono`:
+Action: file_editor str_replace /app/frontend/public/style.css --old-str "/* ==========================================
    REDUCCIÓN ~30% EN ESTUDIO Y KARAOKE
    (En Karaoke, el monitor de pentagrama conserva su tamaño)
 ========================================== */
@@ -881,6 +881,80 @@ textarea {
   width: 100% !important;
   min-height: 500px !important;
   display: block !important;
+}" --new-str "/* ==========================================
+   REDUCCIÓN ~30% EN ESTUDIO, KARAOKE Y CAMBIAR TONO
+   (En Karaoke, el monitor de pentagrama conserva su tamaño)
+========================================== */
+#estudio,
+#karaoke,
+#cambiarTono {
+  font-size: 70%;
 }
-" --insert-line 807
-Observation: Insert was successful.
+
+#estudio h1, #karaoke h1, #cambiarTono h1 { font-size: 1.6rem !important; margin: 10px 0 !important; }
+#estudio h2, #karaoke h2, #cambiarTono h2 { font-size: 1.25rem !important; }
+#estudio h3, #karaoke h3, #cambiarTono h3 { font-size: 1.05rem !important; margin: 6px 0 !important; }
+#estudio h4, #karaoke h4, #cambiarTono h4 { font-size: 0.95rem !important; margin: 6px 0 !important; }
+
+#estudio p, #karaoke p, #cambiarTono p {
+  font-size: 0.92em !important;
+  line-height: 1.35 !important;
+  margin: 6px 0 !important;
+}
+
+#estudio button, #karaoke button, #cambiarTono button {
+  padding: 7px 10px !important;
+  font-size: 0.9em !important;
+}
+
+#estudio input, #estudio select, #estudio textarea,
+#karaoke input, #karaoke select, #karaoke textarea,
+#cambiarTono input, #cambiarTono select, #cambiarTono textarea {
+  font-size: 0.9em !important;
+  padding: 6px 8px !important;
+}
+
+#estudio textarea {
+  min-height: 80px !important;
+}
+
+#estudio .card, #karaoke .card, #cambiarTono .card {
+  padding: 14px !important;
+  margin-bottom: 14px !important;
+}
+
+#estudio audio, #karaoke audio, #cambiarTono audio {
+  height: 32px !important;
+  transform: scale(0.85);
+  transform-origin: left center;
+}
+
+#estudio label, #karaoke label, #cambiarTono label {
+  font-size: 0.9em !important;
+}
+
+#estudio small, #karaoke small, #cambiarTono small {
+  font-size: 0.8em !important;
+}
+
+#estudio .studio-controls, #karaoke .studio-controls, #cambiarTono .studio-controls {
+  gap: 8px !important;
+}
+
+/* TAP grande del Estudio: reducirlo también */
+#estudio #tapBeatBtn {
+  padding: 18px !important;
+  font-size: 16px !important;
+}
+
+/* Excepción en Karaoke: el monitor (canvas) mantiene su tamaño y tipografía */
+#karaoke .monitor-karaoke {
+  font-size: 1rem !important;
+  padding: 0 !important;
+  margin-bottom: 14px !important;
+}
+#karaoke .monitor-karaoke #karaokeCanvas {
+  width: 100% !important;
+  min-height: 500px !important;
+  display: block !important;
+}"
