@@ -539,7 +539,7 @@ function getNoteFrequency(note) {
     "B": 2
   };
 
-  const match = note.match(/^([A-G]#?)(\d)$/);
+  const match = note.match(/^([A-G]#?)(d)$/);
   if (!match) return 440;
 
   const [, noteName, octaveStr] = match;
@@ -1482,7 +1482,7 @@ async function loadSelectedVoiceFromLibrary() {
       if (lyricsText) {
         lyricsText.value = transcriptionSegments
           .map(seg => seg.text || "")
-          .join("\n")
+          .join("n")
           .trim();
       }
 
@@ -1573,7 +1573,7 @@ async function loadSelectedTextFromLibrary() {
         if (nextWord) {
           // Si la siguiente palabra pertenece a un renglón diferente, ponemos salto de línea, si no, un espacio
           if (nextWord.renglon !== word.renglon) {
-            textoFormateadoParaPantalla += "\n";
+            textoFormateadoParaPantalla += "n";
           } else {
             textoFormateadoParaPantalla += " ";
           }
@@ -1685,7 +1685,7 @@ async function transcribeSelectedVoice() {
     cargarLetrasEnMonitor();
 
     if (lyricsText) {
-      lyricsText.value = transcriptionSegments.map(line => line.text).join("\n");
+      lyricsText.value = transcriptionSegments.map(line => line.text).join("n");
     }
 
      // --- AQUÍ ESTÁ EL GUARDADO AUTOMÁTICO EN BIBLIOTECA ---
@@ -1775,7 +1775,7 @@ function buildWordTimingFromSegment(segment) {
     };
   }
 
-  const rawWords = cleanText.split(/\s+/).filter(Boolean);
+  const rawWords = cleanText.split(/s+/).filter(Boolean);
   const segmentDuration = Math.max(0, (segment.end || 0) - (segment.start || 0));
 
   if (!rawWords.length || segmentDuration <= 0) {
@@ -2036,7 +2036,7 @@ async function procesarSincronizacionAutomaticaYPitch() {
       if (status) status.textContent = "🤖 Modo Desarrollador: Distribuyendo palabras de forma musical... ⚡";
       
       // 1. Separamos el texto pegado en palabras individuales
-      const palabras = letraPegada.split(/\s+/).filter(Boolean);
+      const palabras = letraPegada.split(/s+/).filter(Boolean);
       
       let tiempoActual = 4.0; // Dejamos 4 segundos de intro musical antes de la primera palabra
       
@@ -2067,7 +2067,7 @@ async function procesarSincronizacionAutomaticaYPitch() {
       // FLUJO REAL CON CONSUMO DE SALDO (Se queda exactamente como lo tenías)
     let idiomaDetectado = "es";
     const palabrasIngles = ["the", "and", "you", "that", "was", "for", "with", "this", "have"];
-    const palabrasLetra = letraPegada.toLowerCase().split(/\s+/);
+    const palabrasLetra = letraPegada.toLowerCase().split(/s+/);
     if (palabrasLetra.some(palabra => palabrasIngles.includes(palabra))) {
       idiomaDetectado = "en";
     }
@@ -2219,7 +2219,7 @@ function splitSegmentsIntoKaraokeLines(segments, maxWordsPerLine = 7) {
 
 function buildSegmentsFromMultilineLyrics(text, baseSegments) {
   const lines = text
-    .split("\n")
+    .split("n")
     .map(line => line.trim())
     .filter(Boolean);
 
@@ -2236,7 +2236,7 @@ function buildSegmentsFromMultilineLyrics(text, baseSegments) {
   if (totalDuration <= 0) return [];
 
   const lineWeights = lines.map(line => {
-    const words = line.split(/\s+/).filter(Boolean);
+    const words = line.split(/s+/).filter(Boolean);
     return words.reduce((sum, w) => sum + w.length, 0) || words.length || 1;
   });
 
@@ -3394,7 +3394,7 @@ async function applyCorrectedLyrics() {
         textoFormateado += word.text;
         const nextWord = textSegments[index + 1];
         if (nextWord) {
-          textoFormateado += (nextWord.renglon !== word.renglon) ? "\n" : " ";
+          textoFormateado += (nextWord.renglon !== word.renglon) ? "n" : " ";
         }
       });
       
@@ -3425,7 +3425,7 @@ async function applyCorrectedLyrics() {
       renderKaraokeLyrics(transcriptionSegments);
       cargarLetrasEnMonitor();
 
-      if (lyricsText) lyricsText.value = transcriptionSegments.map(seg => seg.text || "").join("\n").trim();
+      if (lyricsText) lyricsText.value = transcriptionSegments.map(seg => seg.text || "").join("n").trim();
 
       // Guardamos bajo la propiedad original de tu IA
       await updateLibraryItem(currentId, {
@@ -3475,15 +3475,15 @@ function startTapSync() {
 
   // 2. PROCESAMIENTO SEGÚN EL MODO ELEGIDO POR EL USUARIO
   if (modoSeleccionado === "linea") {
-    // Modo Línea por línea: Cortamos por saltos de línea (\n)
+    // Modo Línea por línea: Cortamos por saltos de línea (n)
     tapSyncLines = textoActivo
-      .split("\n")
+      .split("n")
       .map(line => line.trim())
       .filter(line => line.length > 0);
   } else {
     // Modo Palabra por palabra: Ignoramos saltos de línea y cortamos por cualquier espacio
     tapSyncLines = textoActivo
-      .split(/\s+/)
+      .split(/s+/)
       .map(palabra => palabra.trim())
       .filter(palabra => palabra.length > 0);
   }
@@ -3549,11 +3549,11 @@ function leerArchivoTexto(file) {
 function segmentarTextoPlano(texto) {
   if (!texto || texto.trim() === "") return [];
 
-  // 1. CORRECCIÓN CLAVE: Limpiamos espacios horizontales dobles, pero RESPETAMOS los saltos de línea (\n)
-  const textoLimpio = texto.replace(/[ \t]+/g, ' ').trim();
+  // 1. CORRECCIÓN CLAVE: Limpiamos espacios horizontales dobles, pero RESPETAMOS los saltos de línea (n)
+  const textoLimpio = texto.replace(/[ t]+/g, ' ').trim();
   
   // 2. Rompemos el texto primero por líneas para saber en qué renglón va cada elemento
-  const lineas = textoLimpio.split('\n');
+  const lineas = textoLimpio.split('n');
   let palabraGlobalIndex = 1;
   let todasLasPalabras = [];
 
@@ -3682,7 +3682,7 @@ async function finishTapSync() {
           const duracionTotalFrase = endTimeFrase - startTimeFrase;
           
           // Rompemos la línea actual en sus palabras reales para no generar la barra gigante
-          const palabrasDeLaLinea = lineText.split(/\s+/).filter(w => w.trim().length > 0);
+          const palabrasDeLaLinea = lineText.split(/s+/).filter(w => w.trim().length > 0);
           const totalPalabras = palabrasDeLaLinea.length;
           
           if (totalPalabras === 0) return;
@@ -3802,7 +3802,7 @@ async function applyTapSync() {
       const duracionTotalFrase = endFrase - startFrase;
 
       // Rompemos la línea en palabras reales
-      const palabrasDeLaLinea = lineText.split(/\s+/).filter(w => w.trim().length > 0);
+      const palabrasDeLaLinea = lineText.split(/s+/).filter(w => w.trim().length > 0);
       const totalPalabras = palabrasDeLaLinea.length;
 
       if (totalPalabras === 0) return;
@@ -4103,7 +4103,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const file = e.target.files[0];
       const nameInput = $("libraryFileName");
       if (file && nameInput && !nameInput.value.trim()) {
-        nameInput.value = file.name.replace(/\.[^.]+$/, "");
+        nameInput.value = file.name.replace(/.[^.]+$/, "");
       }
     });
 
@@ -4447,7 +4447,7 @@ function closeUltrastarModal() {
 */
 
 function parseUltrastarTxt(content) {
-  const lines = content.split("\n");
+  const lines = content.split("n");
   const metadata = {};
   const notes = [];
   
@@ -4458,7 +4458,7 @@ function parseUltrastarTxt(content) {
     
     // Metadatos (líneas que empiezan con #)
     if (trimmed.startsWith("#")) {
-      const match = trimmed.match(/^#(\w+):(.*)$/);
+      const match = trimmed.match(/^#(w+):(.*)$/);
       if (match) {
         const key = match[1].toUpperCase();
         const value = match[2].trim();
@@ -4468,8 +4468,8 @@ function parseUltrastarTxt(content) {
     }
     
     // Notas (líneas que empiezan con :, *, F, o -)
-    if (trimmed.match(/^[:*F\-]/)) {
-      const parts = trimmed.split(/\s+/);
+    if (trimmed.match(/^[:*F-]/)) {
+      const parts = trimmed.split(/s+/);
       const type = parts[0]; // : = normal, * = golden, F = freestyle, - = line break
       
       if (type === "-") {
@@ -4666,7 +4666,7 @@ async function confirmUltrastarImport() {
     // Cerrar modal
     closeUltrastarModal();
     
-    alert(`✅ ¡"${parsedUltrastar.title}" importada exitosamente!\n\nLa encontrarás en "Mis Canciones" lista para cantar.`);
+    alert(`✅ ¡"${parsedUltrastar.title}" importada exitosamente!nnLa encontrarás en "Mis Canciones" lista para cantar.`);
     
   } catch (error) {
     console.error("Error importando:", error);
@@ -5046,23 +5046,50 @@ function actualizarSelectoresGlobales() {
   console.log("🔄 Selectores de la interfaz actualizados");
 }
 
-// ==========================================
+Now rewrite the pitch-shifter logic in script.js. Replace the entire pitch-shift section:
+Action: file_editor str_replace /app/frontend/public/script.js --old-str "// ==========================================
 // CAMBIAR TONO (PITCH SHIFTER)
 // ==========================================
 let pitchAudioContext = null;
 let pitchAudioBuffer = null;
 let pitchSelectedItem = null;
-
-let pitchSourceNode = null;
-let pitchWorkletNode = null;
+let pitchShifterNode = null;
 let pitchGainNode = null;
-
 let pitchIsPlaying = false;
 let pitchIsPaused = false;
-let pitchPausedOffset = 0;
-let pitchStartedAt = 0;
+let pitchPausedTime = 0;
+let pitchLastSavedId = null;" --new-str "// ==========================================
+// CAMBIAR TONO (PITCH SHIFTER - AudioWorklet)
+// ==========================================
+let pitchAudioContext = null;
+let pitchAudioBuffer = null;
+let pitchSelectedItem = null;
+let pitchWorkletNode = null;
+let pitchSourceNode = null;
+let pitchGainNode = null;
+let pitchIsPlaying = false;
+let pitchIsPaused = false;
 let pitchLastSavedId = null;
-let pitchWorkletLoaded = false;
+
+// Cache de promesas addModule por contexto (key: context, value: promise)
+const _pitchWorkletLoaded = new WeakMap();
+
+function _getWorkletUrl() {
+  return window.__SOUNDTOUCH_WORKLET_URL__
+      || "https://cdn.jsdelivr.net/npm/@soundtouchjs/audio-worklet@1.0.3/dist/soundtouch-worklet.js";
+}
+
+async function ensureSoundTouchWorklet(ctx) {
+  if (!ctx || !ctx.audioWorklet || typeof ctx.audioWorklet.addModule !== "function") {
+    throw new Error("AudioWorklet no está soportado en este navegador.");
+  }
+  let p = _pitchWorkletLoaded.get(ctx);
+  if (!p) {
+    p = ctx.audioWorklet.addModule(_getWorkletUrl());
+    _pitchWorkletLoaded.set(ctx, p);
+  }
+  return p;
+}
 
 function getNetSemitones() {
   const up = parseInt(($("pitchUpSelect")?.value) || "0", 10);
@@ -5074,78 +5101,28 @@ function getPitchRatio() {
   return Math.pow(2, getNetSemitones() / 12);
 }
 
-function setPitchPlayStatus(text) {
-  const st = $("pitchPlayStatus");
-  if (st) st.textContent = text;
-}
-
-async function ensurePitchAudioContext() {
-  if (!pitchAudioContext) {
-    pitchAudioContext = new (window.AudioContext || window.webkitAudioContext)();
-  }
-
-  if (!pitchWorkletLoaded) {
-    await pitchAudioContext.audioWorklet.addModule("pitch-shifter-processor.js");
-    pitchWorkletLoaded = true;
-  }
-
-  if (pitchAudioContext.state === "suspended") {
-    await pitchAudioContext.resume();
-  }
-
-  return pitchAudioContext;
-}
-
-function cleanupPitchNodes() {
-  if (pitchSourceNode) {
-    try { pitchSourceNode.stop(); } catch (e) {}
-    try { pitchSourceNode.disconnect(); } catch (e) {}
-    pitchSourceNode = null;
-  }
-
-  if (pitchWorkletNode) {
-    try { pitchWorkletNode.disconnect(); } catch (e) {}
-    pitchWorkletNode = null;
-  }
-
-  if (pitchGainNode) {
-    try { pitchGainNode.disconnect(); } catch (e) {}
-    pitchGainNode = null;
-  }
-
-  pitchIsPlaying = false;
-  pitchIsPaused = false;
-  pitchStartedAt = 0;
-}
-
 function onPitchSelectsChange() {
   const net = getNetSemitones();
   const display = $("pitchCurrentDisplay");
-
   if (display) {
     const signo = net > 0 ? "+" : "";
     display.textContent = `Cambio actual: ${signo}${net} semitono${Math.abs(net) === 1 ? "" : "s"}`;
   }
-
-  // Si está reproduciendo, aplicar en vivo
-  if (pitchShifterNode) {
+  // En vivo: aplicar el nuevo pitch al worklet si está reproduciendo
+  if (pitchWorkletNode) {
     try {
-      pitchShifterNode.pitch = getPitchRatio();
-    } catch (e) {
-      // puede no estar listo aún
-    }
+      const pitchParam = pitchWorkletNode.parameters.get("pitch");
+      if (pitchParam) pitchParam.value = getPitchRatio();
+    } catch (e) { /* nop */ }
   }
 }
 
 async function loadPitchKaraokeOptions() {
   const select = $("pitchKaraokeSelect");
   if (!select) return;
-
   select.innerHTML = `<option value="">Selecciona un archivo karaoke</option>`;
-
   try {
     const items = await getLibraryItemsByType("karaoke");
-
     if (!items.length) {
       const opt = document.createElement("option");
       opt.value = "";
@@ -5153,7 +5130,6 @@ async function loadPitchKaraokeOptions() {
       select.appendChild(opt);
       return;
     }
-
     items.forEach(item => {
       const opt = document.createElement("option");
       opt.value = item.id;
@@ -5169,45 +5145,45 @@ async function loadSelectedPitchKaraoke() {
   const select = $("pitchKaraokeSelect");
   const status = $("pitchLoadStatus");
   const id = Number(select?.value);
-
   if (!id) {
     alert("⚠️ Selecciona un archivo karaoke de la lista.");
     return;
   }
-
   try {
     if (status) status.textContent = "Estado: cargando y decodificando audio…";
-
     const item = await getLibraryItemById(id);
     if (!item || !item.audioBlob) {
       if (status) status.textContent = "Estado: el archivo no tiene audio.";
       alert("⚠️ Este archivo karaoke no contiene audio.");
       return;
     }
-
+    // Detener reproducción previa
     stopPitchShifted();
 
-    const ctx = await ensurePitchAudioContext();
+    if (!pitchAudioContext) {
+      pitchAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
     const arrayBuffer = await item.audioBlob.arrayBuffer();
-    pitchAudioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
+    pitchAudioBuffer = await pitchAudioContext.decodeAudioData(arrayBuffer.slice(0));
     pitchSelectedItem = item;
 
+    // Reset del botón "Enviar al monitor karaoke"
     pitchLastSavedId = null;
     const sendBtn = $("pitchSendToKaraokeBtn");
     if (sendBtn) sendBtn.disabled = true;
 
-    if (status) {
-      status.textContent =
-        `Estado: "${item.name}" cargado (${pitchAudioBuffer.duration.toFixed(1)} s, ` +
-        `${pitchAudioBuffer.numberOfChannels} canal${pitchAudioBuffer.numberOfChannels === 1 ? "" : "es"}). Listo para reproducir.`;
-    }
+    // Pre-cargar el worklet en segundo plano (ahorra latencia al primer Play)
+    ensureSoundTouchWorklet(pitchAudioContext).catch(() => { /* se reintenta al Play */ });
 
+    if (status) {
+      status.textContent = `Estado: "${item.name}" cargado (${pitchAudioBuffer.duration.toFixed(1)} s, ${pitchAudioBuffer.numberOfChannels} canal${pitchAudioBuffer.numberOfChannels === 1 ? "" : "es"}). Listo para reproducir.`;
+    }
     const saveName = $("pitchSaveName");
     if (saveName && !saveName.value) {
       saveName.value = item.name + " (tono modificado)";
     }
   } catch (e) {
-    console.error("Error cargando karaoke:", e);
+    console.error("Error cargando karaoke en pitch shifter:", e);
     if (status) status.textContent = "Estado: ❌ no se pudo decodificar el audio.";
     alert("❌ No se pudo decodificar el audio: " + e.message);
   }
@@ -5219,118 +5195,109 @@ async function playPitchShifted() {
     return;
   }
 
-  try {
-    const ctx = await ensurePitchAudioContext();
+  if (!pitchAudioContext) {
+    pitchAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (pitchAudioContext.state === "suspended") {
+    await pitchAudioContext.resume();
+  }
 
-    if (pitchIsPaused) {
-      // recreamos desde offset pausado
-      await startPitchPlaybackFromOffset(pitchPausedOffset);
+  // Reanudar si estaba pausado
+  if (pitchIsPaused && pitchWorkletNode && pitchSourceNode) {
+    try {
+      await pitchAudioContext.resume();
+      pitchIsPaused = false;
+      pitchIsPlaying = true;
+      const st = $("pitchPlayStatus");
+      if (st) st.textContent = "Estado: ▶️ reproduciendo con tono modificado…";
       return;
-    }
-
-    await startPitchPlaybackFromOffset(0);
-  } catch (e) {
-    console.error("Error reproduciendo tono cambiado:", e);
-    alert("❌ Error al reproducir: " + e.message);
-  }
-}
-
-async function startPitchPlaybackFromOffset(offsetSeconds) {
-  const ctx = await ensurePitchAudioContext();
-
-  cleanupPitchNodes();
-
-  pitchSourceNode = ctx.createBufferSource();
-  pitchSourceNode.buffer = pitchAudioBuffer;
-
-  pitchWorkletNode = new AudioWorkletNode(ctx, "pitch-shifter-processor", {
-    numberOfInputs: 1,
-    numberOfOutputs: 1,
-    outputChannelCount: [pitchAudioBuffer.numberOfChannels],
-    parameterData: {
-      pitchRatio: getPitchRatio()
-    }
-  });
-
-  pitchGainNode = ctx.createGain();
-  pitchGainNode.gain.value = 1.0;
-
-  pitchSourceNode.connect(pitchWorkletNode);
-  pitchWorkletNode.connect(pitchGainNode);
-  pitchGainNode.connect(ctx.destination);
-
-  pitchSourceNode.onended = () => {
-    if (pitchIsPlaying) {
-      stopPitchShifted();
-    }
-  };
-
-  pitchSourceNode.start(0, offsetSeconds);
-
-  pitchStartedAt = ctx.currentTime - offsetSeconds;
-  pitchPausedOffset = offsetSeconds;
-  pitchIsPlaying = true;
-  pitchIsPaused = false;
-
-  setPitchPlayStatus("Estado: ▶️ reproduciendo con tono modificado…");
-  requestAnimationFrame(updatePitchPlaybackStatus);
-}
-
-function onPitchSelectsChange() {
-  const net = getNetSemitones();
-  const display = $("pitchCurrentDisplay");
-
-  if (display) {
-    const signo = net > 0 ? "+" : "";
-    display.textContent = `Cambio actual: ${signo}${net} semitono${Math.abs(net) === 1 ? "" : "s"}`;
+    } catch (e) { /* si falla, sigue al reset normal */ }
   }
 
-  if (pitchWorkletNode) {
-    const param = pitchWorkletNode.parameters.get("pitchRatio");
-    if (param) {
-      param.setValueAtTime(getPitchRatio(), pitchAudioContext.currentTime);
-    }
-  }
-}
-
-
-async function pausePitchShifted() {
-  if (!pitchAudioContext || !pitchIsPlaying) return;
+  // Resetear cualquier nodo previo
+  stopPitchShifted();
 
   try {
-    pitchPausedOffset = pitchAudioContext.currentTime - pitchStartedAt;
-    cleanupPitchNodes();
+    await ensureSoundTouchWorklet(pitchAudioContext);
+  } catch (e) {
+    console.error("Worklet no cargó:", e);
+    alert("❌ No se pudo cargar el procesador de audio: " + e.message);
+    return;
+  }
+
+  try {
+    pitchSourceNode = pitchAudioContext.createBufferSource();
+    pitchSourceNode.buffer = pitchAudioBuffer;
+
+    pitchWorkletNode = new AudioWorkletNode(pitchAudioContext, "soundtouch-processor");
+    const pitchParam = pitchWorkletNode.parameters.get("pitch");
+    const tempoParam = pitchWorkletNode.parameters.get("tempo");
+    if (pitchParam) pitchParam.value = getPitchRatio();
+    if (tempoParam) tempoParam.value = 1.0;
+
+    pitchGainNode = pitchAudioContext.createGain();
+    pitchGainNode.gain.value = 1.0;
+
+    pitchSourceNode.connect(pitchWorkletNode);
+    pitchWorkletNode.connect(pitchGainNode);
+    pitchGainNode.connect(pitchAudioContext.destination);
+
+    pitchSourceNode.onended = () => {
+      // Auto-stop al terminar el buffer
+      if (pitchIsPlaying) stopPitchShifted();
+    };
+
+    pitchSourceNode.start();
+    pitchIsPlaying = true;
+    pitchIsPaused = false;
+
+    const st = $("pitchPlayStatus");
+    if (st) st.textContent = "Estado: ▶️ reproduciendo con tono modificado…";
+  } catch (e) {
+    console.error("Error iniciando reproducción con pitch shift:", e);
+    alert("❌ Error iniciando el cambio de tono: " + e.message);
+    stopPitchShifted();
+  }
+}
+
+function pausePitchShifted() {
+  if (!pitchAudioContext || !pitchIsPlaying) return;
+  try {
+    pitchAudioContext.suspend();
     pitchIsPaused = true;
-    setPitchPlayStatus("Estado: ⏸️ pausado.");
+    pitchIsPlaying = false;
+    const st = $("pitchPlayStatus");
+    if (st) st.textContent = "Estado: ⏸️ pausado.";
   } catch (e) {
     console.error("Error pausando:", e);
   }
 }
 
 function stopPitchShifted() {
-  cleanupPitchNodes();
-  pitchPausedOffset = 0;
-  setPitchPlayStatus("Estado: ⏹️ detenido.");
-}
-
-function updatePitchPlaybackStatus() {
-  if (!pitchIsPlaying || !pitchAudioBuffer || !pitchAudioContext) return;
-
-  const played = pitchAudioContext.currentTime - pitchStartedAt;
-  const duration = pitchAudioBuffer.duration;
-  const percentage = Math.min(100, (played / duration) * 100);
-
-  const mm = String(Math.floor(played / 60)).padStart(2, "0");
-  const ss = String(Math.floor(played % 60)).padStart(2, "0");
-
-  setPitchPlayStatus(`Estado: ▶️ ${mm}:${ss} (${percentage.toFixed(0)}%)`);
-
-  if (pitchIsPlaying) {
-    requestAnimationFrame(updatePitchPlaybackStatus);
+  if (pitchSourceNode) {
+    try { pitchSourceNode.onended = null; } catch (e) {}
+    try { pitchSourceNode.stop(); } catch (e) {}
+    try { pitchSourceNode.disconnect(); } catch (e) {}
+    pitchSourceNode = null;
   }
+  if (pitchWorkletNode) {
+    try { pitchWorkletNode.disconnect(); } catch (e) {}
+    pitchWorkletNode = null;
+  }
+  if (pitchGainNode) {
+    try { pitchGainNode.disconnect(); } catch (e) {}
+    pitchGainNode = null;
+  }
+  if (pitchAudioContext && pitchAudioContext.state === "suspended") {
+    try { pitchAudioContext.resume(); } catch (e) {}
+  }
+  pitchIsPlaying = false;
+  pitchIsPaused = false;
+  const st = $("pitchPlayStatus");
+  if (st) st.textContent = "Estado: ⏹️ detenido.";
 }
 
-// Convierte AudioBuffer a Blob WAV (16-bit PCM)
+// Convierte AudioBuffer a Blob WAV (PCM 16-bit)
 function audioBufferToWavBlob(buffer) {
   const numChannels = buffer.numberOfChannels;
   const sampleRate = buffer.sampleRate;
@@ -5345,9 +5312,7 @@ function audioBufferToWavBlob(buffer) {
   const view = new DataView(ab);
 
   function writeString(offset, str) {
-    for (let i = 0; i < str.length; i++) {
-      view.setUint8(offset + i, str.charCodeAt(i));
-    }
+    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
   }
 
   writeString(0, "RIFF");
@@ -5365,53 +5330,17 @@ function audioBufferToWavBlob(buffer) {
   view.setUint32(40, dataSize, true);
 
   const channels = [];
-  for (let c = 0; c < numChannels; c++) {
-    channels.push(buffer.getChannelData(c));
-  }
+  for (let c = 0; c < numChannels; c++) channels.push(buffer.getChannelData(c));
 
   let offset = 44;
   for (let i = 0; i < numSamples; i++) {
     for (let c = 0; c < numChannels; c++) {
       let s = Math.max(-1, Math.min(1, channels[c][i]));
-      const sample = s < 0 ? s * 0x8000 : s * 0x7FFF;
-      view.setInt16(offset, Math.round(sample), true);
+      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
       offset += 2;
     }
   }
-
   return new Blob([ab], { type: "audio/wav" });
-}
-
-// Render offline aplicando PitchShifter
-async function renderPitchShiftOffline(audioBuffer, semitones) {
-  const ratio = Math.pow(2, semitones / 12);
-
-  const offlineCtx = new OfflineAudioContext(
-    audioBuffer.numberOfChannels,
-    audioBuffer.length,
-    audioBuffer.sampleRate
-  );
-
-  await offlineCtx.audioWorklet.addModule("pitch-shifter-processor.js");
-
-  const source = offlineCtx.createBufferSource();
-  source.buffer = audioBuffer;
-
-  const worklet = new AudioWorkletNode(offlineCtx, "pitch-shifter-processor", {
-    numberOfInputs: 1,
-    numberOfOutputs: 1,
-    outputChannelCount: [audioBuffer.numberOfChannels],
-    parameterData: {
-      pitchRatio: ratio
-    }
-  });
-
-  source.connect(worklet);
-  worklet.connect(offlineCtx.destination);
-  source.start(0);
-
-  const rendered = await offlineCtx.startRendering();
-  return rendered;
 }
 
 async function savePitchShiftedToLibrary() {
@@ -5419,17 +5348,13 @@ async function savePitchShiftedToLibrary() {
     alert("⚠️ Primero carga un archivo karaoke desde Biblioteca.");
     return;
   }
-
   const semitones = getNetSemitones();
   if (semitones === 0) {
-    if (!confirm("El cambio actual es 0 semitonos (sin modificación). ¿Guardar de todas formas?")) {
-      return;
-    }
+    if (!confirm("El cambio actual es 0 semitonos (sin modificación). ¿Guardar de todas formas?")) return;
   }
 
   const status = $("pitchSaveStatus");
   const btn = $("pitchSaveBtn");
-
   if (btn) btn.disabled = true;
   if (status) status.textContent = "Estado: 🔄 procesando audio con el nuevo tono…";
 
@@ -5441,9 +5366,7 @@ async function savePitchShiftedToLibrary() {
 
     const nameInput = $("pitchSaveName");
     const signo = semitones > 0 ? "+" : "";
-    const baseName = (pitchSelectedItem?.name || "Karaoke")
-      .replace(/\s*\(?tono modificado\)?\s*$/i, "");
-
+    const baseName = (pitchSelectedItem?.name || "Karaoke").replace(/s*(tono modificado)s*$/i, "");
     const finalName = (nameInput && nameInput.value.trim())
       ? nameInput.value.trim()
       : `${baseName} (${signo}${semitones} semitonos)`;
@@ -5457,49 +5380,32 @@ async function savePitchShiftedToLibrary() {
       pitchShiftSemitones: semitones,
       originalKaraokeId: pitchSelectedItem?.id || null
     };
-
     if (pitchSelectedItem) {
-      if (Array.isArray(pitchSelectedItem.transcription)) {
-        libraryItem.transcription = pitchSelectedItem.transcription;
-      }
-      if (Array.isArray(pitchSelectedItem.lyrics)) {
-        libraryItem.lyrics = pitchSelectedItem.lyrics;
-      }
-      if (pitchSelectedItem.metadata) {
-        libraryItem.metadata = pitchSelectedItem.metadata;
-      }
+      if (Array.isArray(pitchSelectedItem.transcription)) libraryItem.transcription = pitchSelectedItem.transcription;
+      if (Array.isArray(pitchSelectedItem.lyrics)) libraryItem.lyrics = pitchSelectedItem.lyrics;
+      if (pitchSelectedItem.metadata) libraryItem.metadata = pitchSelectedItem.metadata;
     }
 
     await addLibraryItem(libraryItem);
-
+    // Recuperar el id del recién guardado
     try {
       const all = await getAllLibraryItems();
       const candidate = all
         .filter(i => i.name === finalName && i.type === "karaoke")
         .sort((a, b) => (b.date || 0) - (a.date || 0))[0];
-
       pitchLastSavedId = candidate?.id || null;
     } catch (e) {
       pitchLastSavedId = null;
-      console.warn("No se pudo recuperar el id del item guardado:", e);
     }
-
     const sendBtn = $("pitchSendToKaraokeBtn");
     if (sendBtn) sendBtn.disabled = !pitchLastSavedId;
 
     if (typeof renderLibrary === "function") {
-      try {
-        await renderLibrary(window.currentFilter || "karaoke");
-      } catch (e) {}
+      try { await renderLibrary(window.currentFilter || "karaoke"); } catch (e) {}
     }
-
     await loadPitchKaraokeOptions();
 
-    if (status) {
-      status.textContent =
-        `Estado: ✅ guardado como "${finalName}" en la carpeta Karaoke de Biblioteca. Ya puedes enviarlo al monitor karaoke.`;
-    }
-
+    if (status) status.textContent = `Estado: ✅ guardado como "${finalName}" en la carpeta Karaoke de Biblioteca. Ya puedes enviarlo al monitor karaoke.`;
     alert(`✅ Archivo guardado: "${finalName}"`);
   } catch (e) {
     console.error("Error guardando archivo con tono cambiado:", e);
@@ -5510,32 +5416,58 @@ async function savePitchShiftedToLibrary() {
   }
 }
 
-// Envía el último archivo guardado en "Cambiar tono" al monitor del Karaoke
-// (mismo flujo que el botón de Biblioteca: solo carga, no inicia grabación ni cambia de pestaña)
+// Enviar el último guardado al monitor del karaoke (mismo flujo que Biblioteca)
 async function sendPitchShiftedToKaraokeMonitor() {
   if (!pitchLastSavedId) {
     alert("⚠️ Primero guarda el archivo con tono cambiado para poder enviarlo al monitor.");
     return;
   }
-
   try {
     if (typeof loadKaraokeSong !== "function") {
       alert("⚠️ Función del monitor karaoke no disponible.");
       return;
     }
-
     stopPitchShifted();
     await loadKaraokeSong(pitchLastSavedId);
-
     const status = $("pitchSaveStatus");
     if (status) {
-      status.textContent =
-        "Estado: ✅ archivo cargado en el monitor karaoke. Cuando estés listo, ve a la pestaña Karaoke y presiona Iniciar grabación.";
+      status.textContent = "Estado: ✅ archivo cargado en el monitor karaoke. Cuando estés listo, ve a la pestaña Karaoke y presiona Iniciar grabación.";
     }
-
-    alert("✅ Enviado al monitor karaoke. Cuando estés listo, ve a la pestaña Karaoke y presiona '🎙️ Iniciar Grabación' para empezar a cantar.");
+    alert("✅ Enviado al monitor karaoke.nnCuando estés listo, ve a la pestaña Karaoke y presiona '🎙️ Iniciar Grabación' para empezar a cantar.");
   } catch (e) {
     console.error("Error enviando al monitor karaoke desde Cambiar tono:", e);
     alert("❌ No se pudo enviar al monitor karaoke: " + e.message);
   }
+}
+
+// Render offline aplicando AudioWorklet (moderno, sin ScriptProcessorNode)
+async function renderPitchShiftOffline(audioBuffer, semitones) {
+  const ratio = Math.pow(2, semitones / 12);
+
+  // Padding al final para que el worklet termine de procesar la latencia interna
+  const padFrames = Math.ceil(audioBuffer.sampleRate * 0.4); // ~400ms
+  const totalLength = audioBuffer.length + padFrames;
+
+  const offlineCtx = new OfflineAudioContext(
+    audioBuffer.numberOfChannels,
+    totalLength,
+    audioBuffer.sampleRate
+  );
+  await ensureSoundTouchWorklet(offlineCtx);
+
+  const source = offlineCtx.createBufferSource();
+  source.buffer = audioBuffer;
+
+  const worklet = new AudioWorkletNode(offlineCtx, "soundtouch-processor");
+  const pitchParam = worklet.parameters.get("pitch");
+  const tempoParam = worklet.parameters.get("tempo");
+  if (pitchParam) pitchParam.value = ratio;
+  if (tempoParam) tempoParam.value = 1.0;
+
+  source.connect(worklet);
+  worklet.connect(offlineCtx.destination);
+  source.start();
+
+  const rendered = await offlineCtx.startRendering();
+  return rendered;
 }
