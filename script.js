@@ -1091,11 +1091,15 @@ async function renderLibrary(filter = 'todos') {
           `;
         } else {
           const audioURL = item.audioBlob ? URL.createObjectURL(item.audioBlob) : "";
+          const isKaraoke = item.type === \"karaoke\";
           div.innerHTML = `
             <p><strong>${item.name}</strong></p>
             <small>Tipo: ${item.type.toUpperCase()} | ${item.date}</small>
             ${audioURL ? `<audio controls src="${audioURL}" style="width:100%; margin: 10px 0;"></audio>` : '<p style="color:red; font-size:12px;">Audio no encontrado</p>'}
+            <div style=\"display: flex; gap: 10px; flex-wrap: wrap;\">
+            ${isKaraoke ? `<button type=\"button\" data-id=\"${item.id}\" class=\"send-karaoke-btn\" style=\"background:#a855f7; color:white;\">📤 Enviar al monitor karaoke</button>` : ''}
             <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#e11d48;">🗑️ Eliminar</button>
+            </div>
           `;
         }
         container.appendChild(div);
@@ -1142,6 +1146,25 @@ async function renderLibrary(filter = 'todos') {
           } else {
             alert("⚠️ No se encontró el contenedor visual del monitor en esta pantalla.");
           }
+        }
+      });
+    });
+
+    // Evento: Enviar archivo karaoke al monitor del karaoke (solo carga, sin cambiar pestaña)
+    document.querySelectorAll(".send-karaoke-btn").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = Number(btn.dataset.id);
+        try {
+          if (typeof loadKaraokeSong === 'function') {
+            await loadKaraokeSong(id);
+            const item = library.find(i => i.id === id);
+            alert(`✅ "${item?.name || 'Karaoke'}" enviado al monitor karaoke.`);
+          } else {
+            alert("⚠️ Función de carga de karaoke no disponible.");
+          }
+        } catch (e) {
+          console.error("Error enviando al monitor karaoke:", e);
+          alert("❌ No se pudo enviar al monitor karaoke.");
         }
       });
     });
