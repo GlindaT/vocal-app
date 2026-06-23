@@ -5046,19 +5046,7 @@ function actualizarSelectoresGlobales() {
   console.log("🔄 Selectores de la interfaz actualizados");
 }
 
-Now rewrite the pitch-shifter logic in script.js. Replace the entire pitch-shift section:
-Action: file_editor str_replace /app/frontend/public/script.js --old-str "// ==========================================
-// CAMBIAR TONO (PITCH SHIFTER)
 // ==========================================
-let pitchAudioContext = null;
-let pitchAudioBuffer = null;
-let pitchSelectedItem = null;
-let pitchShifterNode = null;
-let pitchGainNode = null;
-let pitchIsPlaying = false;
-let pitchIsPaused = false;
-let pitchPausedTime = 0;
-let pitchLastSavedId = null;" --new-str "// ==========================================
 // CAMBIAR TONO (PITCH SHIFTER - AudioWorklet)
 // ==========================================
 let pitchAudioContext = null;
