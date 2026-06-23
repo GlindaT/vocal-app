@@ -18,6 +18,7 @@
         <button id="btnEstudio" type="button">Estudio</button>
         <button id="btnBiblioteca" type="button">Biblioteca</button>
         <button id="btnKaraoke" type="button">Karaoke</button>
+        <button id="btnCambiarTono" type="button">Cambiar tono</button>
         <!-- <button id="btnSplitter" type="button">Splitter</button> -->
         <button id="btnConfig" type="button">Configuración</button>
       </nav>
@@ -455,6 +456,95 @@
             <div id="karaokeMixResult" style="margin-top: 15px;"></div>
           </div>
     </section>
+
+        </section>
+        
+        <!-- CAMBIAR TONO -->
+        <section id="cambiarTono" class="tab">
+          <h1>🎚️ Cambiar tono</h1>
+          
+          <div class="card">
+            <h3>1. Seleccionar archivo Karaoke desde Biblioteca</h3>
+            <div class="studio-controls">
+              <button id="refreshPitchKaraokeListBtn" type="button">🔄 Actualizar lista</button>
+            </div>
+            <select id="pitchKaraokeSelect" style="width:100%; margin:10px 0;">
+              <option value="">Selecciona un archivo karaoke</option>
+            </select>
+            <div class="studio-controls" style="margin-bottom: 15px;">
+              <button id="loadPitchKaraokeBtn" type="button" style="background:#3b82f6; color:white;">📥 Cargar archivo karaoke</button>
+            </div>
+            <p id="pitchLoadStatus" style="color: var(--text-muted);">Estado: ningún archivo cargado</p>
+          </div>
+          
+          <div class="card">
+            <h3>2. Cambio de tono (medios tonos)</h3>
+            <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+              <div class="settings-group" style="flex:1; min-width:200px;">
+                <label for="pitchUpSelect">⬆️ Subir tono</label>
+                <select id="pitchUpSelect">
+                  <option value="0">— Sin subir —</option>
+                  <option value="1">+1 semitono</option>
+                  <option value="2">+2 semitonos</option>
+                  <option value="3">+3 semitonos</option>
+                  <option value="4">+4 semitonos</option>
+                  <option value="5">+5 semitonos</option>
+                  <option value="6">+6 semitonos</option>
+                  <option value="7">+7 semitonos</option>
+                  <option value="8">+8 semitonos</option>
+                  <option value="9">+9 semitonos</option>
+                  <option value="10">+10 semitonos</option>
+                  <option value="11">+11 semitonos</option>
+                  <option value="12">+12 semitonos (1 octava)</option>
+                </select>
+              </div>
+              <div class="settings-group" style="flex:1; min-width:200px;">
+                <label for="pitchDownSelect">⬇️ Bajar tono</label>
+                <select id="pitchDownSelect">
+                  <option value="0">— Sin bajar —</option>
+                  <option value="1">-1 semitono</option>
+                  <option value="2">-2 semitonos</option>
+                  <option value="3">-3 semitonos</option>
+                  <option value="4">-4 semitonos</option>
+                  <option value="5">-5 semitonos</option>
+                  <option value="6">-6 semitonos</option>
+                  <option value="7">-7 semitonos</option>
+                  <option value="8">-8 semitonos</option>
+                  <option value="9">-9 semitonos</option>
+                  <option value="10">-10 semitonos</option>
+                  <option value="11">-11 semitonos</option>
+                  <option value="12">-12 semitonos (1 octava)</option>
+                </select>
+              </div>
+            </div>
+            <p id="pitchCurrentDisplay" style="color: var(--accent); font-weight: bold; margin-top: 10px;">Cambio actual: 0 semitonos</p>
+            <p style="color: var(--text-muted); font-size: 12px;">
+              Nota: si seleccionas un valor en \"Subir\" y otro en \"Bajar\", se aplica la diferencia neta. Para una sola dirección, deja la otra en 0.
+            </p>
+          </div>
+          
+          <div class="card">
+            <h3>3. Reproducción de prueba (con tono cambiado en vivo)</h3>
+            <div class="studio-controls">
+              <button id="pitchPlayBtn" type="button" style="background:#22c55e; color:white;">▶️ Reproducir</button>
+              <button id="pitchPauseBtn" type="button">⏸️ Pausar</button>
+              <button id="pitchStopBtn" type="button">⏹️ Detener</button>
+            </div>
+            <p id="pitchPlayStatus" style="color: var(--text-muted); margin-top: 10px;">Estado: detenido</p>
+          </div>
+          
+          <div class="card">
+            <h3>4. Guardar en Biblioteca</h3>
+            <div class="settings-group">
+              <label for="pitchSaveName">Nombre (opcional)</label>
+              <input type="text" id="pitchSaveName" placeholder="Ej. Mi cancion (+2 semitonos)" style="width:100%;">
+            </div>
+            <div class="studio-controls">
+              <button id="pitchSaveBtn" type="button" style="background:#a855f7; color:white;">💾 Guardar archivo con tono cambiado</button>
+            </div>
+            <p id="pitchSaveStatus" style="color: var(--text-muted); margin-top: 10px;">Estado: listo para guardar</p>
+          </div>
+        </section>
         
         <!-- SPLITTER 
     <section id="splitter" class="tab">
@@ -580,6 +670,12 @@
         </section>
       </main>
     </div>
+    <!-- SoundTouchJS para pitch shifting sin cambiar tempo -->
+    <script type="module">
+      import { PitchShifter } from "https://cdn.jsdelivr.net/npm/soundtouchjs@0.2.1/+esm";
+      window.PitchShifter = PitchShifter;
+      window.dispatchEvent(new Event("soundtouch-ready"));
+    </script>
     <script src="script.js"></script>
   </body>
 </html>
