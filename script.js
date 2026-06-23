@@ -2439,6 +2439,24 @@ function cargarLetrasEnMonitor() {
   });
 }
 
+function getRmsLevel(analyser, multiplier = 280) {
+  if (!analyser) return 0;
+
+  const bufferLength = analyser.fftSize;
+  const data = new Uint8Array(bufferLength);
+  analyser.getByteTimeDomainData(data);
+
+  let sum = 0;
+  for (let i = 0; i < bufferLength; i++) {
+    const sample = (data[i] - 128) / 128;
+    sum += sample * sample;
+  }
+
+  const rms = Math.sqrt(sum / bufferLength);
+
+  return Math.min(100, Math.max(0, rms * multiplier));
+}
+
 async function startKaraokeRecording() {
   const track = $("karaokeTrack");
 
@@ -2502,8 +2520,10 @@ async function startKaraokeRecording() {
       // Crear analizadores para visualización
       karaokeDuoAnalyser1 = karaokeDuoAudioContext.createAnalyser();
       karaokeDuoAnalyser2 = karaokeDuoAudioContext.createAnalyser();
-      karaokeDuoAnalyser1.fftSize = 256;
-      karaokeDuoAnalyser2.fftSize = 256;
+      karaokeDuoAnalyser1.fftSize = 2048;
+      karaokeDuoAnalyser2.fftSize = 2048;
+      karaokeDuoAnalyser1.smoothingTimeConstant = 0.8;
+      karaokeDuoAnalyser2.smoothingTimeConstant = 0.8;
 
       // Crear mezclador
       const merger = karaokeDuoAudioContext.createChannelMerger(2);
@@ -2583,19 +2603,15 @@ function startKaraokeDuoLevelMonitor() {
   const level1 = $("karaokeDuoMic1Level");
   const level2 = $("karaokeDuoMic2Level");
 
+  stopKaraokeDuoLevelMonitor();
+
   function updateLevels() {
     if (karaokeDuoAnalyser1 && level1) {
-      const data1 = new Uint8Array(karaokeDuoAnalyser1.frequencyBinCount);
-      karaokeDuoAnalyser1.getByteFrequencyData(data1);
-      const avg1 = data1.reduce((a, b) => a + b, 0) / data1.length;
-      level1.style.width = Math.min(100, (avg1 / 128) * 100) + "%";
+      level1.style.width = `${getRmsLevel(karaokeDuoAnalyser1)}%`;
     }
 
     if (karaokeDuoAnalyser2 && level2) {
-      const data2 = new Uint8Array(karaokeDuoAnalyser2.frequencyBinCount);
-      karaokeDuoAnalyser2.getByteFrequencyData(data2);
-      const avg2 = data2.reduce((a, b) => a + b, 0) / data2.length;
-      level2.style.width = Math.min(100, (avg2 / 128) * 100) + "%";
+      level2.style.width = `${getRmsLevel(karaokeDuoAnalyser2)}%`;
     }
 
     if (karaokeMediaRecorder && karaokeMediaRecorder.state === "recording") {
