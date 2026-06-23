@@ -400,6 +400,7 @@ function showTab(tabId) {
     estudio: "btnEstudio",
     biblioteca: "btnBiblioteca",
     karaoke: "btnKaraoke",
+    cambiarTono: "btnCambiarTono",
     splitter: "btnSplitter",
     config: "btnConfig"
   };
@@ -1050,7 +1051,7 @@ function asignarEventosBiblioteca(filter) {
 async function renderLibrary(filter = 'todos') {
   const container = $("libraryList");
   if (!container) return;
-
+  
   document.querySelectorAll(".folder-btn").forEach(btn => {
     const clickAttr = btn.getAttribute("onclick") || "";
     if (clickAttr.includes(`'${filter}'`)) {
@@ -1059,19 +1060,21 @@ async function renderLibrary(filter = 'todos') {
       btn.classList.remove("active"); 
     }
   });
-
+  
   container.innerHTML = "<p>Cargando archivos...</p>";
   
   try {
     let library = await getAllLibraryItems();
     let filteredItems = filter !== 'todos' ? library.filter(item => item.type === filter) : library;
-
+    
     container.innerHTML = "";
-
+    
     if (filteredItems.length === 0) {
       container.innerHTML = `<p>La carpeta '${filter}' está vacía.</p>`;
     } else {
+      
       filteredItems.forEach((item) => {
+        
         const div = document.createElement("div");
         div.className = "library-item card"; 
         div.style.marginBottom = "10px";
@@ -1079,58 +1082,94 @@ async function renderLibrary(filter = 'todos') {
         if (item.type === 'ultrastar_txt') {
           const previewTexto = item.textoPlano ? item.textoPlano.substring(0, 120) + "..." : "Sin contenido";
           div.innerHTML = `
-            <p><strong>${item.name}</strong></p>
-            <small>Tipo: 📝 TEXTO ULTRASTAR | ${item.date}</small>
-            <div style="background: var(--bg-main); padding: 10px; border-radius: 6px; font-family: monospace; font-size: 12px; margin: 10px 0; white-space: pre-wrap; border: 1px solid var(--border); color: var(--text-muted);">
-              ${previewTexto}
-            </div>
-            <div style="display: flex; gap: 10px;">
-              <button type="button" data-id="${item.id}" class="load-monitor-btn" style="background:#3b82f6; color:white;">📥 Cargar en Monitor</button>
-              <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#e11d48;">🗑️ Eliminar</button>
-            </div>
+          <p><strong>${item.name}</strong></p>
+          <small>Tipo: 📝 TEXTO ULTRASTAR | ${item.date}</small>
+          <div style="background: var(--bg-main); padding: 10px; border-radius: 6px; font-family: monospace; font-size: 12px; margin: 10px 0; white-space: pre-wrap; border: 1px solid var(--border); color: var(--text-muted);">
+          ${previewTexto}
+          </div>
+          <div style="display: flex; gap: 10px;">
+          <button type="button" data-id="${item.id}" class="load-monitor-btn" style="background:#3b82f6; color:white;">📥 Cargar en Monitor</button>
+          <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#e11d48;">🗑️ Eliminar</button>
+          </div>
+          `;
+        } else if (item.type === 'texto') {
+          // Reconstruir preview desde textoPlano o desde el array lyrics
+          let preview = '';
+          if (item.textoPlano) {
+            preview = item.textoPlano.substring(0, 180) + (item.textoPlano.length > 180 ? '…' : '');
+          } else if (Array.isArray(item.lyrics) && item.lyrics.length) {
+            const palabras = item.lyrics.slice(0, 40).map(w => w.text || '').filter(Boolean);
+            preview = palabras.join(' ') + (item.lyrics.length > 40 ? ' …' : '');
+          } else {
+            preview = 'Sin contenido de letra.';
+          }
+          // Detectar si la letra está sincronizada (tiempos > 0)
+          const isSynced = item.isSincronizada === true ||
+                           (Array.isArray(item.lyrics) && item.lyrics.some(w => (w.startTime || 0) > 0 || (w.duration || 0) > 0));
+          const totalPalabras = Array.isArray(item.lyrics) ? item.lyrics.length : 0;
+          const syncBadge = isSynced
+            ? '<span style="background:#22c55e; color:white; padding:3px 8px; border-radius:6px; font-size:0.8em;">🎯 Sincronizada</span>'
+            : '<span style="background:#6b7280; color:white; padding:3px 8px; border-radius:6px; font-size:0.8em;">📝 Texto plano</span>';
+          div.innerHTML = `
+          <p><strong>📄 ${item.name}</strong> ${syncBadge}</p>
+          <small>Tipo: LETRA | ${item.date} | ${totalPalabras} palabras</small>
+          <div style="background: var(--bg-main); padding: 10px; border-radius: 6px; font-size: 13px; margin: 10px 0; white-space: pre-wrap; border: 1px solid var(--border); color: var(--text-muted); max-height: 110px; overflow:auto;">
+          ${preview.replace(/</g, '&lt;')}
+          </div>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button type="button" data-id="${item.id}" class="load-monitor-btn" style="background:#3b82f6; color:white;">📥 Cargar en Monitor</button>
+          <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#e11d48;">🗑️ Eliminar</button>
+          </div>
           `;
         } else {
           const audioURL = item.audioBlob ? URL.createObjectURL(item.audioBlob) : "";
           const isKaraoke = item.type === "karaoke";
+          // Detectar si el karaoke está listo (sincronizado)
+          const isReady = item.isReadyKaraoke === true ||
+                          (Array.isArray(item.transcription) && item.transcription.length > 0) ||
+                          (Array.isArray(item.lyrics) && item.lyrics.some(w => (w.startTime || 0) > 0));
+          const karaokeBadge = isKaraoke
+            ? (isReady
+                ? '<span style="background:#22c55e; color:white; padding:3px 8px; border-radius:6px; font-size:0.8em;">✅ Listo para cantar</span>'
+                : '<span style="background:#f59e0b; color:white; padding:3px 8px; border-radius:6px; font-size:0.8em;">⚠️ Sin sincronización</span>')
+            : '';
+          
           div.innerHTML = `
-            <p><strong>${item.name}</strong></p>
-            <small>Tipo: ${item.type.toUpperCase()} | ${item.date}</small>
-            ${audioURL ? `<audio controls src="${audioURL}" style="width:100%; margin: 10px 0;"></audio>` : '<p style="color:red; font-size:12px;">Audio no encontrado</p>'}
-            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            ${isKaraoke ? `<button type="button" data-id="${item.id}" class="send-karaoke-btn" style="background:#a855f7; color:white;">📤 Enviar al monitor karaoke</button>` : ''}
-            <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#e11d48;">🗑️ Eliminar</button>
-            </div>
+          <p><strong>${item.name}</strong> ${karaokeBadge}</p>
+          <small>Tipo: ${item.type.toUpperCase()} | ${item.date}</small>
+          ${audioURL ? `<audio controls src="${audioURL}" style="width:100%; margin: 10px 0;"></audio>` : '<p style="color:red; font-size:12px;">Audio no encontrado</p>'}
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          ${isKaraoke ? `<button type="button" data-id="${item.id}" class="send-karaoke-btn" style="background:#a855f7; color:white;">📤 Enviar al monitor karaoke</button>` : ''}
+          <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#e11d48;">🗑️ Eliminar</button>
+          </div>
           `;
         }
-        container.appendChild(div);
-      });
-    }
-    document.querySelectorAll(".delete-library-btn").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const id = Number(btn.dataset.id);
-        await deleteLibraryItemFromDB(id);
-        renderLibrary(filter); 
-      });
-    });
-
-    document.querySelectorAll(".load-monitor-btn").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const id = Number(btn.dataset.id);
-        const item = library.find(i => i.id === id);
+        document.querySelectorAll(".delete-library-btn").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const id = Number(btn.dataset.id);
+            await deleteLibraryItemFromDB(id);
+            renderLibrary(filter); 
+          });
+        });
         
-        if (item && item.textoPlano) {
-          const monitor = document.getElementById("lyricsText") || document.getElementById("miniMonitorTextArea");
-          
-          if (monitor) {
-            monitor.value = item.textoPlano;
+        document.querySelectorAll(".load-monitor-btn").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const id = Number(btn.dataset.id);
+            const item = library.find(i => i.id === id);
+            
+            if (item && item.textoPlano) {
+              const monitor = document.getElementById("lyricsText") || document.getElementById("miniMonitorTextArea");
+              
+              if (monitor) {
+                monitor.value = item.textoPlano;
 
             /*
             if (item.transcription) {
               try {
                 const estudioModulo = await import('./estudio.js');
-                if (typeof estudioModulo.setTranscriptionSegments === 'function') {
+                if (typeof estudioModulo.setTranscriptionSegments === 'function')// {
                   estudioModulo.setTranscriptionSegments(item.transcription);
-                }
+               }
                 const karaokeModulo = await import('./karaoke.js');
                 if (typeof karaokeModulo.cargarLetrasEnMonitor === 'function') {
                   karaokeModulo.cargarLetrasEnMonitor();
@@ -1140,34 +1179,35 @@ async function renderLibrary(filter = 'todos') {
               }
             }
             */
-
-            alert(`✅ Letra de "${item.name}" cargada en el monitor del Estudio.`);
-            monitor.scrollIntoView({ behavior: "smooth", block: "center" });
-          } else {
-            alert("⚠️ No se encontró el contenedor visual del monitor en esta pantalla.");
-          }
-        }
+                alert(`✅ Letra de "${item.name}" cargada en el monitor del Estudio.`);
+                monitor.scrollIntoView({ behavior: "smooth", block: "center" });
+              } else {
+                alert("⚠️ No se encontró el contenedor visual del monitor en esta pantalla.");
+              }
+            }
+          });
+        });
+        
+        // Evento: Enviar archivo karaoke al monitor del karaoke (solo carga, sin cambiar pestaña)
+        document.querySelectorAll(".send-karaoke-btn").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const id = Number(btn.dataset.id);
+            try {
+              if (typeof loadKaraokeSong === 'function') {
+                await loadKaraokeSong(id);
+                const item = library.find(i => i.id === id);
+                alert(`✅ "${item?.name || 'Karaoke'}" enviado al monitor karaoke.`);
+              } else {
+                alert("⚠️ Función de carga de karaoke no disponible.");
+              }
+            } catch (e) {
+              console.error("Error enviando al monitor karaoke:", e);
+              alert("❌ No se pudo enviar al monitor karaoke.");
+            }
+          });
+        });
       });
-    });
-
-    // Evento: Enviar archivo karaoke al monitor del karaoke (solo carga, sin cambiar pestaña)
-    document.querySelectorAll(".send-karaoke-btn").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const id = Number(btn.dataset.id);
-        try {
-          if (typeof loadKaraokeSong === 'function') {
-            await loadKaraokeSong(id);
-            const item = library.find(i => i.id === id);
-            alert(`✅ "${item?.name || 'Karaoke'}" enviado al monitor karaoke.`);
-          } else {
-            alert("⚠️ Función de carga de karaoke no disponible.");
-          }
-        } catch (e) {
-          console.error("Error enviando al monitor karaoke:", e);
-          alert("❌ No se pudo enviar al monitor karaoke.");
-        }
-      });
-    });
+    }
     
     /*
     try {
@@ -3936,8 +3976,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     safeAdd("btnEstudio", "click", () => showTab("estudio"));
     safeAdd("btnBiblioteca", "click", () => showTab("biblioteca"));
     safeAdd("btnKaraoke", "click", () => showTab("karaoke"));
+    safeAdd("btnCambiarTono", "click", () => {
+      showTab("cambiarTono");
+      if (typeof loadPitchKaraokeOptions === "function") loadPitchKaraokeOptions();
+    });
     safeAdd("btnSplitter", "click", () => showTab("splitter"));
     safeAdd("btnConfig", "click", () => showTab("config"));
+
+    // cambiar tono (pitch shifter)
+    safeAdd("refreshPitchKaraokeListBtn", "click", loadPitchKaraokeOptions);
+    safeAdd("loadPitchKaraokeBtn", "click", loadSelectedPitchKaraoke);
+    safeAdd("pitchUpSelect", "change", onPitchSelectsChange);
+    safeAdd("pitchDownSelect", "change", onPitchSelectsChange);
+    safeAdd("pitchPlayBtn", "click", playPitchShifted);
+    safeAdd("pitchPauseBtn", "click", pausePitchShifted);
+    safeAdd("pitchStopBtn", "click", stopPitchShifted);
+    safeAdd("pitchSaveBtn", "click", savePitchShiftedToLibrary);
 
     // afinador
     safeAdd("recordBtn", "click", toggleRecording);
@@ -4986,6 +5040,445 @@ function actualizarSelectoresGlobales() {
   if (typeof loadTrackOptionsInStudio === "function") loadTrackOptionsInStudio();
   if (typeof loadTrackOptionsInKaraoke === "function") loadTrackOptionsInKaraoke();
   if (typeof loadTextOptionsInStudio === "function") loadTextOptionsInStudio();
+  if (typeof loadPitchKaraokeOptions === "function") loadPitchKaraokeOptions();
   
   console.log("🔄 Selectores de la interfaz actualizados");
+}
+
+// ==========================================
+// CAMBIAR TONO (PITCH SHIFTER)
+// ==========================================
+let pitchAudioContext = null;
+let pitchAudioBuffer = null;
+let pitchSelectedItem = null;
+let pitchShifterNode = null;
+let pitchGainNode = null;
+let pitchIsPlaying = false;
+let pitchIsPaused = false;
+let pitchPausedTime = 0;
+
+function getNetSemitones() {
+  const up = parseInt(($("pitchUpSelect")?.value) || "0", 10);
+  const down = parseInt(($("pitchDownSelect")?.value) || "0", 10);
+  return up - down;
+}
+
+function getPitchRatio() {
+  return Math.pow(2, getNetSemitones() / 12);
+}
+
+function onPitchSelectsChange() {
+  const net = getNetSemitones();
+  const display = $("pitchCurrentDisplay");
+  if (display) {
+    const signo = net > 0 ? "+" : "";
+    display.textContent = `Cambio actual: ${signo}${net} semitono${Math.abs(net) === 1 ? "" : "s"}`;
+  }
+  // Si está reproduciendo, aplicar en vivo
+  if (pitchShifterNode) {
+    try {
+      pitchShifterNode.pitch = getPitchRatio();
+    } catch (e) { /* puede no estar conectado aún */ }
+  }
+}
+
+async function loadPitchKaraokeOptions() {
+  const select = $("pitchKaraokeSelect");
+  if (!select) return;
+  select.innerHTML = `<option value="">Selecciona un archivo karaoke</option>`;
+  try {
+    const items = await getLibraryItemsByType("karaoke");
+    if (!items.length) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "No hay archivos karaoke guardados";
+      select.appendChild(opt);
+      return;
+    }
+    items.forEach(item => {
+      const opt = document.createElement("option");
+      opt.value = item.id;
+      opt.textContent = item.name;
+      select.appendChild(opt);
+    });
+  } catch (e) {
+    console.error("Error cargando karaokes en Cambiar tono:", e);
+  }
+}
+
+async function loadSelectedPitchKaraoke() {
+  const select = $("pitchKaraokeSelect");
+  const status = $("pitchLoadStatus");
+  const id = Number(select?.value);
+  if (!id) {
+    alert("⚠️ Selecciona un archivo karaoke de la lista.");
+    return;
+  }
+  try {
+    if (status) status.textContent = "Estado: cargando y decodificando audio…";
+    const item = await getLibraryItemById(id);
+    if (!item || !item.audioBlob) {
+      if (status) status.textContent = "Estado: el archivo no tiene audio.";
+      alert("⚠️ Este archivo karaoke no contiene audio.");
+      return;
+    }
+    // Detener reproducción previa si la hay
+    stopPitchShifted();
+
+    if (!pitchAudioContext) {
+      pitchAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    const arrayBuffer = await item.audioBlob.arrayBuffer();
+    pitchAudioBuffer = await pitchAudioContext.decodeAudioData(arrayBuffer.slice(0));
+    pitchSelectedItem = item;
+
+    if (status) {
+      status.textContent = `Estado: "${item.name}" cargado (${pitchAudioBuffer.duration.toFixed(1)} s, ${pitchAudioBuffer.numberOfChannels} canal${pitchAudioBuffer.numberOfChannels === 1 ? "" : "es"}). Listo para reproducir.`;
+    }
+    // Sugerencia de nombre de guardado
+    const saveName = $("pitchSaveName");
+    if (saveName && !saveName.value) {
+      saveName.value = item.name + " (tono modificado)";
+    }
+  } catch (e) {
+    console.error("Error cargando karaoke en pitch shifter:", e);
+    if (status) status.textContent = "Estado: ❌ no se pudo decodificar el audio.";
+    alert("❌ No se pudo decodificar el audio: " + e.message);
+  }
+}
+
+function ensurePitchShifterAvailable() {
+  if (typeof window.PitchShifter !== "function") {
+    alert("⚠️ La librería de cambio de tono aún no terminó de cargar. Espera unos segundos y vuelve a intentarlo.");
+    return false;
+  }
+  return true;
+}
+
+async function playPitchShifted() {
+  if (!pitchAudioBuffer) {
+    alert("⚠️ Primero carga un archivo karaoke desde Biblioteca.");
+    return;
+  }
+  if (!ensurePitchShifterAvailable()) return;
+
+  if (!pitchAudioContext) {
+    pitchAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (pitchAudioContext.state === "suspended") {
+    await pitchAudioContext.resume();
+  }
+
+  // Si está pausado, simplemente reanuda
+  if (pitchIsPaused && pitchShifterNode) {
+    try {
+      pitchAudioContext.resume();
+      pitchIsPaused = false;
+      pitchIsPlaying = true;
+      const st = $("pitchPlayStatus");
+      if (st) st.textContent = "Estado: ▶️ reproduciendo con tono modificado…";
+      return;
+    } catch (e) { /* fallthrough: crear de nuevo */ }
+  }
+
+  // Reset previo
+  if (pitchShifterNode) {
+    try { pitchShifterNode.disconnect(); } catch (e) {}
+    pitchShifterNode = null;
+  }
+
+  try {
+    pitchShifterNode = new window.PitchShifter(pitchAudioContext, pitchAudioBuffer, 1024);
+    pitchShifterNode.pitch = getPitchRatio();
+    pitchShifterNode.tempo = 1.0;
+
+    pitchGainNode = pitchAudioContext.createGain();
+    pitchGainNode.gain.value = 1.0;
+
+    pitchShifterNode.connect(pitchGainNode);
+    pitchGainNode.connect(pitchAudioContext.destination);
+
+    pitchIsPlaying = true;
+    pitchIsPaused = false;
+
+    // Cuando termina la reproducción
+    if (typeof pitchShifterNode.on === "function") {
+      pitchShifterNode.on("play", (detail) => {
+        const st = $("pitchPlayStatus");
+        if (st && detail && detail.formattedTimePlayed) {
+          st.textContent = `Estado: ▶️ ${detail.formattedTimePlayed}  (${(detail.percentagePlayed || 0).toFixed(0)}%)`;
+        }
+        if (detail && detail.percentagePlayed >= 99.9) {
+          stopPitchShifted();
+        }
+      });
+    }
+
+    const st = $("pitchPlayStatus");
+    if (st) st.textContent = "Estado: ▶️ reproduciendo con tono modificado…";
+  } catch (e) {
+    console.error("Error iniciando PitchShifter:", e);
+    alert("❌ Error iniciando el cambio de tono: " + e.message);
+  }
+}
+
+function pausePitchShifted() {
+  if (!pitchShifterNode || !pitchAudioContext) return;
+  if (pitchIsPlaying) {
+    try {
+      pitchAudioContext.suspend();
+      pitchIsPaused = true;
+      pitchIsPlaying = false;
+      const st = $("pitchPlayStatus");
+      if (st) st.textContent = "Estado: ⏸️ pausado.";
+    } catch (e) {
+      console.error("Error pausando:", e);
+    }
+  }
+}
+
+function stopPitchShifted() {
+  if (pitchShifterNode) {
+    try { pitchShifterNode.disconnect(); } catch (e) {}
+    try {
+      if (typeof pitchShifterNode.off === "function") pitchShifterNode.off();
+    } catch (e) {}
+    pitchShifterNode = null;
+  }
+  if (pitchGainNode) {
+    try { pitchGainNode.disconnect(); } catch (e) {}
+    pitchGainNode = null;
+  }
+  // Reanudar el contexto por si estaba suspendido (para que las próximas reproducciones funcionen)
+  if (pitchAudioContext && pitchAudioContext.state === "suspended") {
+    try { pitchAudioContext.resume(); } catch (e) {}
+  }
+  pitchIsPlaying = false;
+  pitchIsPaused = false;
+  const st = $("pitchPlayStatus");
+  if (st) st.textContent = "Estado: ⏹️ detenido.";
+}
+
+// Convierte AudioBuffer a Blob WAV (16-bit PCM)
+function audioBufferToWavBlob(buffer) {
+  const numChannels = buffer.numberOfChannels;
+  const sampleRate = buffer.sampleRate;
+  const numSamples = buffer.length;
+  const bytesPerSample = 2;
+  const blockAlign = numChannels * bytesPerSample;
+  const byteRate = sampleRate * blockAlign;
+  const dataSize = numSamples * blockAlign;
+  const bufferSize = 44 + dataSize;
+
+  const ab = new ArrayBuffer(bufferSize);
+  const view = new DataView(ab);
+
+  function writeString(offset, str) {
+    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+  }
+
+  writeString(0, "RIFF");
+  view.setUint32(4, 36 + dataSize, true);
+  writeString(8, "WAVE");
+  writeString(12, "fmt ");
+  view.setUint32(16, 16, true);          // PCM chunk size
+  view.setUint16(20, 1, true);           // PCM format
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, 16, true);          // bits per sample
+  writeString(36, "data");
+  view.setUint32(40, dataSize, true);
+
+  // Intercalar canales
+  const channels = [];
+  for (let c = 0; c < numChannels; c++) channels.push(buffer.getChannelData(c));
+
+  let offset = 44;
+  for (let i = 0; i < numSamples; i++) {
+    for (let c = 0; c < numChannels; c++) {
+      let s = Math.max(-1, Math.min(1, channels[c][i]));
+      view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+      offset += 2;
+    }
+  }
+  return new Blob([ab], { type: "audio/wav" });
+}
+
+async function savePitchShiftedToLibrary() {
+  if (!pitchAudioBuffer) {
+    alert("⚠️ Primero carga un archivo karaoke desde Biblioteca.");
+    return;
+  }
+  if (!ensurePitchShifterAvailable()) return;
+
+  const semitones = getNetSemitones();
+  if (semitones === 0) {
+    if (!confirm("El cambio actual es 0 semitonos (sin modificación). ¿Guardar de todas formas?")) return;
+  }
+
+  const status = $("pitchSaveStatus");
+  const btn = $("pitchSaveBtn");
+  if (btn) btn.disabled = true;
+  if (status) status.textContent = "Estado: 🔄 procesando audio con el nuevo tono…";
+
+  try {
+    // Detener cualquier reproducción
+    stopPitchShifted();
+
+    // Renderizar offline aplicando el cambio de tono
+    const renderedBuffer = await renderPitchShiftOffline(pitchAudioBuffer, semitones);
+
+    // Convertir a WAV (más compatible y sin necesidad de re-encodear)
+    const wavBlob = audioBufferToWavBlob(renderedBuffer);
+
+    // Nombre
+    const nameInput = $("pitchSaveName");
+    const signo = semitones > 0 ? "+" : "";
+    const baseName = (pitchSelectedItem?.name || "Karaoke").replace(/s*(tono modificado)s*$/i, "");
+    const finalName = (nameInput && nameInput.value.trim())
+      ? nameInput.value.trim()
+      : `${baseName} (${signo}${semitones} semitonos)`;
+
+    // Guardar en biblioteca como type \"karaoke\" preservando letras/transcription
+    const libraryItem = {
+      name: finalName,
+      type: "karaoke",
+      date: Date.now(),
+      audioBlob: wavBlob,
+      isReadyKaraoke: !!pitchSelectedItem?.isReadyKaraoke,
+      pitchShiftSemitones: semitones,
+      originalKaraokeId: pitchSelectedItem?.id || null
+    };
+    if (pitchSelectedItem) {
+      if (Array.isArray(pitchSelectedItem.transcription)) libraryItem.transcription = pitchSelectedItem.transcription;
+      if (Array.isArray(pitchSelectedItem.lyrics)) libraryItem.lyrics = pitchSelectedItem.lyrics;
+      if (pitchSelectedItem.metadata) libraryItem.metadata = pitchSelectedItem.metadata;
+    }
+
+    await addLibraryItem(libraryItem);
+
+    // Refrescar la biblioteca por si el usuario la abre
+    if (typeof renderLibrary === "function") {
+      try { await renderLibrary(window.currentFilter || 'karaoke'); } catch (e) {}
+    }
+    // Refrescar la lista del propio cambiar-tono
+    await loadPitchKaraokeOptions();
+
+    if (status) status.textContent = `Estado: ✅ guardado como "${finalName}" en la carpeta Karaoke de Biblioteca.`;
+    alert(`✅ Archivo guardado: "${finalName}"`);
+  } catch (e) {
+    console.error("Error guardando archivo con tono cambiado:", e);
+    if (status) status.textContent = "Estado: ❌ error al guardar.";
+    alert("❌ Error al guardar: " + e.message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+// Render offline aplicando PitchShifter
+function renderPitchShiftOffline(audioBuffer, semitones) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const ratio = Math.pow(2, semitones / 12);
+      const offlineCtx = new OfflineAudioContext(
+        audioBuffer.numberOfChannels,
+        audioBuffer.length,
+        audioBuffer.sampleRate
+      );
+      const shifter = new window.PitchShifter(offlineCtx, audioBuffer, 1024);
+      shifter.pitch = ratio;
+      shifter.tempo = 1.0;
+      shifter.connect(offlineCtx.destination);
+
+      const rendered = await offlineCtx.startRendering();
+      // Detectar si el resultado parece vacío (algunos browsers no soportan ScriptProcessor en Offline)
+      let hasAudio = false;
+      for (let c = 0; c < rendered.numberOfChannels && !hasAudio; c++) {
+        const data = rendered.getChannelData(c);
+        const step = Math.max(1, Math.floor(data.length / 1000));
+        for (let i = 0; i < data.length; i += step) {
+          if (Math.abs(data[i]) > 0.0005) { hasAudio = true; break; }
+        }
+      }
+      if (hasAudio) {
+        resolve(rendered);
+      } else {
+        // Fallback: renderizar en tiempo real grabando con MediaStreamDestination
+        console.warn("OfflineAudioContext devolvió audio vacío. Usando fallback en tiempo real…");
+        renderPitchShiftRealtime(audioBuffer, semitones).then(resolve).catch(reject);
+      }
+    } catch (e) {
+      console.warn("OfflineAudioContext falló, usando fallback en tiempo real:", e);
+      renderPitchShiftRealtime(audioBuffer, semitones).then(resolve).catch(reject);
+    }
+  });
+}
+
+// Fallback: graba la salida del PitchShifter en tiempo real
+function renderPitchShiftRealtime(audioBuffer, semitones) {
+  return new Promise((resolve, reject) => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: audioBuffer.sampleRate });
+      const ratio = Math.pow(2, semitones / 12);
+      const shifter = new window.PitchShifter(ctx, audioBuffer, 1024);
+      shifter.pitch = ratio;
+      shifter.tempo = 1.0;
+
+      const dest = ctx.createMediaStreamDestination();
+      shifter.connect(dest);
+
+      // Acumular chunks crudos a través de un ScriptProcessor para reconstruir AudioBuffer
+      const numChannels = audioBuffer.numberOfChannels;
+      const sampleRate = audioBuffer.sampleRate;
+      const collector = ctx.createScriptProcessor(4096, numChannels, numChannels);
+      const collected = Array.from({ length: numChannels }, () => []);
+      let totalSamples = 0;
+      const maxSamples = audioBuffer.length;
+
+      collector.onaudioprocess = (e) => {
+        for (let c = 0; c < numChannels; c++) {
+          const input = e.inputBuffer.getChannelData(c);
+          collected[c].push(new Float32Array(input));
+        }
+        totalSamples += e.inputBuffer.length;
+        if (totalSamples >= maxSamples) finish();
+      };
+
+      shifter.connect(collector);
+      collector.connect(ctx.destination); // necesario para que onaudioprocess se ejecute en algunos browsers
+
+      const timeout = setTimeout(finish, (audioBuffer.duration + 2) * 1000);
+
+      let finished = false;
+      function finish() {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timeout);
+        try { shifter.disconnect(); } catch (e) {}
+        try { collector.disconnect(); } catch (e) {}
+        // Construir AudioBuffer
+        const totalLen = Math.min(maxSamples, totalSamples);
+        const outCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const outBuf = outCtx.createBuffer(numChannels, totalLen, sampleRate);
+        for (let c = 0; c < numChannels; c++) {
+          const dest = outBuf.getChannelData(c);
+          let pos = 0;
+          for (const chunk of collected[c]) {
+            const remaining = totalLen - pos;
+            if (remaining <= 0) break;
+            const toCopy = Math.min(chunk.length, remaining);
+            dest.set(chunk.subarray(0, toCopy), pos);
+            pos += toCopy;
+          }
+        }
+        try { ctx.close(); } catch (e) {}
+        try { outCtx.close(); } catch (e) {}
+        resolve(outBuf);
+      }
+    } catch (e) {
+      reject(e);
+    }
+  });
 }
