@@ -5067,16 +5067,19 @@ function _getWorkletUrl() {
       || "https://cdn.jsdelivr.net/npm/@soundtouchjs/audio-worklet@1.0.3/dist/soundtouch-worklet.js";
 }
 
-async function ensureSoundTouchWorklet(ctx) {
-  if (!ctx || !ctx.audioWorklet || typeof ctx.audioWorklet.addModule !== "function") {
-    throw new Error("AudioWorklet no está soportado en este navegador.");
+async function ensureSoundTouchWorklet(pitchAudioContext) {
+  if (pitchAudioContext.state === 'closed') return;
+
+  // Ensure the path is absolute or correctly relative to the root
+  const workletUrl = '/path/to/soundtouch-worklet.js'; 
+
+  try {
+    await pitchAudioContext.audioWorklet.addModule(workletUrl);
+  } catch (e) {
+    // If the error is because it's already loaded, we can ignore it
+    if (e.name === 'InvalidStateError') return; 
+    throw e;
   }
-  let p = _pitchWorkletLoaded.get(ctx);
-  if (!p) {
-    p = ctx.audioWorklet.addModule(_getWorkletUrl());
-    _pitchWorkletLoaded.set(ctx, p);
-  }
-  return p;
 }
 
 function getNetSemitones() {
