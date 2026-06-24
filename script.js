@@ -2590,13 +2590,36 @@ async function startKaraokeRecording() {
     trackSrc: track?.src,
     hasBlob: !!karaokeSelectedTrackBlob,
     selectedName: karaokeSelectedTrackName,
-    loadedItem: karaokeLoadedItem
+    loadedItem: karaokeLoadedItem,
+    datasetLoaded: track?.dataset?.karaokeLoaded,
+    datasetKaraokeId: track?.dataset?.karaokeId
   });
 
-  //if (!track || !track.src || !karaokeSelectedTrackBlob) {
-    //alert("⚠️ Primero carga un karaoke de la lista.");
-    //return;
- // }
+  if (!track || (!track.src && track?.dataset?.karaokeLoaded !== "1")) {
+    alert("⚠️ Primero carga un karaoke de la lista.");
+    return;
+  }
+
+  if (!karaokeSelectedTrackBlob) {
+    const karaokeId = Number(track?.dataset?.karaokeId);
+    if (karaokeId) {
+      try {
+        const item = await getLibraryItemById(karaokeId);
+        if (item?.audioBlob) {
+          karaokeLoadedItem = item;
+          karaokeSelectedTrackBlob = item.audioBlob;
+          karaokeSelectedTrackName = item.name || "Karaoke";
+        }
+      } catch (e) {
+        console.error("No se pudo reconstruir el karaoke cargado:", e);
+      }
+    }
+  }
+
+  if (!karaokeSelectedTrackBlob) {
+    alert("⚠️ Primero carga un karaoke de la lista.");
+    return;
+  }
 
   try {
     const micCount = $("micCount");
@@ -4901,7 +4924,6 @@ async function loadMyKaraokeSongs() {
     container.querySelectorAll(".btn-play").forEach((btn) => {
       btn.onclick = async () => {
         const id = Number(btn.dataset.id);
-        console.log("▶️ Click en Cantar", id);
         await loadKaraokeSong(id);
       };
     });
@@ -4943,25 +4965,30 @@ async function loadKaraokeSong(id) {
       alert("⚠️ No se encontró el karaoke.");
       return;
     }
+
     if (!item.audioBlob) {
       alert("⚠️ Este karaoke no tiene audio.");
       return;
     }
+
     karaokeLoadedItem = item;
     karaokeSelectedTrackBlob = item.audioBlob;
     karaokeSelectedTrackName = item.name || "Karaoke";
 
-    
-    // 1. GESTIÓN DE AUDIO
     const track = $("karaokeTrack");
     if (track) {
       try { track.pause(); } catch (e) {}
       track.currentTime = 0;
-      track.src = URL.createObjectURL(item.audioBlob);
+
+      const objectUrl = URL.createObjectURL(item.audioBlob);
+      track.src = objectUrl;
+      track.dataset.objectUrl = objectUrl;
+      track.dataset.karaokeId = String(item.id);
+      track.dataset.karaokeLoaded = "1";
       track.volume = 0.6;
       track.load();
     }
-    
+
     if (Array.isArray(item.transcription) && item.transcription.length) {
       transcriptionSegments = item.transcription;
       karaokeLoadedLyrics = item.transcription;
@@ -4980,20 +5007,18 @@ async function loadKaraokeSong(id) {
       status.textContent = `Estado: "${item.name}" cargada. ¡A cantar! 🎤`;
     }
 
-    console.log("✅ Karaoke cargado en loadKaraokeSong", {
+    console.log("✅ Karaoke cargado", {
       id: item.id,
       name: item.name,
       hasBlob: !!karaokeSelectedTrackBlob,
-      trackSrc: track?.src
+      trackSrc: track?.src,
+      datasetLoaded: track?.dataset?.karaokeLoaded
     });
 
-    } catch (error) {
+  } catch (error) {
     console.error("Error cargando karaoke:", error);
     alert("❌ Error al cargar el karaoke.");
   }
-  
-  // Scroll suave al monitor
-  $("karaokeCanvas")?.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
 function limpiarVariablesMonitor() {
