@@ -1200,25 +1200,22 @@ async function renderLibrary(filter = "todos") {
     container.querySelectorAll(".send-karaoke-btn").forEach((btn) => {
       btn.onclick = async () => {
         const id = Number(btn.dataset.id);
+        const selectedItem = library.find(i => i.id === id);
+
         try {
           if (typeof loadKaraokeSong !== "function") {
             alert("⚠️ Función de carga de karaoke no disponible.");
             return;
           }
-          await loadKaraokeSong(item.id);
-          const item = library.find(i => i.id === id);
-          alert(`✅ "${item?.name || "Karaoke"}" enviado al monitor karaoke.`);
+          
+          await loadKaraokeSong(id);
+          alert(`✅ "${selectedItem?.name || "Karaoke"}" enviado al monitor karaoke.`);
         } catch (e) {
           console.error("Error enviando al monitor karaoke:", e);
           alert("❌ No se pudo enviar al monitor karaoke.");
         }
       };
     });
-
-    actualizarSelectoresGlobales();
-  } catch (error) {
-    console.error(error);
-    container.innerHTML = "<p>❌ Error al cargar la biblioteca.</p>";
   }
 }
 
