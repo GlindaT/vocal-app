@@ -1201,13 +1201,13 @@ async function renderLibrary(filter = "todos") {
       btn.onclick = async () => {
         const id = Number(btn.dataset.id);
         const selectedItem = library.find(i => i.id === id);
-        
+
         try {
           if (typeof loadKaraokeSong !== "function") {
             alert("⚠️ Función de carga de karaoke no disponible.");
             return;
           }
-          
+
           await loadKaraokeSong(id);
           alert(`✅ "${selectedItem?.name || "Karaoke"}" enviado al monitor karaoke.`);
         } catch (e) {
@@ -1216,9 +1216,13 @@ async function renderLibrary(filter = "todos") {
         }
       };
     });
+
+    actualizarSelectoresGlobales();
+  } catch (error) {
+    console.error("Error en renderLibrary:", error);
+    container.innerHTML = "<p>❌ Error al cargar la biblioteca.</p>";
   }
 }
-
 function asignarEventosBiblioteca(filter) {
   document.querySelectorAll(".delete-library-btn").forEach((btn) => {
     btn.onclick = async () => {
