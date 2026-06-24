@@ -1064,8 +1064,14 @@ async function renderLibrary(filter = 'todos') {
   container.innerHTML = "<p>Cargando archivos...</p>";
   
   try {
+    let filteredItems;
+    if (filter === 'todos') {
+      filteredItems = await getAllLibraryItems();
+    } else {
+      filteredItems = await getLibraryItemsByType(filter);
+    }
     let library = await getAllLibraryItems();
-    let filteredItems = filter !== 'todos' ? library.filter(item => item.type === filter) : library;
+    let libraryItems = filter !== 'todos' ? library.filter(item => item.type === filter) : library;
     
     container.innerHTML = "";
     
