@@ -4144,7 +4144,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     */
       
     // Cargar catálogo y mis canciones al iniciar
-    loadKaraokeCatalog();
+   // loadKaraokeCatalog();
     loadMyKaraokeSongs();
     
     
