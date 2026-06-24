@@ -2396,7 +2396,7 @@ let karaokeStream2 = null;
 let karaokeChunks = [];
 let karaokeRecordedBlob = null;
 let karaokeSelectedTrackBlob = null;
-let karaokeSelectedTrackName = "Pista";
+let karaokeSelectedTrackName = "Karaoke";
 let lastActiveLine = null;
 let karaokeDuoAudioContext = null;
 let karaokeDuoAnalyser1 = null;
@@ -2426,9 +2426,9 @@ async function loadTrackOptionsInKaraoke() {
   select.innerHTML = `<option value="">Selecciona una pista desde tu Biblioteca</option>`;
 
   try {
-    const pistas = await getLibraryItemsByType("pista");
+    const karaoke = await getLibraryItemsByType("karaoke");
 
-    if (!pistas.length) {
+    if (!karaoke.length) {
       const option = document.createElement("option");
       option.value = "";
       option.textContent = "No hay pistas guardadas";
@@ -2533,11 +2533,11 @@ function getRmsLevel(analyser, multiplier = 280) {
 
 async function startKaraokeRecording() {
   const track = $("karaokeTrack");
-
-  //if (!track || !track.src) {
-   // alert("⚠️ Primero sube una pista instrumental en el Paso 1.");
-   // return;
- /*}*/
+  
+  if (!track || !track.src) {
+    alert("⚠️ Primero sube una pista instrumental en el Paso 1.");
+    return;
+  }
 
   try {
     const micCount = $("micCount");
