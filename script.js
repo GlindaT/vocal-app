@@ -2534,10 +2534,10 @@ function getRmsLevel(analyser, multiplier = 280) {
 async function startKaraokeRecording() {
   const track = $("karaokeTrack");
 
-  if (!track || !track.src) {
-    alert("⚠️ Primero sube una pista instrumental en el Paso 1.");
-    return;
-  }
+  //if (!track || !track.src) {
+   // alert("⚠️ Primero sube una pista instrumental en el Paso 1.");
+   // return;
+ /*}*/
 
   try {
     const micCount = $("micCount");
