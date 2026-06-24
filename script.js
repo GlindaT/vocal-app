@@ -2405,7 +2405,7 @@ let karaokeDuoAnimationId = null;
 let karaokeDuoMonitorActive = false;
 let karaokeLoadedItem = null;
 let karaokeLoadedLyrics = [];
-let karaokeReadyToSing = false;
+//let karaokeReadyToSing = false;
 
 
 async function loadKaraokeSong(id) {
@@ -2424,11 +2424,10 @@ async function loadKaraokeSong(id) {
     karaokeLoadedItem = item;
     karaokeSelectedTrackBlob = item.audioBlob;
     karaokeSelectedTrackName = item.name || "Karaoke";
-    karaokeReadyToSing = true;
 
     const track = $("karaokeTrack");
     if (track) {
-      track.pause();
+      try { track.pause(); } catch (e) {}
       track.currentTime = 0;
       track.src = URL.createObjectURL(item.audioBlob);
       track.volume = 0.6;
@@ -2450,8 +2449,16 @@ async function loadKaraokeSong(id) {
 
     const status = $("karaokeStatus");
     if (status) {
-      status.textContent = `Estado: Karaoke "${item.name}" cargado. Presiona Iniciar Grabación.`;
+      status.textContent = `Estado: "${item.name}" cargada. ¡A cantar! 🎤`;
     }
+
+    console.log("✅ Karaoke cargado:", {
+      id: item.id,
+      name: item.name,
+      hasBlob: !!karaokeSelectedTrackBlob,
+      trackSrc: !!track?.src
+    });
+
   } catch (error) {
     console.error("Error cargando karaoke:", error);
     alert("❌ Error al cargar el karaoke.");
@@ -2578,8 +2585,8 @@ function getRmsLevel(analyser, multiplier = 280) {
 async function startKaraokeRecording() {
   const track = $("karaokeTrack");
 
-  if (!karaokeReadyToSing || !karaokeLoadedItem || !karaokeSelectedTrackBlob || !track || !track.src) {
-    alert("⚠️ Primero presiona 'Cantar' en uno de tus karaokes.");
+  if (!track || !track.src || !karaokeSelectedTrackBlob) {
+    alert("⚠️ Primero carga un karaoke de la lista.");
     return;
   }
 
@@ -4888,9 +4895,9 @@ async function loadMyKaraokeSongs() {
         await loadKaraokeSong(id);
       };
     });
-      
-      // 2. Asignación de eventos limpia
-      configurarEventosListaKaraoke(container);
+    
+    // 2. Asignación de eventos limpia
+    configurarEventosListaKaraoke(container);
   } catch (error) {
     console.error("Error al cargar lista de karaoke:", error);
     container.innerHTML = `<p class="error">❌ No se pudieron cargar tus canciones.</p>`;
