@@ -1217,10 +1217,25 @@ async function renderLibrary(filter = 'todos') {
       const karaokeModulo = await import('./karaoke.js');
       if (typeof karaokeModulo.loadTrackOptionsInKaraoke === "function") await karaokeModulo.loadTrackOptionsInKaraoke();
     } catch (e) { modules may not be loaded yet } */
+    
+    asignarEventosBiblioteca(filter);
+    actualizarSelectoresGlobales();
   } catch (error) {
     console.error(error);
     container.innerHTML = "<p>❌ Error al cargar la biblioteca.</p>";
   }
+}
+
+function asignarEventosBiblioteca(filter) {
+  document.querySelectorAll(".delete-library-btn").forEach((btn) => {
+    btn.onclick = async () => {
+      if (confirm("¿Estás seguro de eliminar este archivo?")) {
+        const id = Number(btn.dataset.id);
+        await deleteLibraryItemFromDB(id); // Nombre corregido
+        renderLibrary(filter); 
+      }
+    };
+  });
 }
 
 // Añadimos 'currentFilter' para que no nos saque de la carpeta donde estamos
