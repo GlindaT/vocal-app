@@ -2403,13 +2403,17 @@ let karaokeDuoAnalyser1 = null;
 let karaokeDuoAnalyser2 = null;
 let karaokeDuoAnimationId = null;
 let karaokeDuoMonitorActive = false;
+let karaokeLoadedItem = null;
+let karaokeLoadedLyrics = [];
 
 function cargarPistaKaraoke(e) {
   const file = e.target.files[0];
   if (!file) return;
 
+  karaokeLoadedItem = null;
   karaokeSelectedTrackBlob = file;
   karaokeSelectedTrackName = file.name;
+  karaokeLoadedLyrics = [];
 
   const track = $("karaokeTrack");
   track.src = URL.createObjectURL(file);
@@ -2423,20 +2427,20 @@ async function loadTrackOptionsInKaraoke() {
   const select = $("karaokeTrackSelect");
   if (!select) return;
 
-  select.innerHTML = `<option value="">Selecciona una pista desde tu Biblioteca</option>`;
+  select.innerHTML = `<option value="">Selecciona un karaoke desde tu Biblioteca</option>`;
 
   try {
-    const karaoke = await getLibraryItemsByType("karaoke");
+    const karaokeItems = await getLibraryItemsByType("karaoke");
 
-    if (!karaoke.length) {
+    if (!karaokeItems.length) {
       const option = document.createElement("option");
       option.value = "";
-      option.textContent = "No hay pistas guardadas";
+      option.textContent = "No hay karaokes guardados";
       select.appendChild(option);
       return;
     }
 
-    pistas.forEach((item) => {
+    karaokeItems.forEach((item) => {
       const option = document.createElement("option");
       option.value = item.id;
       option.textContent = item.name;
@@ -2449,10 +2453,10 @@ async function loadTrackOptionsInKaraoke() {
 
 async function loadSelectedTrackFromLibraryKaraoke() {
   const select = $("karaokeTrackSelect");
-  const id = Number(select.value);
+  const id = Number(select?.value);
 
   if (!id) {
-    alert("⚠️ Selecciona una pista de la lista.");
+    alert("⚠️ Selecciona un karaoke de la lista.");
     return;
   }
 
@@ -2460,18 +2464,33 @@ async function loadSelectedTrackFromLibraryKaraoke() {
     const item = await getLibraryItemById(id);
     if (!item) return;
 
-    karaokeSelectedTrackBlob = item.audioBlob;
-    karaokeSelectedTrackName = item.name;
+    karaokeLoadedItem = item;
+    karaokeSelectedTrackBlob = item.audioBlob || null;
+    karaokeSelectedTrackName = item.name || "Karaoke";
 
     const track = $("karaokeTrack");
-    track.src = URL.createObjectURL(item.audioBlob);
-    track.volume = 0.6;
+    if (track && item.audioBlob) {
+      track.src = URL.createObjectURL(item.audioBlob);
+      track.volume = 0.6;
+    }
 
-    $("karaokeStatus").textContent = `Estado: Pista cargada (${item.name}). ¡Inicia grabación!`;
+    if (Array.isArray(item.transcription) && item.transcription.length) {
+      transcriptionSegments = item.transcription;
+      karaokeLoadedLyrics = item.transcription;
+    } else if (Array.isArray(item.lyrics) && item.lyrics.length) {
+      transcriptionSegments = item.lyrics;
+      karaokeLoadedLyrics = item.lyrics;
+    } else {
+      transcriptionSegments = [];
+      karaokeLoadedLyrics = [];
+    }
+
     cargarLetrasEnMonitor();
+
+    $("karaokeStatus").textContent = `Estado: Karaoke cargado (${item.name}). ¡Inicia grabación!`;
   } catch (error) {
     console.error(error);
-    alert("❌ Error al cargar la pista.");
+    alert("❌ Error al cargar el karaoke.");
   }
 }
 
@@ -2479,20 +2498,22 @@ function cargarLetrasEnMonitor() {
   const container = $("karaokeLiveLyrics");
   if (!container) return;
 
-  console.log("cargarLetrasEnMonitor -> transcriptionSegments || textSegments:", transcriptionSegments);
-
   container.innerHTML = "";
 
-  if (!Array.isArray(transcriptionSegments) || transcriptionSegments.length === 0) {
-    container.innerHTML = `<p class="karaoke-placeholder" style="font-size:18px;">⚠️ Ve a la pestaña 'Estudio', transcribe una voz o sube las letras y vuelve aquí.</p>`;
+  const segments = Array.isArray(karaokeLoadedLyrics) && karaokeLoadedLyrics.length
+    ? karaokeLoadedLyrics
+    : (Array.isArray(transcriptionSegments) ? transcriptionSegments : []);
+
+  if (!Array.isArray(segments) || segments.length === 0) {
+    container.innerHTML = `<p class="karaoke-placeholder" style="font-size:18px;">⚠️ Este karaoke no tiene letras sincronizadas cargadas.</p>`;
     return;
   }
 
-  transcriptionSegments.forEach((seg) => {
+  segments.forEach((seg) => {
     const p = document.createElement("p");
     p.className = "karaoke-live-line";
-    p.dataset.start = Number(seg.start || 0);
-    p.dataset.end = Number(seg.end || 0);
+    p.dataset.start = Number(seg.start || seg.startTime || 0);
+    p.dataset.end = Number(seg.end || ((seg.startTime || 0) + (seg.duration || 0)));
 
     const words = Array.isArray(seg.words) ? seg.words : [];
 
@@ -2500,9 +2521,9 @@ function cargarLetrasEnMonitor() {
       words.forEach((wordObj, index) => {
         const span = document.createElement("span");
         span.className = "karaoke-live-word";
-        span.dataset.start = Number(wordObj.start || 0);
-        span.dataset.end = Number(wordObj.end || 0);
-        span.textContent = (wordObj.word || "") + (index < words.length - 1 ? " " : "");
+        span.dataset.start = Number(wordObj.start || wordObj.startTime || 0);
+        span.dataset.end = Number(wordObj.end || ((wordObj.startTime || 0) + (wordObj.duration || 0)));
+        span.textContent = (wordObj.word || wordObj.text || "") + (index < words.length - 1 ? " " : "");
         p.appendChild(span);
       });
     } else {
@@ -2533,9 +2554,9 @@ function getRmsLevel(analyser, multiplier = 280) {
 
 async function startKaraokeRecording() {
   const track = $("karaokeTrack");
-  
-  if (!track || !track.src) {
-    alert("⚠️ Primero sube una pista instrumental en el Paso 1.");
+
+  if (!track || !track.src || !karaokeSelectedTrackBlob) {
+    alert("⚠️ Primero carga un karaoke desde 'Mis karaokes' o sube una pista.");
     return;
   }
 
@@ -2547,7 +2568,6 @@ async function startKaraokeRecording() {
     karaokeRecordedBlob = null;
     $("karaokeVoicePlayer").src = "";
 
-    // Obtener micrófonos seleccionados
     const mic1Id = getSelectedMicId(1);
     const mic2Id = getSelectedMicId(2);
 
@@ -2563,14 +2583,12 @@ async function startKaraokeRecording() {
       audioConstraints1.deviceId = { exact: mic1Id };
     }
 
-    // Obtener stream del Mic 1
     karaokeStream = await navigator.mediaDevices.getUserMedia({
       audio: audioConstraints1
     });
 
     let finalStream = karaokeStream;
 
-    // Si es DÚO, obtener y mezclar Mic 2
     if (isDuo && mic2Id) {
       const audioConstraints2 = {
         echoCancellation: false,
@@ -2585,13 +2603,11 @@ async function startKaraokeRecording() {
         audio: audioConstraints2
       });
 
-      // Crear contexto de audio para mezclar
       karaokeDuoAudioContext = new (window.AudioContext || window.webkitAudioContext)();
 
       const source1 = karaokeDuoAudioContext.createMediaStreamSource(karaokeStream);
       const source2 = karaokeDuoAudioContext.createMediaStreamSource(karaokeStream2);
 
-      // Crear analizadores para visualización
       karaokeDuoAnalyser1 = karaokeDuoAudioContext.createAnalyser();
       karaokeDuoAnalyser2 = karaokeDuoAudioContext.createAnalyser();
       karaokeDuoAnalyser1.fftSize = 2048;
@@ -2599,11 +2615,9 @@ async function startKaraokeRecording() {
       karaokeDuoAnalyser1.smoothingTimeConstant = 0.8;
       karaokeDuoAnalyser2.smoothingTimeConstant = 0.8;
 
-      // Crear mezclador
       const merger = karaokeDuoAudioContext.createChannelMerger(2);
       const destination = karaokeDuoAudioContext.createMediaStreamDestination();
 
-      // Conectar: fuentes -> analizadores -> mezclador -> destino
       source1.connect(karaokeDuoAnalyser1);
       source2.connect(karaokeDuoAnalyser2);
       karaokeDuoAnalyser1.connect(merger, 0, 0);
@@ -2612,13 +2626,9 @@ async function startKaraokeRecording() {
 
       finalStream = destination.stream;
 
-      // Mostrar indicador de dúo
       const duoIndicator = $("karaokeDuoIndicator");
-      if (duoIndicator) {
-        duoIndicator.style.display = "block";
-      }
+      if (duoIndicator) duoIndicator.style.display = "block";
 
-      // Iniciar visualización de niveles
       startKaraokeDuoLevelMonitor();
     }
 
@@ -2637,36 +2647,30 @@ async function startKaraokeRecording() {
       $("karaokeVoicePlayer").src = URL.createObjectURL(karaokeRecordedBlob);
       $("karaokeStatus").textContent = "Estado: Grabación finalizada ✅";
 
-      // Ocultar indicador dúo
       const duoIndicator = $("karaokeDuoIndicator");
-      if (duoIndicator) {
-        duoIndicator.style.display = "none";
-      }
+      if (duoIndicator) duoIndicator.style.display = "none";
 
       stopKaraokeDuoLevelMonitor();
     };
 
     karaokeMediaRecorder.start();
     track.currentTime = 0;
-    track.play();
+    await track.play();
 
-    // ¡AQUÍ ACTIVAMOS EL MONITOR!
     startKaraokePitchDetection();
 
-    // Mostrar estado
     const mic1Select = $("mic1Select");
     const mic1Name = mic1Select ? mic1Select.options[mic1Select.selectedIndex]?.text : "Predeterminado";
 
     if (isDuo && mic2Id) {
       const mic2Select = $("mic2Select");
       const mic2Name = mic2Select ? mic2Select.options[mic2Select.selectedIndex]?.text : "Mic 2";
-      $("karaokeStatus").textContent = `Estado: 🔴 Grabando DÚO (${mic1Name} + ${mic2Name})...`;
+      $("karaokeStatus").textContent = `Estado: 🔴 Grabando DÚO (${mic1Name} + ${mic2Name}) con "${karaokeSelectedTrackName}"...`;
     } else {
-      $("karaokeStatus").textContent = `Estado: 🔴 Grabando con ${mic1Name}...`;
+      $("karaokeStatus").textContent = `Estado: 🔴 Grabando con ${mic1Name} sobre "${karaokeSelectedTrackName}"...`;
     }
 
     $("karaokeStartBtn").disabled = true;
-
   } catch (err) {
     console.error(err);
     alert("❌ Error al acceder al micrófono. Verifica en Configuración.");
@@ -2867,7 +2871,7 @@ async function mixKaraoke() {
       <h4 style="color: #22c55e;">✅ ¡Mezcla completada!</h4>
       <audio controls src="${finalUrl}" style="width: 100%; margin-bottom: 15px; border-radius: 8px;"></audio>
       <div style="display: flex; gap: 10px;">
-        <a href="${finalUrl}" download="Mezcla_${trackFile.name || "Karaoke"}.wav" style="flex: 1;">
+        <a href="${finalUrl}" download="Mezcla_${karaokeSelectedTrackName || "Karaoke"}.wav" style="flex: 1;">
           <button type="button" style="width: 100%; background: #22c55e; color: black;">💾 Descargar Archivo</button>
         </a>
         <button id="saveMixToLibBtn" type="button" style="flex: 1; background: #3b82f6; color: white;">📁 Guardar en Biblioteca</button>
@@ -2880,7 +2884,7 @@ async function mixKaraoke() {
       btnSave.disabled = true;
 
       await saveToLibrary(finalWavBlob, {
-        name: `Mezcla - ${trackFile.name || "Canción"}`,
+        name: `Mezcla - ${karaokeSelectedTrackName || "Canción"}`,
         type: "grabacion"
       });
 
