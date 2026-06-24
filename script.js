@@ -2593,10 +2593,10 @@ async function startKaraokeRecording() {
     loadedItem: karaokeLoadedItem
   });
 
-  if (!track || !track.src || !karaokeSelectedTrackBlob) {
-    alert("⚠️ Primero carga un karaoke de la lista.");
-    return;
-  }
+  //if (!track || !track.src || !karaokeSelectedTrackBlob) {
+    //alert("⚠️ Primero carga un karaoke de la lista.");
+    //return;
+ // }
 
   try {
     const micCount = $("micCount");
