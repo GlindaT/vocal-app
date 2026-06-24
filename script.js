@@ -1048,183 +1048,173 @@ function asignarEventosBiblioteca(filter) {
 }
 */
 
-async function renderLibrary(filter = 'todos') {
+async function renderLibrary(filter = "todos") {
   const container = $("libraryList");
   if (!container) return;
-  
+
   document.querySelectorAll(".folder-btn").forEach(btn => {
     const clickAttr = btn.getAttribute("onclick") || "";
     if (clickAttr.includes(`'${filter}'`)) {
-      btn.classList.add("active"); 
+      btn.classList.add("active");
     } else {
-      btn.classList.remove("active"); 
+      btn.classList.remove("active");
     }
   });
-  
-  container.innerHTML = "<p>Cargando archivos...</p>";
-  
-  try {
-    let filteredItems;
-    if (filter === 'todos') {
-      filteredItems = await getAllLibraryItems();
-    } else {
-      filteredItems = await getLibraryItemsByType(filter);
-    }
-    let library = await getAllLibraryItems();
-    let libraryItems = filter !== 'todos' ? library.filter(item => item.type === filter) : library;
-    
-    container.innerHTML = "";
-    
-    if (filteredItems.length === 0) {
-      container.innerHTML = `<p>La carpeta '${filter}' está vacía.</p>`;
-    } else {
-      
-      filteredItems.forEach((item) => {
-        
-        const div = document.createElement("div");
-        div.className = "library-item card"; 
-        div.style.marginBottom = "10px";
 
-        if (item.type === 'ultrastar_txt') {
-          const previewTexto = item.textoPlano ? item.textoPlano.substring(0, 120) + "..." : "Sin contenido";
-          div.innerHTML = `
+  container.innerHTML = "<p>Cargando archivos...</p>";
+
+  try {
+    const library = await getAllLibraryItems();
+    const filteredItems = filter === "todos"
+      ? library
+      : library.filter(item => item.type === filter);
+
+    container.innerHTML = "";
+
+    if (!filteredItems || filteredItems.length === 0) {
+      container.innerHTML = `<p>La carpeta '${filter}' está vacía.</p>`;
+      actualizarSelectoresGlobales();
+      return;
+    }
+
+    filteredItems.forEach((item) => {
+      const div = document.createElement("div");
+      div.className = "library-item card";
+      div.style.marginBottom = "10px";
+
+      if (item.type === "ultrastar_txt") {
+        const previewTexto = item.textoPlano
+          ? item.textoPlano.substring(0, 120) + "..."
+          : "Sin contenido";
+
+        div.innerHTML = `
           <p><strong>${item.name}</strong></p>
-          <small>Tipo: 📝 TEXTO ULTRASTAR | ${item.date}</small>
+          <small>Tipo: 📝 TEXTO ULTRASTAR | ${new Date(item.date).toLocaleString()}</small>
           <div style="background: var(--bg-main); padding: 10px; border-radius: 6px; font-family: monospace; font-size: 12px; margin: 10px 0; white-space: pre-wrap; border: 1px solid var(--border); color: var(--text-muted);">
-          ${previewTexto}
+            ${previewTexto.replace(/</g, "&lt;")}
           </div>
           <div style="display: flex; gap: 10px;">
-          <button type="button" data-id="${item.id}" class="load-monitor-btn" style="background:#3b82f6; color:white;">📥 Cargar en Monitor</button>
-          <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#e11d48;">🗑️ Eliminar</button>
+            <button type="button" data-id="${item.id}" class="load-monitor-btn" style="background:#3b82f6; color:white;">📥 Cargar en Monitor</button>
+            <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#e11d48; color:white;">🗑️ Eliminar</button>
           </div>
-          `;
-        } else if (item.type === 'texto') {
-          // Reconstruir preview desde textoPlano o desde el array lyrics
-          let preview = '';
-          if (item.textoPlano) {
-            preview = item.textoPlano.substring(0, 180) + (item.textoPlano.length > 180 ? '…' : '');
-          } else if (Array.isArray(item.lyrics) && item.lyrics.length) {
-            const palabras = item.lyrics.slice(0, 40).map(w => w.text || '').filter(Boolean);
-            preview = palabras.join(' ') + (item.lyrics.length > 40 ? ' …' : '');
-          } else {
-            preview = 'Sin contenido de letra.';
-          }
-          // Detectar si la letra está sincronizada (tiempos > 0)
-          const isSynced = item.isSincronizada === true ||
-                           (Array.isArray(item.lyrics) && item.lyrics.some(w => (w.startTime || 0) > 0 || (w.duration || 0) > 0));
-          const totalPalabras = Array.isArray(item.lyrics) ? item.lyrics.length : 0;
-          const syncBadge = isSynced
-            ? '<span style="background:#22c55e; color:white; padding:3px 8px; border-radius:6px; font-size:0.8em;">🎯 Sincronizada</span>'
-            : '<span style="background:#6b7280; color:white; padding:3px 8px; border-radius:6px; font-size:0.8em;">📝 Texto plano</span>';
-          div.innerHTML = `
-          <p><strong>📄 ${item.name}</strong> ${syncBadge}</p>
-          <small>Tipo: LETRA | ${item.date} | ${totalPalabras} palabras</small>
-          <div style="background: var(--bg-main); padding: 10px; border-radius: 6px; font-size: 13px; margin: 10px 0; white-space: pre-wrap; border: 1px solid var(--border); color: var(--text-muted); max-height: 110px; overflow:auto;">
-          ${preview.replace(/</g, '&lt;')}
-          </div>
-          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-          <button type="button" data-id="${item.id}" class="load-monitor-btn" style="background:#3b82f6; color:white;">📥 Cargar en Monitor</button>
-          <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#e11d48;">🗑️ Eliminar</button>
-          </div>
-          `;
+        `;
+      } else if (item.type === "texto") {
+        let preview = "";
+        if (item.textoPlano) {
+          preview = item.textoPlano.substring(0, 180) + (item.textoPlano.length > 180 ? "…" : "");
+        } else if (Array.isArray(item.lyrics) && item.lyrics.length) {
+          const palabras = item.lyrics.slice(0, 40).map(w => w.text || "").filter(Boolean);
+          preview = palabras.join(" ") + (item.lyrics.length > 40 ? " …" : "");
         } else {
-          const audioURL = item.audioBlob ? URL.createObjectURL(item.audioBlob) : "";
-          const isKaraoke = item.type === "karaoke";
-          // Detectar si el karaoke está listo (sincronizado)
-          const isReady = item.isReadyKaraoke === true ||
-                          (Array.isArray(item.transcription) && item.transcription.length > 0) ||
-                          (Array.isArray(item.lyrics) && item.lyrics.some(w => (w.startTime || 0) > 0));
-          const karaokeBadge = isKaraoke
-            ? (isReady
-                ? '<span style="background:#22c55e; color:white; padding:3px 8px; border-radius:6px; font-size:0.8em;">✅ Listo para cantar</span>'
-                : '<span style="background:#f59e0b; color:white; padding:3px 8px; border-radius:6px; font-size:0.8em;">⚠️ Sin sincronización</span>')
-            : '';
-          
-          div.innerHTML = `
-          <p><strong>${item.name}</strong> ${karaokeBadge}</p>
-          <small>Tipo: ${item.type.toUpperCase()} | ${item.date}</small>
-          ${audioURL ? `<audio controls src="${audioURL}" style="width:100%; margin: 10px 0;"></audio>` : '<p style="color:red; font-size:12px;">Audio no encontrado</p>'}
-          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-          ${isKaraoke ? `<button type="button" data-id="${item.id}" class="send-karaoke-btn" style="background:#a855f7; color:white;">📤 Enviar al monitor karaoke</button>` : ''}
-          <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#e11d48;">🗑️ Eliminar</button>
-          </div>
-          `;
+          preview = "Sin contenido de letra.";
         }
-        document.querySelectorAll(".delete-library-btn").forEach((btn) => {
-          btn.addEventListener("click", async () => {
-            const id = Number(btn.dataset.id);
-            await deleteLibraryItemFromDB(id);
-            renderLibrary(filter); 
-          });
-        });
-        
-        document.querySelectorAll(".load-monitor-btn").forEach((btn) => {
-          btn.addEventListener("click", async () => {
-            const id = Number(btn.dataset.id);
-            const item = library.find(i => i.id === id);
-            
-            if (item && item.textoPlano) {
-              const monitor = document.getElementById("lyricsText") || document.getElementById("miniMonitorTextArea");
-              
-              if (monitor) {
-                monitor.value = item.textoPlano;
 
-            /*
-            if (item.transcription) {
-              try {
-                const estudioModulo = await import('./estudio.js');
-                if (typeof estudioModulo.setTranscriptionSegments === 'function')// {
-                  estudioModulo.setTranscriptionSegments(item.transcription);
-               }
-                const karaokeModulo = await import('./karaoke.js');
-                if (typeof karaokeModulo.cargarLetrasEnMonitor === 'function') {
-                  karaokeModulo.cargarLetrasEnMonitor();
-                }
-              } catch (e) {
-                console.warn("Módulo no listo para recibir segmentos:", e);
-              }
-            }
-            */
-                alert(`✅ Letra de "${item.name}" cargada en el monitor del Estudio.`);
-                monitor.scrollIntoView({ behavior: "smooth", block: "center" });
-              } else {
-                alert("⚠️ No se encontró el contenedor visual del monitor en esta pantalla.");
-              }
-            }
-          });
-        });
-        
-        // Evento: Enviar archivo karaoke al monitor del karaoke (solo carga, sin cambiar pestaña)
-        document.querySelectorAll(".send-karaoke-btn").forEach((btn) => {
-          btn.addEventListener("click", async () => {
-            const id = Number(btn.dataset.id);
-            try {
-              if (typeof loadKaraokeSong === 'function') {
-                await loadKaraokeSong(id);
-                const item = library.find(i => i.id === id);
-                alert(`✅ "${item?.name || 'Karaoke'}" enviado al monitor karaoke.`);
-              } else {
-                alert("⚠️ Función de carga de karaoke no disponible.");
-              }
-            } catch (e) {
-              console.error("Error enviando al monitor karaoke:", e);
-              alert("❌ No se pudo enviar al monitor karaoke.");
-            }
-          });
-        });
-      });
-    }
-    
-    /*
-    try {
-      const estudioModulo = await import('./estudio.js');
-      if (typeof estudioModulo.loadVoiceOptionsInStudio === "function") await estudioModulo.loadVoiceOptionsInStudio();
-      if (typeof estudioModulo.loadTrackOptionsInStudio === "function") await estudioModulo.loadTrackOptionsInStudio();
-      const karaokeModulo = await import('./karaoke.js');
-      if (typeof karaokeModulo.loadTrackOptionsInKaraoke === "function") await karaokeModulo.loadTrackOptionsInKaraoke();
-    } catch (e) { modules may not be loaded yet } */
-    
-    asignarEventosBiblioteca(filter);
+        const isSynced =
+          item.isSincronizada === true ||
+          (Array.isArray(item.lyrics) &&
+            item.lyrics.some(w => (w.startTime || 0) > 0 || (w.duration || 0) > 0));
+
+        const totalPalabras = Array.isArray(item.lyrics) ? item.lyrics.length : 0;
+
+        const syncBadge = isSynced
+          ? '<span style="background:#22c55e; color:white; padding:3px 8px; border-radius:6px; font-size:0.8em;">🎯 Sincronizada</span>'
+          : '<span style="background:#6b7280; color:white; padding:3px 8px; border-radius:6px; font-size:0.8em;">📝 Texto plano</span>';
+
+        div.innerHTML = `
+          <p><strong>📄 ${item.name}</strong> ${syncBadge}</p>
+          <small>Tipo: LETRA | ${new Date(item.date).toLocaleString()} | ${totalPalabras} palabras</small>
+          <div style="background: var(--bg-main); padding: 10px; border-radius: 6px; font-size: 13px; margin: 10px 0; white-space: pre-wrap; border: 1px solid var(--border); color: var(--text-muted); max-height: 110px; overflow:auto;">
+            ${preview.replace(/</g, "&lt;")}
+          </div>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button type="button" data-id="${item.id}" class="load-monitor-btn" style="background:#3b82f6; color:white;">📥 Cargar en Monitor</button>
+            <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#e11d48; color:white;">🗑️ Eliminar</button>
+          </div>
+        `;
+      } else {
+        const audioURL = item.audioBlob ? URL.createObjectURL(item.audioBlob) : "";
+        const isKaraoke = item.type === "karaoke";
+        const isReady =
+          item.isReadyKaraoke === true ||
+          (Array.isArray(item.transcription) && item.transcription.length > 0) ||
+          (Array.isArray(item.lyrics) && item.lyrics.some(w => (w.startTime || 0) > 0));
+
+        const karaokeBadge = isKaraoke
+          ? (isReady
+              ? '<span style="background:#22c55e; color:white; padding:3px 8px; border-radius:6px; font-size:0.8em;">✅ Listo para cantar</span>'
+              : '<span style="background:#f59e0b; color:white; padding:3px 8px; border-radius:6px; font-size:0.8em;">⚠️ Sin sincronización</span>')
+          : "";
+
+        div.innerHTML = `
+          <p><strong>${item.name}</strong> ${karaokeBadge}</p>
+          <small>Tipo: ${String(item.type || "").toUpperCase()} | ${new Date(item.date).toLocaleString()}</small>
+          ${audioURL
+            ? `<audio controls src="${audioURL}" style="width:100%; margin: 10px 0;"></audio>`
+            : '<p style="color:red; font-size:12px;">Audio no encontrado</p>'}
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            ${isKaraoke ? `<button type="button" data-id="${item.id}" class="send-karaoke-btn" style="background:#a855f7; color:white;">📤 Enviar al monitor karaoke</button>` : ""}
+            <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#e11d48; color:white;">🗑️ Eliminar</button>
+          </div>
+        `;
+      }
+
+      container.appendChild(div);
+    });
+
+    container.querySelectorAll(".delete-library-btn").forEach((btn) => {
+      btn.onclick = async () => {
+        if (!confirm("¿Estás seguro de eliminar este archivo?")) return;
+        const id = Number(btn.dataset.id);
+        await deleteLibraryItemFromDB(id);
+        await renderLibrary(filter);
+      };
+    });
+
+    container.querySelectorAll(".load-monitor-btn").forEach((btn) => {
+      btn.onclick = async () => {
+        const id = Number(btn.dataset.id);
+        const item = library.find(i => i.id === id);
+        if (!item) return;
+
+        const texto =
+          item.textoPlano ||
+          (Array.isArray(item.lyrics) ? item.lyrics.map(w => w.text || "").join(" ").trim() : "");
+
+        if (!texto) {
+          alert("⚠️ Este archivo no tiene texto para cargar.");
+          return;
+        }
+
+        const monitor = document.getElementById("lyricsText") || document.getElementById("miniMonitorTextArea");
+        if (!monitor) {
+          alert("⚠️ No se encontró el contenedor visual del monitor en esta pantalla.");
+          return;
+        }
+
+        monitor.value = texto;
+        alert(`✅ Letra de "${item.name}" cargada en el monitor del Estudio.`);
+        monitor.scrollIntoView({ behavior: "smooth", block: "center" });
+      };
+    });
+
+    container.querySelectorAll(".send-karaoke-btn").forEach((btn) => {
+      btn.onclick = async () => {
+        const id = Number(btn.dataset.id);
+        try {
+          if (typeof loadKaraokeSong !== "function") {
+            alert("⚠️ Función de carga de karaoke no disponible.");
+            return;
+          }
+          await loadKaraokeSong(id);
+          const item = library.find(i => i.id === id);
+          alert(`✅ "${item?.name || "Karaoke"}" enviado al monitor karaoke.`);
+        } catch (e) {
+          console.error("Error enviando al monitor karaoke:", e);
+          alert("❌ No se pudo enviar al monitor karaoke.");
+        }
+      };
+    });
+
     actualizarSelectoresGlobales();
   } catch (error) {
     console.error(error);
@@ -1285,27 +1275,26 @@ async function saveManualFileToLibrary() {
   try {
     const libraryItem = {
       name: customName || file.name,
-      type: type, // Si aquí eliges "pista", se queda como "pista"
-      date: Date.now() // Usamos timestamp numérico
+      type,
+      date: Date.now()
     };
 
     if (type === "texto") {
       const textoPlano = await leerArchivoTexto(file);
+      libraryItem.textoPlano = textoPlano;
       libraryItem.lyrics = segmentarTextoPlano(textoPlano);
       libraryItem.isSincronizada = false;
     } else {
       libraryItem.audioBlob = file;
-      // Podrías añadir una propiedad para saber si ya es un karaoke listo
       libraryItem.isReadyKaraoke = (type === "karaoke");
     }
 
     await addLibraryItem(libraryItem);
-    await renderLibrary('todos');
+    await renderLibrary("todos");
 
-    // Limpieza
     if (fileInput) fileInput.value = "";
     if (nameInput) nameInput.value = "";
-    
+
     alert(`✅ Guardado en la carpeta ${type.toUpperCase()}`);
   } catch (error) {
     console.error(error);
