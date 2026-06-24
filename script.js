@@ -2422,7 +2422,7 @@ async function loadKaraokeSong(id) {
     karaokeSelectedTrackBlob = item.audioBlob;
     karaokeSelectedTrackName = item.name || "Karaoke";
 
-    const track = $("karaokeTrack");
+    const track = $("karaokeTrack") || $("karaokeAudio") || $("audioKaraoke") || $("trackPlayer");
     if (track) {
       try { track.pause(); } catch (e) {}
       track.currentTime = 0;
@@ -2580,42 +2580,31 @@ function getRmsLevel(analyser, multiplier = 280) {
 }
 
 async function startKaraokeRecording() {
-  const track = $("karaokeTrack");
+  const track = $("karaokeTrack") || $("karaokeAudio") || $("audioKaraoke") || $("trackPlayer");
 
   console.log("DEBUG startKaraokeRecording", {
     hasTrack: !!track,
     trackSrc: track?.src,
     hasBlob: !!karaokeSelectedTrackBlob,
     selectedName: karaokeSelectedTrackName,
-    loadedItem: karaokeLoadedItem,
-    datasetLoaded: track?.dataset?.karaokeLoaded,
-    datasetKaraokeId: track?.dataset?.karaokeId
+    loadedItem: karaokeLoadedItem
   });
 
-  if (!track || (!track.src && track?.dataset?.karaokeLoaded !== "1")) {
+  if (!karaokeSelectedTrackBlob || !karaokeLoadedItem) {
     alert("⚠️ Primero carga un karaoke de la lista.");
     return;
   }
 
-  if (!karaokeSelectedTrackBlob) {
-    const karaokeId = Number(track?.dataset?.karaokeId);
-    if (karaokeId) {
-      try {
-        const item = await getLibraryItemById(karaokeId);
-        if (item?.audioBlob) {
-          karaokeLoadedItem = item;
-          karaokeSelectedTrackBlob = item.audioBlob;
-          karaokeSelectedTrackName = item.name || "Karaoke";
-        }
-      } catch (e) {
-        console.error("No se pudo reconstruir el karaoke cargado:", e);
-      }
-    }
+  if (!track) {
+    alert("⚠️ No se encontró el reproductor de karaoke.");
+    return;
   }
 
-  if (!karaokeSelectedTrackBlob) {
-    alert("⚠️ Primero carga un karaoke de la lista.");
-    return;
+  if (!track.src) {
+    const objectUrl = URL.createObjectURL(karaokeSelectedTrackBlob);
+    track.src = objectUrl;
+    track.volume = 0.6;
+    track.load();
   }
 
   try {
@@ -2814,14 +2803,14 @@ function stopKaraokeRecording() {
     duoIndicator.style.display = "none";
   }
 
-  const track = $("karaokeTrack");
+  const track = $("karaokeTrack") || $("karaokeAudio") || $("audioKaraoke") || $("trackPlayer");
   if (track) track.pause();
 
   $("karaokeStartBtn").disabled = false;
 }
 
 function restartKaraokeRecording() {
-  const track = $("karaokeTrack");
+  const track = $("karaokeTrack") || $("karaokeAudio") || $("audioKaraoke") || $("trackPlayer");
 
   if (track) {
     track.pause();
@@ -4472,7 +4461,7 @@ async function startKaraokePitchDetection() {
   mic.connect(analyser);
 
   function loop() {
-    const track = $("karaokeTrack");
+    const track = $("karaokeTrack") || $("karaokeAudio") || $("audioKaraoke") || $("trackPlayer");
     const currentTime = track ? track.currentTime : 0;
 
     const buffer = new Float32Array(analyser.fftSize);
@@ -4972,7 +4961,7 @@ async function loadKaraokeSong(id) {
     karaokeSelectedTrackBlob = item.audioBlob;
     karaokeSelectedTrackName = item.name || "Karaoke";
 
-    const track = $("karaokeTrack");
+    const track = $("karaokeTrack") || $("karaokeAudio") || $("audioKaraoke") || $("trackPlayer");
     if (track) {
       try { track.pause(); } catch (e) {}
       track.currentTime = 0;
