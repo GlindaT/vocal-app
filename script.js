@@ -5064,19 +5064,37 @@ let pitchLastSavedId = null;
 const _pitchWorkletLoaded = new WeakMap();
 
 function _getWorkletUrl() {
-  return window.__SOUNDTOUCH_WORKLET_URL__
-      || "https://cdn.jsdelivr.net/npm/@soundtouchjs/audio-worklet@1.0.3/dist/soundtouch-worklet.js";
+  return window.__PITCH_WORKLET_URL__ || "/pitch-shifter-processor.js";
 }
 
-async function ensureSoundTouchWorklet(ctx) {
+async function ensurePitchWorklet(ctx) {
   if (!ctx || !ctx.audioWorklet || typeof ctx.audioWorklet.addModule !== "function") {
     throw new Error("AudioWorklet no está soportado en este navegador.");
   }
+
   let p = _pitchWorkletLoaded.get(ctx);
-  if (!p) {
-    p = ctx.audioWorklet.addModule(_getWorkletUrl());
-    _pitchWorkletLoaded.set(ctx, p);
-  }
+  if (p) return p;
+
+  const url = _getWorkletUrl();
+
+  p = (async () => {
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status} cargando ${url}`);
+    }
+
+    const text = await res.text();
+    if (/<!doctype html>|<html/i.test(text)) {
+      throw new Error(`La URL del worklet devolvió HTML en vez de JS: ${url}`);
+    }
+
+    await ctx.audioWorklet.addModule(url);
+  })().catch(err => {
+    _pitchWorkletLoaded.delete(ctx);
+    throw err;
+  });
+
+  _pitchWorkletLoaded.set(ctx, p);
   return p;
 }
 
@@ -5097,12 +5115,12 @@ function onPitchSelectsChange() {
     const signo = net > 0 ? "+" : "";
     display.textContent = `Cambio actual: ${signo}${net} semitono${Math.abs(net) === 1 ? "" : "s"}`;
   }
-  // En vivo: aplicar el nuevo pitch al worklet si está reproduciendo
+
   if (pitchWorkletNode) {
     try {
-      const pitchParam = pitchWorkletNode.parameters.get("pitch");
+      const pitchParam = pitchWorkletNode.parameters.get("pitchRatio");
       if (pitchParam) pitchParam.value = getPitchRatio();
-    } catch (e) { /* nop */ }
+    } catch (e) {}
   }
 }
 
@@ -5162,7 +5180,7 @@ async function loadSelectedPitchKaraoke() {
     if (sendBtn) sendBtn.disabled = true;
 
     // Pre-cargar el worklet en segundo plano (ahorra latencia al primer Play)
-    ensureSoundTouchWorklet(pitchAudioContext).catch(() => { /* se reintenta al Play */ });
+    ensurePitchWorklet(pitchAudioContext).catch(() => { /* se reintenta al Play */ });
 
     if (status) {
       status.textContent = `Estado: "${item.name}" cargado (${pitchAudioBuffer.duration.toFixed(1)} s, ${pitchAudioBuffer.numberOfChannels} canal${pitchAudioBuffer.numberOfChannels === 1 ? "" : "es"}). Listo para reproducir.`;
@@ -5187,11 +5205,11 @@ async function playPitchShifted() {
   if (!pitchAudioContext) {
     pitchAudioContext = new (window.AudioContext || window.webkitAudioContext)();
   }
+
   if (pitchAudioContext.state === "suspended") {
     await pitchAudioContext.resume();
   }
 
-  // Reanudar si estaba pausado
   if (pitchIsPaused && pitchWorkletNode && pitchSourceNode) {
     try {
       await pitchAudioContext.resume();
@@ -5200,14 +5218,13 @@ async function playPitchShifted() {
       const st = $("pitchPlayStatus");
       if (st) st.textContent = "Estado: ▶️ reproduciendo con tono modificado…";
       return;
-    } catch (e) { /* si falla, sigue al reset normal */ }
+    } catch (e) {}
   }
 
-  // Resetear cualquier nodo previo
   stopPitchShifted();
 
   try {
-    await ensureSoundTouchWorklet(pitchAudioContext);
+    await ensurePitchWorklet(pitchAudioContext);
   } catch (e) {
     console.error("Worklet no cargó:", e);
     alert("❌ No se pudo cargar el procesador de audio: " + e.message);
@@ -5218,11 +5235,13 @@ async function playPitchShifted() {
     pitchSourceNode = pitchAudioContext.createBufferSource();
     pitchSourceNode.buffer = pitchAudioBuffer;
 
-    pitchWorkletNode = new AudioWorkletNode(pitchAudioContext, "soundtouch-processor");
-    const pitchParam = pitchWorkletNode.parameters.get("pitch");
-    const tempoParam = pitchWorkletNode.parameters.get("tempo");
+    pitchWorkletNode = new AudioWorkletNode(
+      pitchAudioContext,
+      "pitch-shifter-processor"
+    );
+
+    const pitchParam = pitchWorkletNode.parameters.get("pitchRatio");
     if (pitchParam) pitchParam.value = getPitchRatio();
-    if (tempoParam) tempoParam.value = 1.0;
 
     pitchGainNode = pitchAudioContext.createGain();
     pitchGainNode.gain.value = 1.0;
@@ -5232,7 +5251,6 @@ async function playPitchShifted() {
     pitchGainNode.connect(pitchAudioContext.destination);
 
     pitchSourceNode.onended = () => {
-      // Auto-stop al terminar el buffer
       if (pitchIsPlaying) stopPitchShifted();
     };
 
@@ -5433,30 +5451,28 @@ async function sendPitchShiftedToKaraokeMonitor() {
 async function renderPitchShiftOffline(audioBuffer, semitones) {
   const ratio = Math.pow(2, semitones / 12);
 
-  // Padding al final para que el worklet termine de procesar la latencia interna
-  const padFrames = Math.ceil(audioBuffer.sampleRate * 0.4); // ~400ms
-  const totalLength = audioBuffer.length + padFrames;
-
   const offlineCtx = new OfflineAudioContext(
     audioBuffer.numberOfChannels,
-    totalLength,
+    audioBuffer.length,
     audioBuffer.sampleRate
   );
-  await ensureSoundTouchWorklet(offlineCtx);
+
+  await ensurePitchWorklet(offlineCtx);
 
   const source = offlineCtx.createBufferSource();
   source.buffer = audioBuffer;
 
-  const worklet = new AudioWorkletNode(offlineCtx, "soundtouch-processor");
-  const pitchParam = worklet.parameters.get("pitch");
-  const tempoParam = worklet.parameters.get("tempo");
+  const worklet = new AudioWorkletNode(
+    offlineCtx,
+    "pitch-shifter-processor"
+  );
+
+  const pitchParam = worklet.parameters.get("pitchRatio");
   if (pitchParam) pitchParam.value = ratio;
-  if (tempoParam) tempoParam.value = 1.0;
 
   source.connect(worklet);
   worklet.connect(offlineCtx.destination);
   source.start();
 
-  const rendered = await offlineCtx.startRendering();
-  return rendered;
+  return await offlineCtx.startRendering();
 }
