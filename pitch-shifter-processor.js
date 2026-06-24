@@ -1,4 +1,3 @@
-/*
 class PitchShifterProcessor extends AudioWorkletProcessor {
   static get parameterDescriptors() {
     return [
@@ -51,7 +50,6 @@ class PitchShifterProcessor extends AudioWorkletProcessor {
     }
 
     return true;
-    */
   }
 }
 
