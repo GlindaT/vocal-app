@@ -539,7 +539,7 @@ function getNoteFrequency(note) {
     "B": 2
   };
 
-  const match = note.match(/^([A-G]#?)(d)$/);
+  const match = note.match(/^([A-G]#?)(\d)$/);
   if (!match) return 440;
 
   const [, noteName, octaveStr] = match;
@@ -1493,7 +1493,7 @@ async function loadSelectedVoiceFromLibrary() {
       if (lyricsText) {
         lyricsText.value = transcriptionSegments
           .map(seg => seg.text || "")
-          .join("n")
+          .join("\n")
           .trim();
       }
 
@@ -1584,7 +1584,7 @@ async function loadSelectedTextFromLibrary() {
         if (nextWord) {
           // Si la siguiente palabra pertenece a un renglón diferente, ponemos salto de línea, si no, un espacio
           if (nextWord.renglon !== word.renglon) {
-            textoFormateadoParaPantalla += "n";
+            textoFormateadoParaPantalla += "\n";
           } else {
             textoFormateadoParaPantalla += " ";
           }
@@ -1696,7 +1696,7 @@ async function transcribeSelectedVoice() {
     cargarLetrasEnMonitor();
 
     if (lyricsText) {
-      lyricsText.value = transcriptionSegments.map(line => line.text).join("n");
+      lyricsText.value = transcriptionSegments.map(line => line.text).join("\n");
     }
 
      // --- AQUÍ ESTÁ EL GUARDADO AUTOMÁTICO EN BIBLIOTECA ---
@@ -1786,7 +1786,7 @@ function buildWordTimingFromSegment(segment) {
     };
   }
 
-  const rawWords = cleanText.split(/s+/).filter(Boolean);
+  const rawWords = cleanText.split(/\s+/).filter(Boolean);
   const segmentDuration = Math.max(0, (segment.end || 0) - (segment.start || 0));
 
   if (!rawWords.length || segmentDuration <= 0) {
@@ -2047,7 +2047,7 @@ async function procesarSincronizacionAutomaticaYPitch() {
       if (status) status.textContent = "🤖 Modo Desarrollador: Distribuyendo palabras de forma musical... ⚡";
       
       // 1. Separamos el texto pegado en palabras individuales
-      const palabras = letraPegada.split(/s+/).filter(Boolean);
+      const palabras = letraPegada.split(/\s+/).filter(Boolean);
       
       let tiempoActual = 4.0; // Dejamos 4 segundos de intro musical antes de la primera palabra
       
@@ -2078,7 +2078,7 @@ async function procesarSincronizacionAutomaticaYPitch() {
       // FLUJO REAL CON CONSUMO DE SALDO (Se queda exactamente como lo tenías)
     let idiomaDetectado = "es";
     const palabrasIngles = ["the", "and", "you", "that", "was", "for", "with", "this", "have"];
-    const palabrasLetra = letraPegada.toLowerCase().split(/s+/);
+    const palabrasLetra = letraPegada.toLowerCase().split(/\s+/);
     if (palabrasLetra.some(palabra => palabrasIngles.includes(palabra))) {
       idiomaDetectado = "en";
     }
@@ -2230,7 +2230,7 @@ function splitSegmentsIntoKaraokeLines(segments, maxWordsPerLine = 7) {
 
 function buildSegmentsFromMultilineLyrics(text, baseSegments) {
   const lines = text
-    .split("n")
+    .split("\n")
     .map(line => line.trim())
     .filter(Boolean);
 
@@ -2247,7 +2247,7 @@ function buildSegmentsFromMultilineLyrics(text, baseSegments) {
   if (totalDuration <= 0) return [];
 
   const lineWeights = lines.map(line => {
-    const words = line.split(/s+/).filter(Boolean);
+    const words = line.split(/\s+/).filter(Boolean);
     return words.reduce((sum, w) => sum + w.length, 0) || words.length || 1;
   });
 
@@ -3455,7 +3455,7 @@ async function applyCorrectedLyrics() {
         textoFormateado += word.text;
         const nextWord = textSegments[index + 1];
         if (nextWord) {
-          textoFormateado += (nextWord.renglon !== word.renglon) ? "n" : " ";
+          textoFormateado += (nextWord.renglon !== word.renglon) ? "\n" : " ";
         }
       });
       
@@ -3486,7 +3486,7 @@ async function applyCorrectedLyrics() {
       renderKaraokeLyrics(transcriptionSegments);
       cargarLetrasEnMonitor();
 
-      if (lyricsText) lyricsText.value = transcriptionSegments.map(seg => seg.text || "").join("n").trim();
+      if (lyricsText) lyricsText.value = transcriptionSegments.map(seg => seg.text || "").join("\n").trim();
 
       // Guardamos bajo la propiedad original de tu IA
       await updateLibraryItem(currentId, {
@@ -3536,15 +3536,15 @@ function startTapSync() {
 
   // 2. PROCESAMIENTO SEGÚN EL MODO ELEGIDO POR EL USUARIO
   if (modoSeleccionado === "linea") {
-    // Modo Línea por línea: Cortamos por saltos de línea (n)
+    // Modo Línea por línea: Cortamos por saltos de línea (\n)
     tapSyncLines = textoActivo
-      .split("n")
+      .split(/\r?\n/)
       .map(line => line.trim())
       .filter(line => line.length > 0);
   } else {
     // Modo Palabra por palabra: Ignoramos saltos de línea y cortamos por cualquier espacio
     tapSyncLines = textoActivo
-      .split(/s+/)
+      .split(/\s+/)
       .map(palabra => palabra.trim())
       .filter(palabra => palabra.length > 0);
   }
@@ -3610,11 +3610,11 @@ function leerArchivoTexto(file) {
 function segmentarTextoPlano(texto) {
   if (!texto || texto.trim() === "") return [];
 
-  // 1. CORRECCIÓN CLAVE: Limpiamos espacios horizontales dobles, pero RESPETAMOS los saltos de línea (n)
-  const textoLimpio = texto.replace(/[ t]+/g, ' ').trim();
+  // 1. CORRECCIÓN CLAVE: Limpiamos espacios horizontales dobles, pero RESPETAMOS los saltos de línea (\n)
+  const textoLimpio = texto.replace(/[ \t]+/g, ' ').trim();
   
   // 2. Rompemos el texto primero por líneas para saber en qué renglón va cada elemento
-  const lineas = textoLimpio.split('n');
+  const lineas = textoLimpio.split('\n');
   let palabraGlobalIndex = 1;
   let todasLasPalabras = [];
 
@@ -3743,7 +3743,7 @@ async function finishTapSync() {
           const duracionTotalFrase = endTimeFrase - startTimeFrase;
           
           // Rompemos la línea actual en sus palabras reales para no generar la barra gigante
-          const palabrasDeLaLinea = lineText.split(/s+/).filter(w => w.trim().length > 0);
+          const palabrasDeLaLinea = lineText.split(/\s+/).filter(w => w.trim().length > 0);
           const totalPalabras = palabrasDeLaLinea.length;
           
           if (totalPalabras === 0) return;
@@ -3863,7 +3863,7 @@ async function applyTapSync() {
       const duracionTotalFrase = endFrase - startFrase;
 
       // Rompemos la línea en palabras reales
-      const palabrasDeLaLinea = lineText.split(/s+/).filter(w => w.trim().length > 0);
+      const palabrasDeLaLinea = lineText.split(/\s+/).filter(w => w.trim().length > 0);
       const totalPalabras = palabrasDeLaLinea.length;
 
       if (totalPalabras === 0) return;
@@ -4164,7 +4164,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const file = e.target.files[0];
       const nameInput = $("libraryFileName");
       if (file && nameInput && !nameInput.value.trim()) {
-        nameInput.value = file.name.replace(/.[^.]+$/, "");
+        nameInput.value = file.name.replace(/\.[^.]+$/, "");
       }
     });
 
@@ -4508,7 +4508,7 @@ function closeUltrastarModal() {
 */
 
 function parseUltrastarTxt(content) {
-  const lines = content.split("n");
+  const lines = content.split("\n");
   const metadata = {};
   const notes = [];
   
@@ -4519,7 +4519,7 @@ function parseUltrastarTxt(content) {
     
     // Metadatos (líneas que empiezan con #)
     if (trimmed.startsWith("#")) {
-      const match = trimmed.match(/^#(w+):(.*)$/);
+      const match = trimmed.match(/^#(\w+):(.*)$/);
       if (match) {
         const key = match[1].toUpperCase();
         const value = match[2].trim();
@@ -4530,7 +4530,7 @@ function parseUltrastarTxt(content) {
     
     // Notas (líneas que empiezan con :, *, F, o -)
     if (trimmed.match(/^[:*F-]/)) {
-      const parts = trimmed.split(/s+/);
+      const parts = trimmed.split(/\s+/);
       const type = parts[0]; // : = normal, * = golden, F = freestyle, - = line break
       
       if (type === "-") {
@@ -4727,7 +4727,7 @@ async function confirmUltrastarImport() {
     // Cerrar modal
     closeUltrastarModal();
     
-    alert(`✅ ¡"${parsedUltrastar.title}" importada exitosamente!nnLa encontrarás en "Mis Canciones" lista para cantar.`);
+    alert(`✅ ¡"${parsedUltrastar.title}" importada exitosamente!\n\nLa encontrarás en "Mis Canciones" lista para cantar.`);
     
   } catch (error) {
     console.error("Error importando:", error);
