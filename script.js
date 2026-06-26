@@ -725,8 +725,8 @@ async function startStudioRecording() {
       // Crear analizadores para visualización
       duoAnalyser1 = duoAudioContext.createAnalyser();
       duoAnalyser2 = duoAudioContext.createAnalyser();
-      duoAnalyser1.fftSize = 256;
-      duoAnalyser2.fftSize = 256;
+      duoAnalyser1.fftSize = 2048;
+      duoAnalyser2.fftSize = 2048;
       
       // Crear mezclador
       const merger = duoAudioContext.createChannelMerger(2);
@@ -1937,7 +1937,7 @@ async function analyzePitchForSegments(audioBlob, textBlob, segments) {
 }
 
 function detectPitchFromSamples(samples, sampleRate) {
-  if (!samples || samples.length < 256) return -1;
+  if (!samples || samples.length < 2048) return -1;
   
   // Calcular RMS para verificar si hay señal
   let rms = 0;
@@ -3336,7 +3336,7 @@ async function testMicrophone(micNumber) {
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const source = audioCtx.createMediaStreamSource(micTestStream);
     micTestAnalyser = audioCtx.createAnalyser();
-    micTestAnalyser.fftSize = 256;
+    micTestAnalyser.fftSize = 2048;
     source.connect(micTestAnalyser);
 
     const levelFill = levelBar.querySelector(".mic-level-fill");
