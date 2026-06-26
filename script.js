@@ -4312,11 +4312,22 @@ function toggleKaraokeDuoSplitMode() {
 }
 
 // Inicia detección de pitch en Mic2 (P2) en paralelo a Mic1. Idempotente.
+// Si ya hay un analyser dúo activo (grabación dúo en curso), lo reutiliza
+// para evitar abrir un segundo stream al mismo dispositivo (lo que Chrome rechaza).
 async function ensureP2PitchTracking() {
+  // Reutilizar el analyser de la grabación dúo si está disponible
+  if (karaokeDuoAnalyser2 && karaokeDuoAudioContext) {
+    karaokeSplitAnalyser2 = karaokeDuoAnalyser2;
+    karaokeSplitAudioCtx = karaokeDuoAudioContext;
+    return;
+  }
   if (karaokeSplitAnalyser2) return;
   try {
     const mic2Id = (typeof getSelectedMicId === "function") ? getSelectedMicId(2) : null;
-    if (!mic2Id) return;
+    if (!mic2Id) {
+      console.warn("[DuoSplit] No hay Mic 2 seleccionado; el rastro P2 no se podrá dibujar.");
+      return;
+    }
     if (!karaokeSplitAudioCtx) {
       karaokeSplitAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
@@ -4327,6 +4338,7 @@ async function ensureP2PitchTracking() {
     karaokeSplitAnalyser2 = karaokeSplitAudioCtx.createAnalyser();
     karaokeSplitAnalyser2.fftSize = 2048;
     src2.connect(karaokeSplitAnalyser2);
+    console.log("[DuoSplit] Pitch tracking del Mic 2 iniciado");
   } catch (e) {
     console.warn("No se pudo iniciar pitch del Mic 2 (P2):", e);
   }
@@ -4334,6 +4346,7 @@ async function ensureP2PitchTracking() {
 
 function stopP2PitchTracking() {
   try {
+    // Sólo paramos el stream si NOSOTROS lo abrimos (no si lo prestamos del flujo dúo)
     if (karaokeSplitStream2) {
       karaokeSplitStream2.getTracks().forEach(t => t.stop());
     }
@@ -4395,6 +4408,64 @@ function drawKaraokeMonitor(currentTime, currentFreq, currentFreq2) {
   // Fuente de datos (palabras con tiempos)
   const datos = (textSegments && textSegments.length > 0) ? textSegments : transcriptionSegments;
 
+  // Offset extra cuando hay etiqueta de avatar (split mode): empuja pentagrama,
+  // notas y línea "ahora" a la derecha para dejar espacio al bloque vertical.
+  const AVATAR_BLOCK_W = karaokeDuoSplitMode ? 110 : 0;
+  const noteLabelsX = 28 + AVATAR_BLOCK_W;
+  const pentagramStartX = 35 + AVATAR_BLOCK_W;
+  const dynLineX = lineX + AVATAR_BLOCK_W;
+
+  // Pinta un bloque vertical: nombre arriba, avatar al centro, cuadrado de color abajo
+  function drawAvatarBlock(pTop, pBottom, parte) {
+    if (!parte || parte === "DUO") return;
+    const isP1 = (parte === "P1");
+    const nombre = isP1 ? "Wen-dolyne" : "To-bonito";
+    const emoji = isP1 ? "👩" : "👨";
+    const cuadradoColor = isP1 ? "#7c3aed" : "#708238"; // morado / verde oliva
+    const cuadradoStroke = isP1 ? "#a855f7" : "#9caf88";
+
+    const cx = 5 + AVATAR_BLOCK_W / 2; // centrado en el bloque
+    const blockTop = pTop + 10;
+    const avatarSize = 56;
+    const squareSize = 56;
+    const nameH = 22;
+    const gap = 6;
+
+    // Fondo translúcido del bloque para legibilidad
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    ctx.fillRect(2, pTop + 2, AVATAR_BLOCK_W - 4, (nameH + avatarSize + squareSize + gap * 2 + 16));
+
+    // 1) Nombre
+    ctx.fillStyle = "white";
+    ctx.font = "bold 16px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(nombre, cx, blockTop + nameH - 4);
+
+    // 2) Avatar (círculo con emoji)
+    const avTop = blockTop + nameH + gap;
+    ctx.beginPath();
+    ctx.fillStyle = isP1 ? "#fde68a" : "#bae6fd";
+    ctx.arc(cx, avTop + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.font = "38px Arial";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = "black";
+    ctx.fillText(emoji, cx, avTop + avatarSize / 2 + 2);
+    ctx.textBaseline = "alphabetic";
+
+    // 3) Cuadrado de color (mismo tamaño que el avatar)
+    const sqTop = avTop + avatarSize + gap;
+    ctx.fillStyle = cuadradoColor;
+    ctx.fillRect(cx - squareSize / 2, sqTop, squareSize, squareSize);
+    ctx.strokeStyle = cuadradoStroke;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(cx - squareSize / 2, sqTop, squareSize, squareSize);
+  }
+
   // Helper interno: dibuja un pentagrama+barras+pitch en una región vertical [pTop, pBottom]
   // parteFiltro: "P1" | "P2" | null (sin filtro). Las palabras "DUO" siempre se dibujan.
   function drawRegion(pTop, pBottom, pitchVal, pitchHist, parteFiltro, etiquetaParte) {
@@ -4405,6 +4476,9 @@ function drawKaraokeMonitor(currentTime, currentFreq, currentFreq2) {
       return pTop + (normalized * pHeight);
     };
 
+    // Avatar block (sólo en split mode)
+    drawAvatarBlock(pTop, pBottom, etiquetaParte);
+
     // Pentagrama
     ctx.strokeStyle = paleta.lineas;
     ctx.lineWidth = 1;
@@ -4412,7 +4486,7 @@ function drawKaraokeMonitor(currentTime, currentFreq, currentFreq2) {
     for (let i = 0; i <= numLines; i++) {
       const y = pTop + (pHeight / numLines) * i;
       ctx.beginPath();
-      ctx.moveTo(35, y);
+      ctx.moveTo(pentagramStartX, y);
       ctx.lineTo(canvas.width, y);
       ctx.stroke();
     }
@@ -4424,16 +4498,11 @@ function drawKaraokeMonitor(currentTime, currentFreq, currentFreq2) {
     const noteLabels = ["C6", "A5", "F5", "D5", "B4", "G4", "E4", "C4", "A3", "F3", "D3", "C3"];
     noteLabels.forEach((label, i) => {
       const y = pTop + (pHeight / numLines) * i + 7;
-      ctx.fillText(label, 28, y);
+      ctx.fillText(label, noteLabelsX, y);
     });
 
     // Etiqueta de parte (P1 / P2) en la esquina superior izquierda de la región
-    if (etiquetaParte) {
-      ctx.fillStyle = (etiquetaParte === "P1") ? "#3b82f6" : "#f97316";
-      ctx.font = "bold 18px Arial";
-      ctx.textAlign = "left";
-      ctx.fillText(etiquetaParte, 40, pTop + 22);
-    }
+    // (etiqueta P1/P2 antigua removida: el avatar block ya identifica la región)
 
     // Barras de notas (filtradas por parte si aplica)
     if (Array.isArray(datos) && datos.length > 0) {
@@ -4448,7 +4517,7 @@ function drawKaraokeMonitor(currentTime, currentFreq, currentFreq2) {
           const end = w.end || (start + (w.duration || 0.5));
           if (end < currentTime - 1 || start > currentTime + (canvas.width / pixelsPerSecond)) return;
 
-          const x = lineX + (start - currentTime) * pixelsPerSecond;
+          const x = dynLineX + (start - currentTime) * pixelsPerSecond;
           const width = (end - start) * pixelsPerSecond;
           const midi = w.midi || seg.midi || 60;
           const y = midiToY(midi);
@@ -4509,9 +4578,9 @@ function drawKaraokeMonitor(currentTime, currentFreq, currentFreq2) {
       let started = false;
       pitchHist.forEach((f, i) => {
         if (f) {
-          const x = lineX - (pitchHist.length - i) * 3;
+          const x = dynLineX - (pitchHist.length - i) * 3;
           const yPos = midiToY(Math.round(12 * Math.log2(f / 440) + 69));
-          if (x < 0) return;
+          if (x < pentagramStartX) return;
           if (!started) { ctx.moveTo(x, yPos); started = true; } else { ctx.lineTo(x, yPos); }
         }
       });
@@ -4519,7 +4588,7 @@ function drawKaraokeMonitor(currentTime, currentFreq, currentFreq2) {
 
       ctx.beginPath();
       ctx.fillStyle = "#facc15";
-      ctx.arc(lineX, userY, 9, 0, Math.PI * 2);
+      ctx.arc(dynLineX, userY, 9, 0, Math.PI * 2);
       ctx.fill();
       ctx.strokeStyle = "white";
       ctx.lineWidth = 2;
@@ -4530,8 +4599,8 @@ function drawKaraokeMonitor(currentTime, currentFreq, currentFreq2) {
     ctx.strokeStyle = "#ef4444";
     ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(lineX, pTop - 2);
-    ctx.lineTo(lineX, pBottom + 2);
+    ctx.moveTo(dynLineX, pTop - 2);
+    ctx.lineTo(dynLineX, pBottom + 2);
     ctx.stroke();
   }
 
