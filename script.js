@@ -4422,8 +4422,9 @@ function drawKaraokeMonitor(currentTime, currentFreq, currentFreq2) {
     if (!parte || parte === "DUO") return;
     const isP1 = (parte === "P1");
     const nombre = isP1 ? "Wen-dolyne" : "To-bonito";
-    // P1: mujer. P2: hombre con barba, piel morena, cabello crespo (best emoji match)
-    const avatarEmoji = isP1 ? "👩" : "🧔🏾‍♂️";
+    // P1: mujer. P2: persona con barba + piel morena (forma compacta sin ZWJ
+    // para evitar que algunos sistemas pinten un ♂ extra al lado).
+    const avatarEmoji = isP1 ? "👩" : "🧔🏾";
 
     const cx = 5 + AVATAR_BLOCK_W / 2;
     const blockTop = pTop + 10;
