@@ -23,6 +23,20 @@ let tapSyncMode = false;
 let tapSyncLines = [];
 let tapSyncTimestamps = [];
 let tapSyncCurrentIndex = 0;
+let tapSyncParts = [];           // Parte ("P1" | "P2" | "DUO") asignada a cada tap
+let currentTapPart = "P1";       // Parte activa durante la sincronización
+
+// Estado del Monitor Dúo Split (canvas dividido)
+let karaokeDuoSplitMode = false;
+let karaokePitchP1 = -1;         // Pitch detectado del Mic 1 (P1)
+let karaokePitchP2 = -1;         // Pitch detectado del Mic 2 (P2)
+let pitchHistoryP1 = [];         // Rastro de voz P1
+let pitchHistoryP2 = [];         // Rastro de voz P2
+let karaokeSplitStream1 = null;
+let karaokeSplitStream2 = null;
+let karaokeSplitAudioCtx = null;
+let karaokeSplitAnalyser1 = null;
+let karaokeSplitAnalyser2 = null;
 
 function $(id) {
   return document.getElementById(id);
@@ -2793,6 +2807,9 @@ function stopKaraokeRecording() {
   karaokeDuoAnalyser1 = null;
   karaokeDuoAnalyser2 = null;
 
+  // Detener el segundo Mic abierto por el modo Dúo Split (si aplica)
+  stopP2PitchTracking();
+
   stopKaraokeDuoLevelMonitor();
 
   // Ocultar indicador
@@ -3561,7 +3578,10 @@ function startTapSync() {
   // Reiniciar variables globales de control
   tapSyncTimestamps = [];
   tapSyncCurrentIndex = 0;
+  tapSyncParts = [];
+  currentTapPart = "P1";
   tapSyncMode = true;
+  updateTapPartButtonsUI();
   
   if ($("startTapSyncBtn")) $("startTapSyncBtn").style.display = "none";
   if ($("cancelTapSyncBtn")) $("cancelTapSyncBtn").style.display = "inline-block";
@@ -3588,12 +3608,34 @@ function handleTapSyncKeypress(e) {
   if (e.code === "Space" || e.key === " ") {
     e.preventDefault();
     recordTap(); // Ejecuta tu función nativa de marcado de tiempo
+    return;
   }
+  
+  // Atajos para cambiar la parte activa: 1=P1, 2=P2, 3=DÚO
+  if (e.key === "1") { setCurrentTapPart("P1"); return; }
+  if (e.key === "2") { setCurrentTapPart("P2"); return; }
+  if (e.key === "3") { setCurrentTapPart("DUO"); return; }
   
   // Captura tecla Escape para cancelar
   if (e.code === "Escape") {
     cancelTapSync();
   }
+}
+
+// Cambia la parte activa (P1/P2/DUO) durante la sincronización
+function setCurrentTapPart(part) {
+  if (part !== "P1" && part !== "P2" && part !== "DUO") return;
+  currentTapPart = part;
+  updateTapPartButtonsUI();
+}
+
+function updateTapPartButtonsUI() {
+  const btnP1 = $("tapPartP1Btn");
+  const btnP2 = $("tapPartP2Btn");
+  const btnDuo = $("tapPartDuoBtn");
+  if (btnP1) btnP1.style.background = (currentTapPart === "P1") ? "#3b82f6" : "#374151";
+  if (btnP2) btnP2.style.background = (currentTapPart === "P2") ? "#f97316" : "#374151";
+  if (btnDuo) btnDuo.style.background = (currentTapPart === "DUO") ? "#a855f7" : "#374151";
 }
 
 // Función para leer el archivo .txt usando Promesas (compatible con async/await)
@@ -3650,8 +3692,9 @@ function recordTap() {
   
   const currentTime = player.currentTime;
   
-  // Guardamos el tiempo del tap
+  // Guardamos el tiempo del tap y la parte activa en ese momento
   tapSyncTimestamps.push(currentTime);
+  tapSyncParts.push(currentTapPart);
   tapSyncCurrentIndex++;
   
   // Efecto visual del botón TAP
@@ -3729,7 +3772,8 @@ async function finishTapSync() {
             renglon: word.renglon || 1,
             startTime: startTime,
             duration: Math.max(0.1, nextTime - startTime),
-            pitch: word.pitch || 0
+            pitch: word.pitch || 0,
+            parte: tapSyncParts[index] || "P1"
           };
         });
       } else {
@@ -3741,6 +3785,7 @@ async function finishTapSync() {
           const startTimeFrase = tapSyncTimestamps[lineIndex] || 0;
           const endTimeFrase = tapSyncTimestamps[lineIndex + 1] || (startTimeFrase + 3.0);
           const duracionTotalFrase = endTimeFrase - startTimeFrase;
+          const parteLinea = tapSyncParts[lineIndex] || "P1";
           
           // Rompemos la línea actual en sus palabras reales para no generar la barra gigante
           const palabrasDeLaLinea = lineText.split(/\s+/).filter(w => w.trim().length > 0);
@@ -3760,6 +3805,7 @@ async function finishTapSync() {
               startTime: wordStart,
               duration: duracionPorPalabra,
               pitch: 60, // Nota central por defecto (C4), lista para que analyzePitch la refine
+              parte: parteLinea,
               
               // Simulamos la estructura interna .words que tu Canvas clásico de IA tanto busca
               words: [{
@@ -3831,6 +3877,7 @@ function cancelTapSync() {
   
   tapSyncLines = [];
   tapSyncTimestamps = [];
+  tapSyncParts = [];
   tapSyncCurrentIndex = 0;
 }
 
@@ -3861,6 +3908,7 @@ async function applyTapSync() {
       const startFrase = tapSyncTimestamps[lineIndex] || 0;
       const endFrase = (lineIndex < tapSyncTimestamps.length - 1) ? tapSyncTimestamps[lineIndex + 1] : (totalDuration || startFrase + 3.0);
       const duracionTotalFrase = endFrase - startFrase;
+      const parteLinea = tapSyncParts[lineIndex] || "P1";
 
       // Rompemos la línea en palabras reales
       const palabrasDeLaLinea = lineText.split(/\s+/).filter(w => w.trim().length > 0);
@@ -3881,6 +3929,7 @@ async function applyTapSync() {
           text: palabraText,
           id: globalWordId++,
           renglon: lineIndex + 1,
+          parte: parteLinea,
           // Inyectamos el sub-objeto words para mantener retrocompatibilidad total con tu monitor de IA
           words: [{
             start: wordStart,
@@ -3900,7 +3949,8 @@ async function applyTapSync() {
       newSegments.push(buildWordTimingFromSegment({
         start: start,
         end: end,
-        text: tapSyncLines[i]
+        text: tapSyncLines[i],
+        parte: tapSyncParts[i] || "P1"
       }));
     }
   }
@@ -4122,6 +4172,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     safeAdd("tapBeatBtn", "click", recordTap);
     safeAdd("applyTapSyncBtn", "click", applyTapSync);
     safeAdd("redoTapSyncBtn", "click", redoTapSync);
+    
+    // Botones de "Parte activa" (P1/P2/DÚO) durante el TAP sync
+    safeAdd("tapPartP1Btn", "click", () => setCurrentTapPart("P1"));
+    safeAdd("tapPartP2Btn", "click", () => setCurrentTapPart("P2"));
+    safeAdd("tapPartDuoBtn", "click", () => setCurrentTapPart("DUO"));
+    
+    // Toggle del Modo Dúo Split en el Monitor Karaoke
+    safeAdd("karaokeDuoSplitToggleBtn", "click", toggleKaraokeDuoSplitMode);
       
     // Importador .vocalApp
     safeAdd("importvocalAppBtn", "click", () => $("importvocalAppFile")?.click());
@@ -4237,61 +4295,93 @@ document.addEventListener("DOMContentLoaded", async () => {
 // MONITOR DE KARAOKE (CANVAS)
 // ==========================================
 
-function drawKaraokeMonitor(currentTime, currentFreq) {
+// ─── MODO DÚO SPLIT (Toggle + Pitch dual) ───────────────────────────────────
+function toggleKaraokeDuoSplitMode() {
+  karaokeDuoSplitMode = !karaokeDuoSplitMode;
+  const btn = $("karaokeDuoSplitToggleBtn");
+  if (btn) {
+    btn.textContent = karaokeDuoSplitMode ? "🎤🎤 Modo Dúo Split: ON" : "🎤🎤 Modo Dúo Split: OFF";
+    btn.style.background = karaokeDuoSplitMode ? "#22c55e" : "#3b82f6";
+  }
+  // Re-pintar el canvas para reflejar el cambio aunque no haya pitch activo
+  if (typeof drawKaraokeMonitor === "function") {
+    const track = $("karaokeTrack");
+    const t = track ? track.currentTime : 0;
+    drawKaraokeMonitor(t, karaokePitchP1, karaokePitchP2);
+  }
+}
+
+// Inicia detección de pitch en Mic2 (P2) en paralelo a Mic1. Idempotente.
+async function ensureP2PitchTracking() {
+  if (karaokeSplitAnalyser2) return;
+  try {
+    const mic2Id = (typeof getSelectedMicId === "function") ? getSelectedMicId(2) : null;
+    if (!mic2Id) return;
+    if (!karaokeSplitAudioCtx) {
+      karaokeSplitAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    karaokeSplitStream2 = await navigator.mediaDevices.getUserMedia({
+      audio: { deviceId: { exact: mic2Id }, echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+    });
+    const src2 = karaokeSplitAudioCtx.createMediaStreamSource(karaokeSplitStream2);
+    karaokeSplitAnalyser2 = karaokeSplitAudioCtx.createAnalyser();
+    karaokeSplitAnalyser2.fftSize = 2048;
+    src2.connect(karaokeSplitAnalyser2);
+  } catch (e) {
+    console.warn("No se pudo iniciar pitch del Mic 2 (P2):", e);
+  }
+}
+
+function stopP2PitchTracking() {
+  try {
+    if (karaokeSplitStream2) {
+      karaokeSplitStream2.getTracks().forEach(t => t.stop());
+    }
+  } catch (e) {}
+  karaokeSplitStream2 = null;
+  karaokeSplitAnalyser2 = null;
+  karaokePitchP2 = -1;
+  pitchHistoryP2 = [];
+}
+
+function drawKaraokeMonitor(currentTime, currentFreq, currentFreq2) {
   const canvas = $("karaokeCanvas");
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
   const hueFiesta = (currentTime * 50) % 360;
   const paleta = obtenerPaletaTema(hueFiesta);
-  ctx.fillStyle = paleta.fondo;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // --- CONFIGURACIÓN ---
-  const P_TOP = 40;
-  const P_BOTTOM = canvas.height - 110;
-  const P_HEIGHT = P_BOTTOM - P_TOP;
-  const MIDI_MIN = 36; 
+  // Guardamos pitch global para repintados manuales (toggle, etc.)
+  if (typeof currentFreq === "number") karaokePitchP1 = currentFreq;
+  if (typeof currentFreq2 === "number") karaokePitchP2 = currentFreq2;
+
+  // --- CONFIGURACIÓN COMÚN ---
+  const MIDI_MIN = 36;
   const MIDI_MAX = 84;
   const lineX = 80; // Línea roja (Ahora)
-  const pixelsPerSecond = (canvas.width - 50) / 7; 
+  const pixelsPerSecond = (canvas.width - 50) / 7;
 
-  // Historial de voz
-  if (typeof pitchHistory !== 'undefined') {
-    pitchHistory.push(currentFreq > 0 ? currentFreq : null);
-    if (pitchHistory.length > 60) pitchHistory.shift();
-  }
-
-  const midiToY = (midi) => {
-    const val = (midi && midi > 0) ? midi : 60; 
-    const normalized = (MIDI_MAX - val) / (MIDI_MAX - MIDI_MIN);
-    return P_TOP + (normalized * P_HEIGHT);
-  };
-  
   function obtenerPaletaTema(hue = 0) {
     const temaActual = localStorage.getItem("vocalApp_stage") || "theme-clasico";
-  
-    // Añadimos tamanoTexto a cada tema (por defecto 15)
     let config = { fondo: "#111827", lineas: "#333333", etiquetas: "#666666", barraFutura: "#1e40af", bordeFuturo: "#3b82f6", tamanoTexto: "15px" };
-
     switch (temaActual) {
       case "theme-moderno":
         config = { fondo: "#082f49", lineas: "rgba(6, 182, 212, 0.2)", etiquetas: "#06b6d4", barraFutura: "#1e3a8a", bordeFuturo: "#06b6d4", tamanoTexto: "16px" };
         break;
       case "theme-disco":
-        // El tema disco suele verse genial con letras un poco más grandes
         config = { fondo: "#2e1065", lineas: "rgba(219, 39, 119, 0.25)", etiquetas: "#facc15", barraFutura: "#701a75", bordeFuturo: "#db2777", tamanoTexto: "18px" };
         break;
       case "theme-acustico":
         config = { fondo: "#451a03", lineas: "rgba(120, 53, 15, 0.4)", etiquetas: "#fcd34d", barraFutura: "#78350f", bordeFuturo: "#b45309", tamanoTexto: "14px" };
         break;
       case "theme-fiesta":
-        config = { 
-          fondo: `hsl(${hue}, 40%, 12%)`, 
-          lineas: "rgba(255, 255, 255, 0.15)", 
-          etiquetas: "#ff007f", 
-          barraFutura: `hsl(${(hue + 180) % 360}, 50%, 25%)`, 
+        config = {
+          fondo: `hsl(${hue}, 40%, 12%)`,
+          lineas: "rgba(255, 255, 255, 0.15)",
+          etiquetas: "#ff007f",
+          barraFutura: `hsl(${(hue + 180) % 360}, 50%, 25%)`,
           bordeFuturo: `hsl(${(hue + 180) % 360}, 70%, 50%)`,
-          tamanoTexto: "19px" 
+          tamanoTexto: "19px"
         };
         break;
     }
@@ -4299,104 +4389,204 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
   }
 
   // 1. LIMPIAR TODO EL CANVAS
-  ctx.fillStyle = paleta.fondo
+  ctx.fillStyle = paleta.fondo;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // 2. DIBUJAR PENTAGRAMA (A todo lo ancho)
-  ctx.strokeStyle = paleta.lineas;
-  ctx.lineWidth = 1;
-  const numLines = 10;
-  for (let i = 0; i <= numLines; i++) {
-    const y = P_TOP + (P_HEIGHT / numLines) * i;
+  // Fuente de datos (palabras con tiempos)
+  const datos = (textSegments && textSegments.length > 0) ? textSegments : transcriptionSegments;
+
+  // Helper interno: dibuja un pentagrama+barras+pitch en una región vertical [pTop, pBottom]
+  // parteFiltro: "P1" | "P2" | null (sin filtro). Las palabras "DUO" siempre se dibujan.
+  function drawRegion(pTop, pBottom, pitchVal, pitchHist, parteFiltro, etiquetaParte) {
+    const pHeight = pBottom - pTop;
+    const midiToY = (midi) => {
+      const val = (midi && midi > 0) ? midi : 60;
+      const normalized = (MIDI_MAX - val) / (MIDI_MAX - MIDI_MIN);
+      return pTop + (normalized * pHeight);
+    };
+
+    // Pentagrama
+    ctx.strokeStyle = paleta.lineas;
+    ctx.lineWidth = 1;
+    const numLines = 10;
+    for (let i = 0; i <= numLines; i++) {
+      const y = pTop + (pHeight / numLines) * i;
+      ctx.beginPath();
+      ctx.moveTo(35, y);
+      ctx.lineTo(canvas.width, y);
+      ctx.stroke();
+    }
+
+    // Notas a la izquierda
+    ctx.fillStyle = paleta.etiquetas;
+    ctx.font = "bold 20px Arial";
+    ctx.textAlign = "right";
+    const noteLabels = ["C6", "A5", "F5", "D5", "B4", "G4", "E4", "C4", "A3", "F3", "D3", "C3"];
+    noteLabels.forEach((label, i) => {
+      const y = pTop + (pHeight / numLines) * i + 7;
+      ctx.fillText(label, 28, y);
+    });
+
+    // Etiqueta de parte (P1 / P2) en la esquina superior izquierda de la región
+    if (etiquetaParte) {
+      ctx.fillStyle = (etiquetaParte === "P1") ? "#3b82f6" : "#f97316";
+      ctx.font = "bold 18px Arial";
+      ctx.textAlign = "left";
+      ctx.fillText(etiquetaParte, 40, pTop + 22);
+    }
+
+    // Barras de notas (filtradas por parte si aplica)
+    if (Array.isArray(datos) && datos.length > 0) {
+      datos.forEach((seg) => {
+        // Filtrado por parte: en modo split, dibujamos solo las palabras de esta parte (DUO va en ambas)
+        const parteSeg = seg.parte || "P1";
+        if (parteFiltro && parteSeg !== parteFiltro && parteSeg !== "DUO") return;
+
+        const words = Array.isArray(seg.words) ? seg.words : [];
+        words.forEach(w => {
+          const start = w.start || w.startTime || seg.start || 0;
+          const end = w.end || (start + (w.duration || 0.5));
+          if (end < currentTime - 1 || start > currentTime + (canvas.width / pixelsPerSecond)) return;
+
+          const x = lineX + (start - currentTime) * pixelsPerSecond;
+          const width = (end - start) * pixelsPerSecond;
+          const midi = w.midi || seg.midi || 60;
+          const y = midiToY(midi);
+          const h = 24;
+
+          const isActive = currentTime >= start && currentTime <= end;
+          const isPast = currentTime > end;
+
+          let barColor = paleta.barraFutura;
+          let strokeColor = paleta.bordeFuturo;
+
+          // En DUO usamos un tinte violeta para diferenciar visualmente
+          if (parteSeg === "DUO") {
+            barColor = "#7c3aed";
+            strokeColor = "#a855f7";
+          } else if (parteSeg === "P2") {
+            barColor = "#9a3412";
+            strokeColor = "#f97316";
+          }
+
+          if (isPast) barColor = "#4b5563";
+
+          if (isActive) {
+            const userMidi = Math.round(12 * Math.log2(pitchVal / 440) + 69);
+            const isCorrect = pitchVal > 0 && Math.abs(userMidi - midi) <= 2;
+            barColor = isCorrect ? "#22c55e" : strokeColor;
+            strokeColor = "white";
+          }
+
+          ctx.fillStyle = barColor;
+          ctx.beginPath();
+          if (ctx.roundRect) ctx.roundRect(x, y - h / 2, Math.max(width, 25), h, 5);
+          else ctx.fillRect(x, y - h / 2, Math.max(width, 25), h);
+          ctx.fill();
+
+          if (isActive || !isPast) {
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = isActive ? 3 : 1;
+            ctx.stroke();
+          }
+
+          ctx.fillStyle = "white";
+          ctx.font = `bold ${paleta.tamanoTexto || "15px"} Arial`;
+          ctx.textAlign = "center";
+          ctx.fillText(w.word || w.text || "", x + Math.max(width, 25) / 2, y + 5);
+        });
+      });
+    }
+
+    // Rastro de pitch y punto del usuario (por región)
+    if (pitchVal > 0) {
+      const userMidi = Math.round(12 * Math.log2(pitchVal / 440) + 69);
+      const userY = midiToY(userMidi);
+
+      ctx.beginPath();
+      ctx.strokeStyle = "rgba(250, 204, 21, 0.5)";
+      ctx.lineWidth = 4;
+      let started = false;
+      pitchHist.forEach((f, i) => {
+        if (f) {
+          const x = lineX - (pitchHist.length - i) * 3;
+          const yPos = midiToY(Math.round(12 * Math.log2(f / 440) + 69));
+          if (x < 0) return;
+          if (!started) { ctx.moveTo(x, yPos); started = true; } else { ctx.lineTo(x, yPos); }
+        }
+      });
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.fillStyle = "#facc15";
+      ctx.arc(lineX, userY, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "white";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    // Línea roja (Ahora) que cruza solo esta región
+    ctx.strokeStyle = "#ef4444";
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(35, y);
-    ctx.lineTo(canvas.width, y); // Dibuja hasta el final del canvas
+    ctx.moveTo(lineX, pTop - 2);
+    ctx.lineTo(lineX, pBottom + 2);
     ctx.stroke();
   }
 
-  // Notas a la izquierda
-  ctx.fillStyle = paleta.etiquetas;
-  ctx.font = "bold 20px Arial";
-  ctx.textAlign = "right";
-  const noteLabels = ["C6", "A5", "F5", "D5", "B4", "G4", "E4", "C4", "A3", "F3", "D3", "C3"];
-  noteLabels.forEach((label, i) => {
-    const y = P_TOP + (P_HEIGHT / numLines) * i + 7;
-    ctx.fillText(label, 28, y);
-  });
+  // 2. Renderizar según modo (Single vs Dúo Split)
+  if (karaokeDuoSplitMode) {
+    // Dos regiones apiladas: P1 arriba, P2 abajo. Teleprompter compartido al fondo.
+    const TELE_H = 100;
+    const GAP = 14;
+    const totalUsable = canvas.height - TELE_H - 20;
+    const regionH = (totalUsable - GAP) / 2;
+    const topP1 = 20;
+    const bottomP1 = topP1 + regionH;
+    const topP2 = bottomP1 + GAP;
+    const bottomP2 = topP2 + regionH;
 
-  // 3. DIBUJAR BARRAS DE NOTAS
-  const datos = (textSegments && textSegments.length > 0) ? textSegments : transcriptionSegments;
-  
+    // Historial de cada parte
+    pitchHistoryP1.push(currentFreq > 0 ? currentFreq : null);
+    if (pitchHistoryP1.length > 60) pitchHistoryP1.shift();
+    pitchHistoryP2.push(currentFreq2 > 0 ? currentFreq2 : null);
+    if (pitchHistoryP2.length > 60) pitchHistoryP2.shift();
+
+    // Línea divisoria sutil entre regiones
+    ctx.fillStyle = "rgba(255,255,255,0.06)";
+    ctx.fillRect(0, bottomP1, canvas.width, GAP);
+
+    drawRegion(topP1, bottomP1, currentFreq, pitchHistoryP1, "P1", "P1");
+    drawRegion(topP2, bottomP2, currentFreq2, pitchHistoryP2, "P2", "P2");
+  } else {
+    // Modo clásico: una sola región a todo lo alto (sin filtro de parte)
+    const P_TOP = 40;
+    const P_BOTTOM = canvas.height - 110;
+
+    if (typeof pitchHistory !== 'undefined') {
+      pitchHistory.push(currentFreq > 0 ? currentFreq : null);
+      if (pitchHistory.length > 60) pitchHistory.shift();
+    }
+    drawRegion(P_TOP, P_BOTTOM, currentFreq, pitchHistory, null, null);
+  }
+
+  // 3. TELEPROMPTER DOBLE LÍNEA (Abajo, siempre visible)
   if (Array.isArray(datos) && datos.length > 0) {
-    datos.forEach((seg) => {
-      const words = Array.isArray(seg.words) ? seg.words : [];
-      words.forEach(w => {
-        const start = w.start || w.startTime || seg.start || 0;
-        const end = w.end || (start + (w.duration || 0.5));
-        
-        // Ventana: vemos 1s atrás y el resto del ancho del canvas adelante
-        if (end < currentTime - 1 || start > currentTime + (canvas.width / pixelsPerSecond)) return;
-
-        const x = lineX + (start - currentTime) * pixelsPerSecond;
-        const width = (end - start) * pixelsPerSecond;
-        const midi = w.midi || seg.midi || 60;
-        const y = midiToY(midi);
-        const h = 24;
-
-        const isActive = currentTime >= start && currentTime <= end;
-        const isPast = currentTime > end;
-
-        // --- SOLUCIÓN: LÓGICA DE COLORES BASADA EN EL TEMA DINÁMICO ---
-        let barColor = paleta.barraFutura; // 1. Por defecto toma el color del Tema elegido (Futuro)
-        let strokeColor = paleta.bordeFuturo; // Guardamos el borde del tema para usarlo abajo
-
-        if (isPast) {
-          barColor = "#4b5563"; // Pasado (Gris neutro para que se note que ya pasó)
-        }
-        
-        if (isActive) {
-          // Lógica de acierto (Verde si afina, si falla usa el color del tema)
-          const userMidi = Math.round(12 * Math.log2(currentFreq / 440) + 69);
-          const isCorrect = currentFreq > 0 && Math.abs(userMidi - midi) <= 2;
-          
-          barColor = isCorrect ? "#22c55e" : paleta.bordeFuturo; // Si falla, brilla con el borde del tema
-          strokeColor = "white"; // Borde blanco destacado para la nota que se está cantando actualmente
-        }
-
-        // Dibujar el rectángulo de la barra
-        ctx.fillStyle = barColor;
-        ctx.beginPath();
-        if (ctx.roundRect) ctx.roundRect(x, y - h/2, Math.max(width, 25), h, 5);
-        else ctx.fillRect(x, y - h/2, Math.max(width, 25), h);
-        ctx.fill();
-
-        // Dibujar el contorno/borde de la barra (Solo si está activa o es una nota futura)
-        if (isActive || !isPast) {
-          ctx.strokeStyle = strokeColor;
-          ctx.lineWidth = isActive ? 3 : 1; // Más grueso si es la nota activa
-          ctx.stroke();
-        }
-
-        // Dibujar el texto de la sílaba/palabra
-        ctx.fillStyle = "white";
-        // REMPLAZO: Usamos el tamaño dinámico configurado en la paleta del tema
-        ctx.font = `bold ${paleta.tamanoTexto || "15px"} Arial`; 
-        ctx.textAlign = "center";
-        ctx.fillText(w.word || w.text || "", x + Math.max(width, 25)/2, y + 5);
-      });
-    });
-    
-    // 4. TELEPROMPTER DOBLE LÍNEA (Abajo)
     const idx = datos.findIndex(s => currentTime >= (s.start || 0) && currentTime <= (s.end || (s.start + 1)));
     if (idx !== -1) {
       ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
       ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
-      
+
       ctx.textAlign = "center";
       ctx.fillStyle = "white";
       ctx.font = "bold 30px Arial";
-      ctx.fillText(datos[idx].text || "", canvas.width / 2, canvas.height - 65);
-      
+
+      // En split, mostramos también la parte cantando
+      const parteActual = datos[idx].parte || "P1";
+      const prefijo = karaokeDuoSplitMode ? (parteActual === "DUO" ? "🟪 DÚO · " : (parteActual === "P2" ? "🟧 P2 · " : "🟦 P1 · ")) : "";
+      ctx.fillText(prefijo + (datos[idx].text || ""), canvas.width / 2, canvas.height - 65);
+
       if (datos[idx + 1]) {
         ctx.fillStyle = "#94a3b8";
         ctx.font = "italic 22px Arial";
@@ -4404,38 +4594,6 @@ function drawKaraokeMonitor(currentTime, currentFreq) {
       }
     }
   }
-  // 5. VOZ DEL USUARIO (Rastro y Punto)
-  if (currentFreq > 0) {
-    const userMidi = Math.round(12 * Math.log2(currentFreq / 440) + 69);
-    const userY = midiToY(userMidi);
-    
-    ctx.beginPath();
-    ctx.strokeStyle = "rgba(250, 204, 21, 0.5)";
-    ctx.lineWidth = 4;
-    let started = false;
-    pitchHistory.forEach((f, i) => {
-      if (f) {
-        const x = lineX - (pitchHistory.length - i) * 3;
-        const yPos = midiToY(Math.round(12 * Math.log2(f / 440) + 69));
-        if (x < 0) return;
-        if (!started) { ctx.moveTo(x, yPos); started = true; } else { ctx.lineTo(x, yPos); }
-      }
-    });
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.fillStyle = "#facc15";
-    ctx.arc(lineX, userY, 9, 0, Math.PI * 2); 
-    ctx.fill();
-    ctx.strokeStyle = "white";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-  }
-
-  // Línea roja final
-  ctx.strokeStyle = "#ef4444";
-  ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(lineX, 0); ctx.lineTo(lineX, canvas.height - 100); ctx.stroke();
 }
   
 // ==========================================
@@ -4458,6 +4616,11 @@ async function startKaraokePitchDetection() {
   analyser.fftSize = 2048;
   mic.connect(analyser);
 
+  // Si el Modo Dúo Split está activo, intentamos abrir Mic 2 en paralelo
+  if (karaokeDuoSplitMode) {
+    await ensureP2PitchTracking();
+  }
+
   function loop() {
     const track = $("karaokeTrack") || $("karaokeAudio") || $("audioKaraoke") || $("trackPlayer");
     const currentTime = track ? track.currentTime : 0;
@@ -4466,7 +4629,15 @@ async function startKaraokePitchDetection() {
     analyser.getFloatTimeDomainData(buffer);
     const pitch = autoCorrelate(buffer, audioCtx.sampleRate);
 
-    drawKaraokeMonitor(currentTime, pitch);
+    // Pitch del Mic 2 (P2) si está disponible
+    let pitch2 = -1;
+    if (karaokeDuoSplitMode && karaokeSplitAnalyser2) {
+      const buf2 = new Float32Array(karaokeSplitAnalyser2.fftSize);
+      karaokeSplitAnalyser2.getFloatTimeDomainData(buf2);
+      pitch2 = autoCorrelate(buf2, karaokeSplitAudioCtx.sampleRate);
+    }
+
+    drawKaraokeMonitor(currentTime, pitch, pitch2);
 
     // Si la pista terminó, paramos
     if (track && track.ended) return;

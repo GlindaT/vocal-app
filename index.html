@@ -204,6 +204,26 @@
              
                 <!-- Modo de sincronización activo -->
                 <div id="tapSyncActive" style="display: none;">
+                  <!-- Selector de PARTE para Dúo (manual por color) -->
+                  <div style="padding: 12px; background: var(--bg-main); border-radius: 8px; margin-bottom: 12px; border: 1px solid #3b82f6;">
+                    <p style="margin: 0 0 8px 0; font-size: 13px; color: #60a5fa; font-weight: bold;">
+                      🎨 Parte activa (asigna a los siguientes taps):
+                    </p>
+                    <div class="studio-controls" style="display: flex; gap: 8px; flex-wrap: wrap;">
+                      <button id="tapPartP1Btn" type="button" data-testid="tap-part-p1" style="flex:1; min-width:90px; background:#3b82f6; color:white; padding:8px 12px; border-radius:6px; border:none; cursor:pointer; font-weight:bold;">
+                        🟦 P1 (Mic 1)
+                      </button>
+                      <button id="tapPartP2Btn" type="button" data-testid="tap-part-p2" style="flex:1; min-width:90px; background:#374151; color:white; padding:8px 12px; border-radius:6px; border:none; cursor:pointer; font-weight:bold;">
+                        🟧 P2 (Mic 2)
+                      </button>
+                      <button id="tapPartDuoBtn" type="button" data-testid="tap-part-duo" style="flex:1; min-width:90px; background:#374151; color:white; padding:8px 12px; border-radius:6px; border:none; cursor:pointer; font-weight:bold;">
+                        🟪 DÚO (ambos)
+                      </button>
+                    </div>
+                    <p style="font-size: 11px; color: var(--text-muted); margin: 8px 0 0 0;">
+                      ⌨️ Atajos: <b>1</b> = P1 · <b>2</b> = P2 · <b>3</b> = DÚO
+                    </p>
+                  </div>
                   <div style="text-align: center; padding: 20px; background: var(--bg-main); border-radius: 8px; margin-bottom: 15px;">
                     <!-- AJUSTE: 'Elemento actual' en lugar de línea para que tenga sentido palabra por palabra -->
                     <p style="font-size: 14px; color: var(--text-muted); margin: 0 0 10px 0;">Elemento actual:</p>
@@ -296,6 +316,15 @@
           
           <!-- MONITOR DE PENTAGRAMA -->
           <div class="card" style="background: #1a1a1a; padding: 0; border: 2px solid var(--border); overflow: hidden;">
+            <!-- Toggle Modo Dúo Split -->
+            <div style="padding: 10px 12px; background: #0f172a; border-bottom: 1px solid var(--border); display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+              <button id="karaokeDuoSplitToggleBtn" type="button" data-testid="karaoke-duo-split-toggle" style="background: #3b82f6; color: white; padding: 8px 14px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold;">
+                🎤🎤 Modo Dúo Split: OFF
+              </button>
+              <span id="karaokeDuoSplitHint" style="color: var(--text-muted); font-size: 12px;">
+                Divide el monitor en dos (Mic 1 arriba / Mic 2 abajo) para mostrar lo que canta cada usuario.
+              </span>
+            </div>
             <div class="card monitor-karaoke" style="background: #1a1a1a; padding: 0; border: 2px solid var(--border); overflow: hidden;">
             <canvas id="karaokeCanvas" width="1800" height="600" style="width: 100%; display: block; border-radius: 12px; min-height: 500px;"></canvas>
             </div>
