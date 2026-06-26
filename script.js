@@ -4415,55 +4415,68 @@ function drawKaraokeMonitor(currentTime, currentFreq, currentFreq2) {
   const pentagramStartX = 35 + AVATAR_BLOCK_W;
   const dynLineX = lineX + AVATAR_BLOCK_W;
 
-  // Pinta un bloque vertical: nombre arriba, avatar al centro, cuadrado de color abajo
+  // Pinta un bloque vertical: nombre arriba, avatar emoji al centro,
+  // y una fila inferior con 2 íconos al lado (mitad del tamaño del avatar).
+  // SIN sombra de fondo, SIN círculo detrás del avatar.
   function drawAvatarBlock(pTop, pBottom, parte) {
     if (!parte || parte === "DUO") return;
     const isP1 = (parte === "P1");
     const nombre = isP1 ? "Wen-dolyne" : "To-bonito";
-    const emoji = isP1 ? "👩" : "👨";
-    const cuadradoColor = isP1 ? "#7c3aed" : "#708238"; // morado / verde oliva
-    const cuadradoStroke = isP1 ? "#a855f7" : "#9caf88";
+    // P1: mujer. P2: hombre con barba, piel morena, cabello crespo (best emoji match)
+    const avatarEmoji = isP1 ? "👩" : "🧔🏾‍♂️";
 
-    const cx = 5 + AVATAR_BLOCK_W / 2; // centrado en el bloque
+    const cx = 5 + AVATAR_BLOCK_W / 2;
     const blockTop = pTop + 10;
     const avatarSize = 56;
-    const squareSize = 56;
+    const halfSize = 28; // mitad del tamaño original del cuadrado
     const nameH = 22;
     const gap = 6;
 
-    // Fondo translúcido del bloque para legibilidad
-    ctx.fillStyle = "rgba(0,0,0,0.35)";
-    ctx.fillRect(2, pTop + 2, AVATAR_BLOCK_W - 4, (nameH + avatarSize + squareSize + gap * 2 + 16));
-
-    // 1) Nombre
+    // 1) Nombre (arriba)
     ctx.fillStyle = "white";
     ctx.font = "bold 16px Arial";
     ctx.textAlign = "center";
+    ctx.textBaseline = "alphabetic";
     ctx.fillText(nombre, cx, blockTop + nameH - 4);
 
-    // 2) Avatar (círculo con emoji)
+    // 2) Avatar emoji (centro, sin círculo de fondo)
     const avTop = blockTop + nameH + gap;
-    ctx.beginPath();
-    ctx.fillStyle = isP1 ? "#fde68a" : "#bae6fd";
-    ctx.arc(cx, avTop + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "white";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    ctx.font = "38px Arial";
+    ctx.font = `${avatarSize}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",Arial`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.fillStyle = "black";
-    ctx.fillText(emoji, cx, avTop + avatarSize / 2 + 2);
-    ctx.textBaseline = "alphabetic";
+    ctx.fillText(avatarEmoji, cx, avTop + avatarSize / 2);
 
-    // 3) Cuadrado de color (mismo tamaño que el avatar)
-    const sqTop = avTop + avatarSize + gap;
-    ctx.fillStyle = cuadradoColor;
-    ctx.fillRect(cx - squareSize / 2, sqTop, squareSize, squareSize);
-    ctx.strokeStyle = cuadradoStroke;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(cx - squareSize / 2, sqTop, squareSize, squareSize);
+    // 3) Fila inferior con dos íconos al lado (cada uno de halfSize)
+    const rowTop = avTop + avatarSize + gap;
+    const iconHalfFont = `${halfSize}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",Arial`;
+
+    if (isP1) {
+      // Izquierda: cuadrado morado (mitad de tamaño)
+      const sqX = cx - halfSize - gap / 2;
+      ctx.fillStyle = "#7c3aed";
+      ctx.fillRect(sqX, rowTop, halfSize, halfSize);
+      ctx.strokeStyle = "#a855f7";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(sqX, rowTop, halfSize, halfSize);
+      // Derecha: átomo ⚛️
+      ctx.font = iconHalfFont;
+      ctx.fillStyle = "white";
+      ctx.textBaseline = "middle";
+      ctx.textAlign = "center";
+      ctx.fillText("⚛️", cx + halfSize / 2 + gap / 2, rowTop + halfSize / 2);
+    } else {
+      // Izquierda: cara de gato 🐱 (mitad de tamaño)
+      ctx.font = iconHalfFont;
+      ctx.fillStyle = "white";
+      ctx.textBaseline = "middle";
+      ctx.textAlign = "center";
+      ctx.fillText("🐱", cx - halfSize / 2 - gap / 2, rowTop + halfSize / 2);
+      // Derecha: hombre pensante 🤔
+      ctx.fillText("🤔", cx + halfSize / 2 + gap / 2, rowTop + halfSize / 2);
+    }
+
+    // Reset baseline para no romper otros dibujos
+    ctx.textBaseline = "alphabetic";
   }
 
   // Helper interno: dibuja un pentagrama+barras+pitch en una región vertical [pTop, pBottom]
