@@ -10,7 +10,7 @@ const state = {
   isRecording: false
 };
 
-let db = null;
+let db;
 let pitchHistory = [];
 let transcriptionSegments = [];
 let baseTranscriptionSegments = [];
@@ -66,91 +66,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 });
 
-/*
-// ==========================================
-// MIGRACIÓN DE NOMBRES (VocalApp → vocalApp)
-// ==========================================
-function migrateLegacyNames() {
-  // 1. Migrar claves de localStorage de vocalApp_* a vocalApp_* si existen
-  try {
-    const keys = Object.keys(localStorage);
-    let migrated = 0;
-    keys.forEach(k => {
-      if (k.startsWith("vocalApp_")) {
-        const newKey = k.replace(/^vocalApp_/, "vocalApp_");
-        if (localStorage.getItem(newKey) === null) {
-          localStorage.setItem(newKey, localStorage.getItem(k));
-          migrated++;
-        }
-        localStorage.removeItem(k);
-      }
-    });
-    if (migrated > 0) console.log(`✅ Migradas ${migrated} preferencias VocalApp → vocalApp`);
-  } catch (e) {
-    console.warn("No se pudo migrar localStorage:", e);
-  }
+//import { supabase } from './supabase-config.js'; 
 
-  // 2. Migrar IndexedDB VocalAppDB → vocalAppDB (si existe la vieja y no la nueva)
-  return new Promise((resolve) => {
-    try {
-      const checkReq = indexedDB.open("VocalAppDB");
-      checkReq.onsuccess = (ev) => {
-        const oldDb = ev.target.result;
-        if (!oldDb.objectStoreNames.contains("library")) {
-          oldDb.close();
-          return resolve();
-        }
-        const tx = oldDb.transaction(["library"], "readonly");
-        const store = tx.objectStore("library");
-        const getAll = store.getAll();
-        getAll.onsuccess = () => {
-          const items = getAll.result || [];
-          oldDb.close();
-          if (items.length === 0) {
-            return resolve();
-          }
-          // Abrir/crear la nueva
-          const newReq = indexedDB.open("vocalAppDB", 1);
-          newReq.onupgradeneeded = (e2) => {
-            const newDb = e2.target.result;
-            if (!newDb.objectStoreNames.contains("library")) {
-              const s = newDb.createObjectStore("library", { keyPath: "id", autoIncrement: true });
-              s.createIndex("type", "type", { unique: false });
-              s.createIndex("date", "date", { unique: false });
-            }
-          };
-          newReq.onsuccess = (e3) => {
-            const newDb = e3.target.result;
-            const txN = newDb.transaction(["library"], "readwrite");
-            const storeN = txN.objectStore("library");
-            // Solo migrar si está vacía la nueva
-            const countReq = storeN.count();
-            countReq.onsuccess = () => {
-              if (countReq.result === 0) {
-                items.forEach(item => storeN.add(item));
-                console.log(`✅ Migrados ${items.length} archivos VocalAppDB → vocalAppDB`);
-              }
-              txN.oncomplete = () => { newDb.close(); resolve(); };
-              txN.onerror = () => { newDb.close(); resolve(); };
-            };
-            countReq.onerror = () => { newDb.close(); resolve(); };
-          };
-          newReq.onerror = () => resolve();
-        };
-        getAll.onerror = () => { oldDb.close(); resolve(); };
-      };
-      checkReq.onerror = () => resolve();
-      checkReq.onupgradeneeded = (ev) => {
-        // No existía la vieja → cerrar y seguir
-        ev.target.transaction.abort();
-        resolve();
-      };
-    } catch (e) {
-      resolve();
-    }
-  });
-}
-*/
 // ==========================================
 // INDEXED DB - BIBLIOTECA
 // ==========================================
@@ -166,10 +83,11 @@ function initSupabase() {
     }
   });
 }
-/*function initDB() {
+
+/*function initSupabase() {
   return new Promise((resolve, reject) => {
     // 1. Abrimos la base de datos (nombre, versión)
-    const request = indexedDB.open("vocalAppDB", 1);
+    const request = database.open("vocalApp", 1);
 
     // Se ejecuta si la versión cambia o es la primera vez
     request.onupgradeneeded = function (event) {
@@ -191,12 +109,12 @@ function initSupabase() {
     // Si todo sale bien
     request.onsuccess = function (event) {
       db = event.target.result; // Asignamos a la variable previamente declarada
-      resolve(db);
+      resolve(supabase);
     };
 
     // Si hay un error, pasamos el detalle del error
     request.onerror = function (event) {
-      reject(`❌ Error al abrir IndexedDB: ${event.target.error}`);
+      reject(`❌ Error al abrir Supabase: ${event.target.error}`);
     };
   });
 }
@@ -225,26 +143,25 @@ async function addLibraryItemToSupabase(item) {
   }
 }
 
-async function getLibraryItemsByTypeFromSupabase(type) {
-  // 1. Validación de la base de datos
+async function getAllLibraryItemsFromSupabase() {
+  // 1. Verificación de seguridad
   if (!db) {
-    throw new Error("❌ La base de datos no está disponible.");
+    throw new Error("❌ No hay conexión con la base de datos.");
   }
 
   try {
-    // 2. Hacemos la consulta a Supabase filtrando por la columna 'type'
+    // 2. Solicitamos todos los objetos de la tabla 'library'
     const { data, error } = await db
-      .from('library')       // Nombre de tu tabla
-      .select('*')           // Selecciona todas las columnas
-      .eq('type', type);     // Filtra donde la columna 'type' coincida con el argumento
+      .from('library')
+      .select('*'); // El asterisco trae todas las filas y columnas
 
-    // 3. Si Supabase devuelve un error (ej. la tabla no existe)
+    // 3. Si Supabase devuelve un error, lo manejamos
     if (error) {
-      throw new Error(`❌ Error de Supabase: ${error.message}`);
+      throw new Error(`❌ Error al leer la Biblioteca: ${error.message}`);
     }
 
-    // 4. Mostramos el resultado en consola y lo retornamos
-    console.log(`🔍 Buscando '${type}': se encontraron ${data.length} coincidencias.`);
+    // 4. Resolvemos con el array de resultados
+    console.log(`✅ Se recuperaron ${data.length} elementos desde Supabase.`);
     return data;
 
   } catch (error) {
@@ -252,6 +169,7 @@ async function getLibraryItemsByTypeFromSupabase(type) {
     throw error; 
   }
 }
+
 
 async function updateLibraryItemFromSupabase(id, changes) {
   if (!db) {
@@ -348,6 +266,9 @@ async function getLibraryItemByIdFromSupabase(id) {
     throw error;
   }
 }
+
+//Agregado Supabase 04/07/2026
+
 async function uploadFileToSupabase(fileOrBlob, fileName, mimeType = "application/octet-stream") {
   if (!db) throw new Error("❌ La base de datos no está inicializada.");
 
@@ -432,6 +353,20 @@ async function saveLibraryItemToSupabase({ name, type, blob, transcription = [],
   if (error) throw error;
 }
 
+/*
+async function getAllLibraryItemsFromSupabase() {
+  const { data, error } = await supabaseClient
+    .from("library_items")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return data || [];
+}
+
 async function getLibraryItemsByTypeFromSupabase(type) {
   const { data, error } = await supabaseClient
     .from("library_items")
@@ -483,6 +418,7 @@ async function deleteLibraryItemFromSupabase(id) {
     throw error;
   }
 }
+*/
 
 // ==========================================
 // NAVEGACIÓN
@@ -1330,7 +1266,6 @@ async function renderLibrary(filter = "todos") {
   }
 }
 
-
 function asignarEventosBiblioteca(filter) {
   document.querySelectorAll(".delete-library-btn").forEach((btn) => {
     btn.onclick = async () => {
@@ -1425,29 +1360,26 @@ async function saveManualFileToLibrary() {
   }
 }
 
-async function loadTextOptionsInStudio() {
-  const select = $("textLibrarySelect");
+async function loadTrackOptionsInStudio() {
+  const select = $("studioTrackSelect");
   if (!select) return;
 
-  select.innerHTML = `<option value="">Selecciona una letra guardada</option>`;
+  select.innerHTML = `<option value="">Selecciona una pista desde Biblioteca</option>`;
 
   try {
-    // CORRECCIÓN 1: Enlazado a la función correcta de Supabase
-    const letras = await getLibraryItemsByTypeFromSupabase("texto"); 
+    const tracks = await getLibraryItemsByTypeFromSupabase("pista");
 
-    const merged = [...letras];
-
-    if (!merged.length) {
+    if (!tracks.length) {
       const option = document.createElement("option");
       option.value = "";
-      option.textContent = "No hay letras guardadas";
+      option.textContent = "No hay pistas guardadas";
       select.appendChild(option);
       return;
     }
 
-    merged.forEach((item) => {
+    tracks.forEach((item) => {
       const option = document.createElement("option");
-      option.value = item.id; // Almacena el ID original (sea número o UUID)
+      option.value = item.id; // Guarda el ID tal cual viene de Supabase (sea número o string)
       option.textContent = `${item.name} (${item.date || "sin fecha"})`;
       select.appendChild(option);
     });
@@ -1729,7 +1661,6 @@ async function loadSelectedTextFromLibrary() {
     alert("❌ No se pudo cargar la letra seleccionada.");
   }
 }
-
 // ==========================================
 // TRANSCRIPCIÓN CON TÉCNICA DE CHUNKING
 // ==========================================
@@ -1965,10 +1896,9 @@ function buildWordTimingFromSegment(segment) {
 // 🎯 VERSIÓN CORREGIDA: Ahora acepta los tres parámetros de tu flujo unificado
 async function analyzePitchForSegments(audioBlob, textBlob, segments) {
   
-  // CORRECCIÓN: Si el segundo parámetro es el arreglo de segmentos (flujo original de IA)
   let actualSegments = segments;
   if (Array.isArray(textBlob) && !segments) {
-    actualSegments = textBlob; // Intercambio seguro por si se invoca con 2 parámetros
+    actualSegments = textBlob; 
   }
 
   if (!audioBlob || !actualSegments || !actualSegments.length) {
@@ -1978,7 +1908,16 @@ async function analyzePitchForSegments(audioBlob, textBlob, segments) {
 
   try {
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const arrayBuffer = await audioBlob.arrayBuffer();
+    
+    // CORRECCIÓN: Si 'audioBlob' es una URL de Supabase (un string), la descargamos temporalmente en la RAM
+    let targetBlob = audioBlob;
+    if (typeof audioBlob === "string") {
+      const response = await fetch(audioBlob);
+      targetBlob = await response.blob();
+    }
+
+    // Procesamos el buffer utilizando el binario real garantizado
+    const arrayBuffer = await targetBlob.arrayBuffer();
     const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
     
     const sampleRate = audioBuffer.sampleRate;
@@ -1987,8 +1926,6 @@ async function analyzePitchForSegments(audioBlob, textBlob, segments) {
     console.log("🎵 Analizando pitch de", actualSegments.length, "segmentos...");
 
     const analyzedSegments = actualSegments.map((segment, index) => {
-      // 1. CORRECCIÓN DE PROPIEDADES DINÁMICAS:
-      // Tu .txt manual usa startTime y duration. El flujo original usa start y end.
       const startTime = segment.start !== undefined ? segment.start : (segment.startTime || 0);
       const durationTime = segment.duration !== undefined ? segment.duration : 0.5;
       const endTime = segment.end !== undefined ? segment.end : (startTime + durationTime);
@@ -2004,8 +1941,6 @@ async function analyzePitchForSegments(audioBlob, textBlob, segments) {
       
       let analyzedWords = [];
       
-      // 2. ADAPTACIÓN DE SUB-ARRAYS PARA EL CANVAS:
-      // Si el segmento tiene la estructura .words (IA) o fue inyectada por nuestro flujo proporcional de .txt
       const palabrasInternas = Array.isArray(segment.words) ? segment.words : [];
       
       if (palabrasInternas.length > 0) {
@@ -2030,12 +1965,11 @@ async function analyzePitchForSegments(audioBlob, textBlob, segments) {
         });
       }
 
-      // Devolvemos el segmento enriquecido con los tonos reales de la voz calculados por la función
       return {
         ...segment,
         pitch: pitch,
         note: note,
-        midi: midiNote || segment.pitch || 60, // Conserva el tono o cae en nota central C4
+        midi: midiNote || segment.pitch || 60, 
         words: analyzedWords.length > 0 ? analyzedWords : [{ start: startTime, end: endTime, word: segment.text, midi: midiNote || 60 }]
       };
     });
@@ -2050,7 +1984,7 @@ async function analyzePitchForSegments(audioBlob, textBlob, segments) {
 }
 
 function detectPitchFromSamples(samples, sampleRate) {
-  if (!samples || samples.length < 256) return -1;
+  if (!samples || samples.length < 2048) return -1;
   
   // Calcular RMS para verificar si hay señal
   let rms = 0;
@@ -2138,7 +2072,7 @@ function procesarResultadoAutomatico(apiResponseWords) {
   }];
 
   // Guardas en la base de datos de tu app de karaoke (initDB)
-  guardarSincronizacionAutomaticaEnDB(textSegments);
+  guardarSincronizacionAutomaticaEnSupabase(textSegments);
 }
 
 // Otra función
@@ -2598,6 +2532,7 @@ async function loadKaraokeSong(id) {
     alert("❌ Error al cargar el karaoke.");
   }
 }
+
 /*
 function cargarPistaKaraoke(e) {
   const file = e.target.files[0];
@@ -3010,7 +2945,7 @@ async function mixKaraoke() {
     return;
   }
 
-  const trackFile = karaokeSelectedTrackBlob;
+  const trackFile = karaokeSelectedTrackBlob; // Ahora contiene la URL de Supabase Storage
   const btn = $("karaokeMixBtn");
   const resultDiv = $("karaokeMixResult");
 
@@ -3662,7 +3597,6 @@ async function applyCorrectedLyrics() {
     alert("❌ No se pudieron salvar las modificaciones del monitor.");
   }
 }
-
 // ==========================================
 // SINCRONIZACIÓN MANUAL CON TAPS
 // ==========================================
@@ -3823,19 +3757,15 @@ function segmentarTextoPlano(texto) {
 function recordTap() {
   if (!tapSyncMode) return;
   
-  // Usamos el reproductor dinámico que guardó startTapSync
   const player = window.activeTapPlayer || $("selectedVoicePlayer");
-  
   if (!player) return;
   
   const currentTime = player.currentTime;
   
-  // Guardamos el tiempo del tap y la parte activa en ese momento
   tapSyncTimestamps.push(currentTime);
   tapSyncParts.push(currentTapPart);
   tapSyncCurrentIndex++;
   
-  // Efecto visual del botón TAP
   const tapBtn = $("tapBeatBtn");
   if (tapBtn) {
     tapBtn.style.transform = "scale(0.95)";
@@ -3862,7 +3792,6 @@ function updateTapSyncDisplay() {
   }
   
   if (progressEl) {
-    // Lee el modo global guardado para pintar "palabras" o "líneas" dinámicamente
     const tipoUnidad = (window.currentTapSyncModeType === "palabra") ? "palabras" : "líneas";
     progressEl.textContent = `${tapSyncCurrentIndex} / ${tapSyncLines.length} ${tipoUnidad}`;
   }
@@ -3880,7 +3809,7 @@ async function finishTapSync() {
   if ($("tapSyncResult")) $("tapSyncResult").style.display = "block";
   if ($("cancelTapSyncBtn")) $("cancelTapSyncBtn").style.display = "none";
   
-  // OBTENER EL ID ACTIVO (Voz o Texto manual)
+  // OBTENER EL ID ACTIVO (Voz o Texto manual) sin conversiones forzadas
   const currentId = selectedVoiceId || selectedTextId;
   if (!currentId) {
     console.error("❌ No se encontró un ID activo para guardar los taps.");
@@ -4160,7 +4089,6 @@ async function applyTapSync() {
     : "Sincronización guardada. (Recuerda que sin pista de audio no se puede crear el archivo final de Karaoke).");
 }
 
-
 function redoTapSync() {
   if ($("tapSyncResult")) $("tapSyncResult").style.display = "none";
   startTapSync();
@@ -4422,7 +4350,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     alert("❌ Error inicializando la app");
   }
 });
-
 // ==========================================
 // MONITOR DE KARAOKE (CANVAS)
 // ==========================================
@@ -4464,7 +4391,7 @@ async function ensureP2PitchTracking() {
       karaokeSplitAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
     karaokeSplitStream2 = await navigator.mediaDevices.getUserMedia({
-      audio: { deviceId: { exact: mic2Id }, echoCancellation: false, noiseSuppression: false, autoGainControl: false }
+      audio: { deviceId: { exact: mic2Id }, echoCancellation: { exact: false }, noiseSuppression: { exact: false }, autoGainControl: { exact: false }}
     });
     const src2 = karaokeSplitAudioCtx.createMediaStreamSource(karaokeSplitStream2);
     karaokeSplitAnalyser2 = karaokeSplitAudioCtx.createAnalyser();
@@ -5024,6 +4951,7 @@ function ultrastarToSegments(parsed) {
   return segments;
 }
 
+
 async function handleUltrastarTxtChange(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -5250,6 +5178,9 @@ async function loadCatalogSong(folder, title, artist) {
   }
 }
 
+// ==========================================
+// 2. LISTAR CANCIONES DESDE LA NUBE
+// ==========================================
 async function loadMyKaraokeSongs() {
   const container = $("myKaraokeList");
   if (!container) return;
@@ -5301,7 +5232,9 @@ async function loadMyKaraokeSongs() {
   }
 }
 
-// Función auxiliar para mantener el código organizado
+// ==========================================
+// 3. EVENTOS DE LA LISTA DE KARAOKE
+// ==========================================
 function configurarEventosListaKaraoke(container) {
   // Eliminamos el listener previo para evitar ejecuciones duplicadas si se refresca la lista
   const nuevoContainer = container.cloneNode(true);
@@ -5328,6 +5261,9 @@ function configurarEventosListaKaraoke(container) {
   });
 }
 
+// ==========================================
+// 4. REPRODUCIR CANCIÓN DE KARAOKE DESDE LA NUBE
+// ==========================================
 let currentKaraokeAudioURL = null; // Mantenemos tu variable de control local
   
 async function loadKaraokeSong(id) {
@@ -5492,6 +5428,9 @@ async function exportKaraokeSong(id) {
   }
 }
 
+// ==========================================
+// 3. IMPORTAR ARCHIVO A LA BIBLIOTECA
+// ==========================================
 async function importKaraokeFile(file) {
   if (!file) return;
   try {
@@ -5557,8 +5496,10 @@ async function importKaraokeFile(file) {
   }
 }
 
+// ==========================================
+// 4. ACTUALIZACIÓN VISUAL DE DESPLEGABLES
+// ==========================================
 function actualizarSelectoresGlobales() {
-  // Aquí ponemos todas las funciones que actualizan los menús desplegables
   if (typeof loadVoiceOptionsInStudio === "function") loadVoiceOptionsInStudio();
   if (typeof loadTrackOptionsInStudio === "function") loadTrackOptionsInStudio();
   if (typeof loadTrackOptionsInKaraoke === "function") loadTrackOptionsInKaraoke();
@@ -5671,6 +5612,9 @@ async function loadPitchKaraokeOptions() {
   }
 }
 
+// ==========================================
+// 2. SELECCIONAR Y DECODIFICAR AUDIO DE LA NUBE
+// ==========================================
 async function loadSelectedPitchKaraoke() {
   const select = $("pitchKaraokeSelect");
   const status = $("pitchLoadStatus");
@@ -5730,6 +5674,9 @@ async function loadSelectedPitchKaraoke() {
   }
 }
 
+// ==========================================
+// 3. REPRODUCCIÓN MULTIMEDIA LOCAL (SIN CAMBIOS)
+// ==========================================
 async function playPitchShifted() {
   if (!pitchAudioBuffer) {
     alert("⚠️ Primero carga un archivo karaoke desde Biblioteca.");
@@ -5832,7 +5779,6 @@ function stopPitchShifted() {
   if (st) st.textContent = "Estado: ⏹️ detenido.";
 }
 
-// Convierte AudioBuffer a Blob WAV (PCM 16-bit)
 function audioBufferToWavBlob(buffer) {
   const numChannels = buffer.numberOfChannels;
   const sampleRate = buffer.sampleRate;
