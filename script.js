@@ -1330,6 +1330,7 @@ async function renderLibrary(filter = "todos") {
   }
 }
 
+
 function asignarEventosBiblioteca(filter) {
   document.querySelectorAll(".delete-library-btn").forEach((btn) => {
     btn.onclick = async () => {
