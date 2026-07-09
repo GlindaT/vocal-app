@@ -1062,10 +1062,14 @@ function asignarEventosBiblioteca(filter) {
 }
 */
 
-async function renderLibrary(filter = "todos") {
+async function renderLibrary(filter = "pista") {
   const container = $("libraryList");
   if (!container) return;
 
+  // Legacy: si algo llama con 'todos' (carpeta eliminada), redirigimos a 'pista'.
+  if (filter === "todos") filter = "pista";
+
+  // Marca la carpeta activa
   document.querySelectorAll(".folder-btn").forEach(btn => {
     const clickAttr = btn.getAttribute("onclick") || "";
     if (clickAttr.includes(`'${filter}'`)) {
@@ -1079,156 +1083,150 @@ async function renderLibrary(filter = "todos") {
 
   try {
     const library = await getAllLibraryItems();
-    const filteredItems = filter === "todos"
-      ? library
-      : library.filter(item => item.type === filter);
-
-    container.innerHTML = "";
+    // Filtro por tipo (sin "todos"): karaoke incluye ambos variantes, texto incluye ultrastar_txt
+    const filteredItems = library.filter(item => {
+      if (filter === "texto") return item.type === "texto" || item.type === "ultrastar_txt";
+      return item.type === filter;
+    });
 
     if (!filteredItems || filteredItems.length === 0) {
-      container.innerHTML = `<p>La carpeta '${filter}' está vacía.</p>`;
+      container.innerHTML = `<p style="text-align:center; padding:24px; color:var(--text-muted);">La carpeta <b>${filter}</b> está vacía.</p>`;
       actualizarSelectoresGlobales();
       return;
     }
 
+    // Etiquetas amigables por tipo
+    const tipoLabel = {
+      pista: "🎵 Pista",
+      voz: "🎙️ Voz",
+      grabacion: "💾 Grabación",
+      karaoke: "🎤 Karaoke",
+      texto: "📝 Letra",
+      ultrastar_txt: "📝 UltraStar"
+    };
+
+    // Construimos la tabla
+    const table = document.createElement("table");
+    table.className = "library-table";
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th style="width:45%;">Nombre</th>
+          <th style="width:20%;">Tipo</th>
+          <th style="width:25%;">Autor</th>
+          <th style="width:10%; text-align:right;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    `;
+    const tbody = table.querySelector("tbody");
+
     filteredItems.forEach((item) => {
-      const div = document.createElement("div");
-      div.className = "library-item card";
-      div.style.marginBottom = "10px";
-
-      if (item.type === "ultrastar_txt") {
-        const previewTexto = item.textoPlano
-          ? item.textoPlano.substring(0, 120) + "..."
-          : "Sin contenido";
-
-        div.innerHTML = `
-          <p><strong>${item.name}</strong></p>
-          <small>Tipo: 📝 TEXTO ULTRASTAR | ${new Date(item.date).toLocaleString()}</small>
-          <div style="background: var(--bg-main); padding: 10px; border-radius: 6px; font-family: monospace; font-size: 12px; margin: 10px 0; white-space: pre-wrap; border: 1px solid var(--border); color: var(--text-muted);">
-            ${previewTexto.replace(/</g, "&lt;")}
-          </div>
-          <div style="display: flex; gap: 10px;">
-            <button type="button" data-id="${item.id}" class="load-monitor-btn" style="background:#3b82f6; color:white;">📥 Cargar en Monitor</button>
-            <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#e11d48; color:white;">🗑️ Eliminar</button>
-          </div>
-        `;
-      } else if (item.type === "texto") {
-        let preview = "";
-        if (item.textoPlano) {
-          preview = item.textoPlano.substring(0, 180) + (item.textoPlano.length > 180 ? "…" : "");
-        } else if (Array.isArray(item.lyrics) && item.lyrics.length) {
-          const palabras = item.lyrics.slice(0, 40).map(w => w.text || "").filter(Boolean);
-          preview = palabras.join(" ") + (item.lyrics.length > 40 ? " …" : "");
-        } else {
-          preview = "Sin contenido de letra.";
-        }
-
-        const isSynced =
-          item.isSincronizada === true ||
-          (Array.isArray(item.lyrics) &&
-            item.lyrics.some(w => (w.startTime || 0) > 0 || (w.duration || 0) > 0));
-
-        const totalPalabras = Array.isArray(item.lyrics) ? item.lyrics.length : 0;
-
-        const syncBadge = isSynced
-          ? '<span style="background:#22c55e; color:white; padding:3px 8px; border-radius:6px; font-size:0.8em;">🎯 Sincronizada</span>'
-          : '<span style="background:#6b7280; color:white; padding:3px 8px; border-radius:6px; font-size:0.8em;">📝 Texto plano</span>';
-
-        div.innerHTML = `
-          <p><strong>📄 ${item.name}</strong> ${syncBadge}</p>
-          <small>Tipo: LETRA | ${new Date(item.date).toLocaleString()} | ${totalPalabras} palabras</small>
-          <div style="background: var(--bg-main); padding: 10px; border-radius: 6px; font-size: 13px; margin: 10px 0; white-space: pre-wrap; border: 1px solid var(--border); color: var(--text-muted); max-height: 110px; overflow:auto;">
-            ${preview.replace(/</g, "&lt;")}
-          </div>
-          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            <button type="button" data-id="${item.id}" class="load-monitor-btn" style="background:#3b82f6; color:white;">📥 Cargar en Monitor</button>
-            <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#e11d48; color:white;">🗑️ Eliminar</button>
-          </div>
-        `;
-      } else {
-        const audioURL = item.audioBlob ? URL.createObjectURL(item.audioBlob) : "";
-        const isKaraoke = item.type === "karaoke";
-        const isReady =
+      const isKaraoke = item.type === "karaoke";
+      const isText = item.type === "texto" || item.type === "ultrastar_txt";
+      const isReady =
+        isKaraoke && (
           item.isReadyKaraoke === true ||
           (Array.isArray(item.transcription) && item.transcription.length > 0) ||
-          (Array.isArray(item.lyrics) && item.lyrics.some(w => (w.startTime || 0) > 0));
+          (Array.isArray(item.lyrics) && item.lyrics.some(w => (w.startTime || 0) > 0))
+        );
 
-        const karaokeBadge = isKaraoke
-          ? (isReady
-              ? '<span style="background:#22c55e; color:white; padding:3px 8px; border-radius:6px; font-size:0.8em;">✅ Listo para cantar</span>'
-              : '<span style="background:#f59e0b; color:white; padding:3px 8px; border-radius:6px; font-size:0.8em;">⚠️ Sin sincronización</span>')
-          : "";
+      const badge = isKaraoke
+        ? (isReady
+            ? '<span class="lib-badge" style="background:#22c55e; color:white;">✅ Listo</span>'
+            : '<span class="lib-badge" style="background:#f59e0b; color:white;">⚠️ Sin sync</span>')
+        : "";
 
-        div.innerHTML = `
-          <p><strong>${item.name}</strong> ${karaokeBadge}</p>
-          <small>Tipo: ${String(item.type || "").toUpperCase()} | ${new Date(item.date).toLocaleString()}</small>
-          ${audioURL
-            ? `<audio controls src="${audioURL}" style="width:100%; margin: 10px 0;"></audio>`
-            : '<p style="color:red; font-size:12px;">Audio no encontrado</p>'}
-          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-            ${isKaraoke ? `<button type="button" data-id="${item.id}" class="send-karaoke-btn" style="background:#a855f7; color:white;">📤 Enviar al monitor karaoke</button>` : ""}
-            <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#e11d48; color:white;">🗑️ Eliminar</button>
-          </div>
-        `;
-      }
+      const autor = item.artist || item.autor || item.author || "—";
+      const tipo = tipoLabel[item.type] || String(item.type || "").toUpperCase();
 
-      container.appendChild(div);
+      // El nombre es clickeable para: karaoke → cargar en monitor karaoke,
+      // texto → cargar en monitor de estudio; audios simples → reproducir.
+      const nameCellClass = (isKaraoke || isText) ? "lib-name-clickable" : "";
+      const nameAction = isKaraoke ? "load-karaoke" : (isText ? "load-text" : "toggle-audio");
+
+      const tr = document.createElement("tr");
+      tr.dataset.id = item.id;
+      tr.innerHTML = `
+        <td>
+          <span class="${nameCellClass}" data-action="${nameAction}" data-id="${item.id}" title="${isKaraoke ? "Clic para cargar en Monitor Karaoke" : (isText ? "Clic para cargar en Editor de Estudio" : "Clic para reproducir")}">
+            ${item.name || "(sin nombre)"}
+          </span>
+          ${badge}
+        </td>
+        <td>${tipo}</td>
+        <td>${autor}</td>
+        <td class="lib-row-actions" style="text-align:right;">
+          <button type="button" class="delete-library-btn" data-id="${item.id}">🗑️ Eliminar</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
     });
 
-    container.querySelectorAll(".delete-library-btn").forEach((btn) => {
-      btn.onclick = async () => {
+    container.innerHTML = "";
+    container.appendChild(table);
+
+    // Delegación de eventos: clic en nombre
+    tbody.querySelectorAll(".lib-name-clickable").forEach(el => {
+      el.addEventListener("click", async (ev) => {
+        const id = Number(el.dataset.id);
+        const action = el.dataset.action;
+        const item = library.find(i => i.id === id);
+        if (!item) return;
+
+        if (action === "load-karaoke") {
+          try {
+            if (typeof loadKaraokeSong !== "function") {
+              alert("⚠️ Función de carga de karaoke no disponible.");
+              return;
+            }
+            await loadKaraokeSong(id);
+            // Cambia a la pestaña Karaoke automáticamente
+            const btnK = document.getElementById("btnKaraoke");
+            if (btnK) btnK.click();
+            // Scroll al canvas
+            const canvas = document.getElementById("karaokeCanvas");
+            if (canvas) canvas.scrollIntoView({ behavior: "smooth", block: "center" });
+          } catch (e) {
+            console.error("Error cargando karaoke:", e);
+            alert("❌ No se pudo cargar el karaoke.");
+          }
+        } else if (action === "load-text") {
+          const texto =
+            item.textoPlano ||
+            (Array.isArray(item.lyrics) ? item.lyrics.map(w => w.text || "").join(" ").trim() : "");
+          if (!texto) { alert("⚠️ Este archivo no tiene texto para cargar."); return; }
+          const monitor = document.getElementById("lyricsText") || document.getElementById("miniMonitorTextArea");
+          if (!monitor) { alert("⚠️ No se encontró el editor visible."); return; }
+          monitor.value = texto;
+          monitor.scrollIntoView({ behavior: "smooth", block: "center" });
+        } else if (action === "toggle-audio") {
+          // Reproduce (o para) el audio adjunto al item creando un <audio> temporal
+          const existing = document.querySelector(`audio[data-lib-play="${id}"]`);
+          if (existing) {
+            existing.remove();
+          } else if (item.audioBlob) {
+            const audio = document.createElement("audio");
+            audio.controls = true;
+            audio.autoplay = true;
+            audio.src = URL.createObjectURL(item.audioBlob);
+            audio.dataset.libPlay = String(id);
+            audio.style.cssText = "position:fixed; bottom:12px; right:12px; z-index:9999; background:#0f172a; border-radius:8px; padding:6px; box-shadow:0 6px 24px rgba(0,0,0,0.5);";
+            document.body.appendChild(audio);
+          }
+        }
+      });
+    });
+
+    // Eliminar
+    tbody.querySelectorAll(".delete-library-btn").forEach(btn => {
+      btn.addEventListener("click", async (ev) => {
+        ev.stopPropagation();
         if (!confirm("¿Estás seguro de eliminar este archivo?")) return;
         const id = Number(btn.dataset.id);
         await deleteLibraryItemFromDB(id);
         await renderLibrary(filter);
-      };
-    });
-
-    container.querySelectorAll(".load-monitor-btn").forEach((btn) => {
-      btn.onclick = async () => {
-        const id = Number(btn.dataset.id);
-        const item = library.find(i => i.id === id);
-        if (!item) return;
-
-        const texto =
-          item.textoPlano ||
-          (Array.isArray(item.lyrics) ? item.lyrics.map(w => w.text || "").join(" ").trim() : "");
-
-        if (!texto) {
-          alert("⚠️ Este archivo no tiene texto para cargar.");
-          return;
-        }
-
-        const monitor = document.getElementById("lyricsText") || document.getElementById("miniMonitorTextArea");
-        if (!monitor) {
-          alert("⚠️ No se encontró el contenedor visual del monitor en esta pantalla.");
-          return;
-        }
-
-        monitor.value = texto;
-        alert(`✅ Letra de "${item.name}" cargada en el monitor del Estudio.`);
-        monitor.scrollIntoView({ behavior: "smooth", block: "center" });
-      };
-    });
-
-    container.querySelectorAll(".send-karaoke-btn").forEach((btn) => {
-      btn.onclick = async () => {
-        const id = Number(btn.dataset.id);
-        const selectedItem = library.find(i => i.id === id);
-
-        try {
-          if (typeof loadKaraokeSong !== "function") {
-            alert("⚠️ Función de carga de karaoke no disponible.");
-            return;
-          }
-
-          await loadKaraokeSong(id);
-          alert(`✅ "${selectedItem?.name || "Karaoke"}" enviado al monitor karaoke.`);
-        } catch (e) {
-          console.error("Error enviando al monitor karaoke:", e);
-          alert("❌ No se pudo enviar al monitor karaoke.");
-        }
-      };
+      });
     });
 
     actualizarSelectoresGlobales();
