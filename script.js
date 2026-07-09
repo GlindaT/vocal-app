@@ -2286,25 +2286,25 @@ async function procesarSincronizacionAutomaticaYPitch() {
     transcriptionSegments = splitSegmentsIntoKaraokeLines(segmentosConPitchYNotas, 7);
 
     // 5. GUARDADO COMPATIBLE E INYECCIÓN DE LA PISTA DE MÚSICA INSTRUMENTAL
-    if (idCancionActiva) {
-      const itemOriginal = await getLibraryItemById(idCancionActiva);
+     if (idCancionActiva) {
+      // CORRECCIÓN 1: Usamos la función de lectura correcta de Supabase
+      const itemOriginal = await getLibraryItemByIdFromSupabase(idCancionActiva);
       
       if (itemOriginal) {
+        // Creamos el objeto con los campos exactos que cambian en la base de datos
         let datosFinalesKaraoke = {
-          ...itemOriginal,
           isSincronizada: true,
           isReadyKaraoke: true,
           type: "karaoke", 
-          transcription: transcriptionSegments
+          transcription: transcriptionSegments // Guardamos las líneas sincronizadas en la columna JSON
         };
 
-        if (typeof studioTrackBlob !== "undefined" && studioTrackBlob) {
-          datosFinalesKaraoke.audioBlob = studioTrackBlob;
-          if (typeof studioTrackFileName !== "undefined" && studioTrackFileName) {
-            datosFinalesKaraoke.name = "Karaoke - " + studioTrackFileName;
-          }
+        // Si hay una pista cargada, le cambiamos el nombre para identificar el Karaoke
+        if (typeof studioTrackFileName !== "undefined" && studioTrackFileName) {
+          datosFinalesKaraoke.name = "Karaoke - " + studioTrackFileName;
         }
 
+        // CORRECCIÓN 2: En lugar de machacar todo el registro, actualizamos solo los cambios en la nube
         await updateLibraryItemFromSupabase(idCancionActiva, datosFinalesKaraoke);
         console.log("✅ Registro convertido a Karaoke e indexado en Supabase.");
       }
@@ -2313,6 +2313,7 @@ async function procesarSincronizacionAutomaticaYPitch() {
     // 6. ACTUALIZACIÓN INMEDIATA DE LA INTERFAZ
     renderKaraokeLyrics(transcriptionSegments);
     if (typeof renderLibrary === "function") {
+      // Refrescamos de manera consecutiva y segura las carpetas de la interfaz
       await renderLibrary('todos');
       await renderLibrary('karaoke');
     }
