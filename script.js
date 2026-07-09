@@ -1425,26 +1425,29 @@ async function saveManualFileToLibrary() {
   }
 }
 
-async function loadTrackOptionsInStudio() {
-  const select = $("studioTrackSelect");
+async function loadTextOptionsInStudio() {
+  const select = $("textLibrarySelect");
   if (!select) return;
 
-  select.innerHTML = `<option value="">Selecciona una pista desde Biblioteca</option>`;
+  select.innerHTML = `<option value="">Selecciona una letra guardada</option>`;
 
   try {
-    const tracks = await getLibraryItemsByTypeFromSupabase("pista");
+    // CORRECCIÓN 1: Enlazado a la función correcta de Supabase
+    const letras = await getLibraryItemsByTypeFromSupabase("texto"); 
 
-    if (!tracks.length) {
+    const merged = [...letras];
+
+    if (!merged.length) {
       const option = document.createElement("option");
       option.value = "";
-      option.textContent = "No hay pistas guardadas";
+      option.textContent = "No hay letras guardadas";
       select.appendChild(option);
       return;
     }
 
-    tracks.forEach((item) => {
+    merged.forEach((item) => {
       const option = document.createElement("option");
-      option.value = item.id; // Guarda el ID tal cual viene de Supabase (sea número o string)
+      option.value = item.id; // Almacena el ID original (sea número o UUID)
       option.textContent = `${item.name} (${item.date || "sin fecha"})`;
       select.appendChild(option);
     });
