@@ -918,31 +918,49 @@ async function saveToLibrary(blob, options = {}) {
   }
 
   try {
-    // 2. Creamos el objeto con datos más inteligentes
+    // Modo Supabase: subimos el archivo al bucket `library`.
+    if (window.SupabaseLibrary) {
+      const kindMap = { texto: "texto", karaoke: "karaoke", pista: "pista", voz: "voz", grabacion: "grabacion" };
+      const kind = kindMap[options.type] || "grabacion";
+      // Determinar extensión: si es texto usamos .txt, si es audio inferimos del mime
+      let ext = "webm";
+      if (kind === "texto") ext = "txt";
+      else if (blob.type && /audio\/(mpeg|mp3)/.test(blob.type)) ext = "mp3";
+      else if (blob.type && /audio\/wav/.test(blob.type)) ext = "wav";
+      else if (blob.type && /audio\/ogg/.test(blob.type)) ext = "ogg";
+
+      const safeName = String(options.name || "archivo").replace(/[/\\?%*:|"<>]/g, "_");
+      // Si el nombre ya trae extensión, la respetamos
+      const nameWithExt = /\.[a-z0-9]{2,5}$/i.test(safeName) ? safeName : `${safeName}.${ext}`;
+
+      // Si es texto, subimos como File con contenido de textoPlano
+      let payload = blob;
+      if (kind === "texto") {
+        const contenido = options.textoPlano || (blob instanceof Blob ? await blob.text() : "");
+        payload = new Blob([contenido], { type: "text/plain" });
+      }
+      const file = new File([payload], nameWithExt, { type: payload.type || (kind === "texto" ? "text/plain" : "audio/webm") });
+
+      await window.SupabaseLibrary.uploadFile(file, kind);
+      await renderLibrary(kind);
+      console.log("✅ Guardado en Supabase Storage");
+      return;
+    }
+
+    // Fallback (sin Supabase): guardar en IndexedDB como antes
     await addLibraryItem({
       name: options.name || "Archivo",
       type: options.type || "audio",
       audioBlob: blob || null,
       textoPlano: options.textoPlano || null,
-      // Guardamos la fecha como número (timestamp) para poder ordenar fácilmente
-      date: Date.now(), 
+      date: Date.now(),
       transcription: options.transcription || []
     });
-
-    // 3. Llamamos a tu función de base de datos
-    await renderLibrary(options.type || 'todos');
-
-    // 4. Actualizamos la interfaz
-    // Asegúrate de que esta función exista y esté bien escrita
-    if (typeof renderLibrary === "function") {
-      await renderLibrary();
-    }
-
-    console.log("✅ Guardado en biblioteca correctamente");
-
+    await renderLibrary(options.type || "pista");
+    console.log("✅ Guardado en biblioteca local (IndexedDB)");
   } catch (error) {
     console.error("Error detallado:", error);
-    alert("❌ No se pudo guardar en Biblioteca: " + error);
+    alert("❌ No se pudo guardar en Biblioteca: " + (error?.message || error));
   }
 }
 
@@ -1079,33 +1097,61 @@ async function renderLibrary(filter = "pista") {
     }
   });
 
-  container.innerHTML = "<p>Cargando archivos...</p>";
+  container.innerHTML = `<p style="text-align:center; padding:24px; color:var(--text-muted);">
+    <span style="display:inline-block; width:16px; height:16px; border:2px solid #60a5fa; border-top-color:transparent; border-radius:50%; animation:spin 0.8s linear infinite; vertical-align:middle;"></span>
+    &nbsp;Cargando archivos desde Supabase…
+  </p>`;
+
+  // ¿Modo Supabase disponible?
+  const useSupabase = !!window.SupabaseLibrary && !!window.supabaseClient;
 
   try {
-    const library = await getAllLibraryItems();
-    // Filtro por tipo (sin "todos"): karaoke incluye ambos variantes, texto incluye ultrastar_txt
-    const filteredItems = library.filter(item => {
-      if (filter === "texto") return item.type === "texto" || item.type === "ultrastar_txt";
-      return item.type === filter;
-    });
+    let rows = [];
+    if (useSupabase) {
+      const all = await window.SupabaseLibrary.listAll("");
+      window.SupabaseLibrary.attachKaraokeSidecars(all);
+      // Filtrar por tipo. Para karaoke sólo mostramos el archivo AUDIO (el sidecar txt queda oculto)
+      rows = all.filter(r => {
+        if (filter === "texto") return r.type === "texto";
+        if (filter === "karaoke") return r.type === "karaoke" && window.SupabaseLibrary.isAudio(r.path);
+        return r.type === filter;
+      });
+    } else {
+      // Fallback IndexedDB (por si Supabase falla)
+      const library = await getAllLibraryItems();
+      rows = library
+        .filter(item => filter === "texto" ? (item.type === "texto" || item.type === "ultrastar_txt") : item.type === filter)
+        .map(item => ({
+          _local: true,
+          id: item.id,
+          path: item.name,
+          name: item.name || "(sin nombre)",
+          type: item.type,
+          size: item.audioBlob?.size || 0,
+          publicUrl: "",
+          artist: item.artist || item.autor || "",
+          isReadyKaraoke: item.isReadyKaraoke === true ||
+            (Array.isArray(item.transcription) && item.transcription.length > 0) ||
+            (Array.isArray(item.lyrics) && item.lyrics.some(w => (w.startTime || 0) > 0))
+        }));
+    }
 
-    if (!filteredItems || filteredItems.length === 0) {
-      container.innerHTML = `<p style="text-align:center; padding:24px; color:var(--text-muted);">La carpeta <b>${filter}</b> está vacía.</p>`;
-      actualizarSelectoresGlobales();
+    if (!rows.length) {
+      container.innerHTML = `<p style="text-align:center; padding:24px; color:var(--text-muted);">
+        La carpeta <b>${filter}</b> está vacía${useSupabase ? " en Supabase" : ""}.
+      </p>`;
+      if (typeof actualizarSelectoresGlobales === "function") actualizarSelectoresGlobales();
       return;
     }
 
-    // Etiquetas amigables por tipo
     const tipoLabel = {
       pista: "🎵 Pista",
       voz: "🎙️ Voz",
       grabacion: "💾 Grabación",
       karaoke: "🎤 Karaoke",
-      texto: "📝 Letra",
-      ultrastar_txt: "📝 UltraStar"
+      texto: "📝 Letra"
     };
 
-    // Construimos la tabla
     const table = document.createElement("table");
     table.className = "library-table";
     table.innerHTML = `
@@ -1121,15 +1167,11 @@ async function renderLibrary(filter = "pista") {
     `;
     const tbody = table.querySelector("tbody");
 
-    filteredItems.forEach((item) => {
-      const isKaraoke = item.type === "karaoke";
-      const isText = item.type === "texto" || item.type === "ultrastar_txt";
-      const isReady =
-        isKaraoke && (
-          item.isReadyKaraoke === true ||
-          (Array.isArray(item.transcription) && item.transcription.length > 0) ||
-          (Array.isArray(item.lyrics) && item.lyrics.some(w => (w.startTime || 0) > 0))
-        );
+    rows.forEach((r) => {
+      const isKaraoke = r.type === "karaoke";
+      const isText = r.type === "texto";
+      // Karaoke "Listo" si tiene sidecar sync (Supabase) o si transcripción existe (local)
+      const isReady = isKaraoke && (r.sidecarPath || r.isReadyKaraoke === true);
 
       const badge = isKaraoke
         ? (isReady
@@ -1137,27 +1179,27 @@ async function renderLibrary(filter = "pista") {
             : '<span class="lib-badge" style="background:#f59e0b; color:white;">⚠️ Sin sync</span>')
         : "";
 
-      const autor = item.artist || item.autor || item.author || "—";
-      const tipo = tipoLabel[item.type] || String(item.type || "").toUpperCase();
+      // Autor: viene del parseo del nombre (Supabase) o de item.artist (local)
+      const autor = r.artist || "—";
+      const tipo = tipoLabel[r.type] || String(r.type || "").toUpperCase();
 
-      // El nombre es clickeable para: karaoke → cargar en monitor karaoke,
-      // texto → cargar en monitor de estudio; audios simples → reproducir.
-      const nameCellClass = (isKaraoke || isText) ? "lib-name-clickable" : "";
+      const nameCellClass = (isKaraoke || isText || (useSupabase && window.SupabaseLibrary?.isAudio?.(r.path)) || r.type === "pista") ? "lib-name-clickable" : "";
       const nameAction = isKaraoke ? "load-karaoke" : (isText ? "load-text" : "toggle-audio");
+      const displayName = r.name || "(sin nombre)";
 
       const tr = document.createElement("tr");
-      tr.dataset.id = item.id;
+      tr.dataset.path = r.path;
       tr.innerHTML = `
         <td>
-          <span class="${nameCellClass}" data-action="${nameAction}" data-id="${item.id}" title="${isKaraoke ? "Clic para cargar en Monitor Karaoke" : (isText ? "Clic para cargar en Editor de Estudio" : "Clic para reproducir")}">
-            ${item.name || "(sin nombre)"}
+          <span class="${nameCellClass}" data-action="${nameAction}" data-path="${encodeURIComponent(r.path)}" ${r._local ? `data-local-id="${r.id}"` : ""} title="${isKaraoke ? "Clic para cargar en Monitor Karaoke" : (isText ? "Clic para cargar en Editor de Estudio" : "Clic para reproducir")}">
+            ${displayName || "(sin nombre)"}
           </span>
           ${badge}
         </td>
         <td>${tipo}</td>
         <td>${autor}</td>
         <td class="lib-row-actions" style="text-align:right;">
-          <button type="button" class="delete-library-btn" data-id="${item.id}">🗑️ Eliminar</button>
+          <button type="button" class="delete-library-btn" data-path="${encodeURIComponent(r.path)}" ${r._local ? `data-local-id="${r.id}"` : ""}>🗑️ Eliminar</button>
         </td>
       `;
       tbody.appendChild(tr);
@@ -1166,74 +1208,169 @@ async function renderLibrary(filter = "pista") {
     container.innerHTML = "";
     container.appendChild(table);
 
-    // Delegación de eventos: clic en nombre
+    // ─── Eventos: clic en nombre ─────────────────────────────────
     tbody.querySelectorAll(".lib-name-clickable").forEach(el => {
-      el.addEventListener("click", async (ev) => {
-        const id = Number(el.dataset.id);
+      el.addEventListener("click", async () => {
         const action = el.dataset.action;
-        const item = library.find(i => i.id === id);
-        if (!item) return;
+        const path = decodeURIComponent(el.dataset.path || "");
+        const localId = el.dataset.localId ? Number(el.dataset.localId) : null;
+        const row = rows.find(r => r.path === path);
+        if (!row) return;
 
         if (action === "load-karaoke") {
           try {
-            if (typeof loadKaraokeSong !== "function") {
-              alert("⚠️ Función de carga de karaoke no disponible.");
-              return;
+            if (row._local && localId) {
+              // Flujo local existente
+              if (typeof loadKaraokeSong === "function") await loadKaraokeSong(localId);
+            } else {
+              // Flujo Supabase: descargar audio + sidecar, meter en karaoke
+              await loadKaraokeFromSupabase(row);
             }
-            await loadKaraokeSong(id);
-            // Cambia a la pestaña Karaoke automáticamente
             const btnK = document.getElementById("btnKaraoke");
             if (btnK) btnK.click();
-            // Scroll al canvas
             const canvas = document.getElementById("karaokeCanvas");
             if (canvas) canvas.scrollIntoView({ behavior: "smooth", block: "center" });
           } catch (e) {
             console.error("Error cargando karaoke:", e);
-            alert("❌ No se pudo cargar el karaoke.");
+            alert("❌ No se pudo cargar el karaoke: " + (e?.message || e));
           }
         } else if (action === "load-text") {
-          const texto =
-            item.textoPlano ||
-            (Array.isArray(item.lyrics) ? item.lyrics.map(w => w.text || "").join(" ").trim() : "");
+          let texto = "";
+          if (row._local) {
+            const item = (await getAllLibraryItems()).find(i => i.id === localId);
+            texto = item?.textoPlano || (Array.isArray(item?.lyrics) ? item.lyrics.map(w => w.text || "").join(" ").trim() : "");
+          } else {
+            try { texto = await window.SupabaseLibrary.downloadText(row.path); } catch (e) { console.error(e); }
+          }
           if (!texto) { alert("⚠️ Este archivo no tiene texto para cargar."); return; }
           const monitor = document.getElementById("lyricsText") || document.getElementById("miniMonitorTextArea");
           if (!monitor) { alert("⚠️ No se encontró el editor visible."); return; }
           monitor.value = texto;
           monitor.scrollIntoView({ behavior: "smooth", block: "center" });
         } else if (action === "toggle-audio") {
-          // Reproduce (o para) el audio adjunto al item creando un <audio> temporal
-          const existing = document.querySelector(`audio[data-lib-play="${id}"]`);
-          if (existing) {
-            existing.remove();
-          } else if (item.audioBlob) {
-            const audio = document.createElement("audio");
-            audio.controls = true;
-            audio.autoplay = true;
-            audio.src = URL.createObjectURL(item.audioBlob);
-            audio.dataset.libPlay = String(id);
-            audio.style.cssText = "position:fixed; bottom:12px; right:12px; z-index:9999; background:#0f172a; border-radius:8px; padding:6px; box-shadow:0 6px 24px rgba(0,0,0,0.5);";
-            document.body.appendChild(audio);
+          // Reproduce audio in-place: usa URL pública si es Supabase, o Blob si es local
+          const key = row._local ? String(localId) : row.path;
+          const existing = document.querySelector(`audio[data-lib-play="${CSS.escape(key)}"]`);
+          if (existing) { existing.remove(); return; }
+          const audio = document.createElement("audio");
+          audio.controls = true;
+          audio.autoplay = true;
+          if (row._local) {
+            const item = (await getAllLibraryItems()).find(i => i.id === localId);
+            if (item?.audioBlob) audio.src = URL.createObjectURL(item.audioBlob);
+          } else {
+            audio.src = row.publicUrl;
           }
+          audio.dataset.libPlay = key;
+          audio.style.cssText = "position:fixed; bottom:12px; right:12px; z-index:9999; background:#0f172a; border-radius:8px; padding:6px; box-shadow:0 6px 24px rgba(0,0,0,0.5);";
+          document.body.appendChild(audio);
         }
       });
     });
 
-    // Eliminar
+    // ─── Eventos: eliminar ────────────────────────────────────
     tbody.querySelectorAll(".delete-library-btn").forEach(btn => {
       btn.addEventListener("click", async (ev) => {
         ev.stopPropagation();
         if (!confirm("¿Estás seguro de eliminar este archivo?")) return;
-        const id = Number(btn.dataset.id);
-        await deleteLibraryItemFromDB(id);
-        await renderLibrary(filter);
+        const path = decodeURIComponent(btn.dataset.path || "");
+        const localId = btn.dataset.localId ? Number(btn.dataset.localId) : null;
+        try {
+          if (localId) {
+            await deleteLibraryItemFromDB(localId);
+          } else {
+            await window.SupabaseLibrary.deleteFile(path);
+            // Si tiene sidecar, también lo eliminamos
+            const row = rows.find(r => r.path === path);
+            if (row?.sidecarPath) {
+              try { await window.SupabaseLibrary.deleteFile(row.sidecarPath); } catch (e) {}
+            }
+          }
+          await renderLibrary(filter);
+        } catch (e) {
+          alert("❌ No se pudo eliminar: " + (e?.message || e));
+        }
       });
     });
 
-    actualizarSelectoresGlobales();
+    if (typeof actualizarSelectoresGlobales === "function") actualizarSelectoresGlobales();
   } catch (error) {
     console.error("Error en renderLibrary:", error);
-    container.innerHTML = "<p>❌ Error al cargar la biblioteca.</p>";
+    container.innerHTML = `<p style="color:#ef4444; text-align:center; padding:20px;">
+      ❌ Error al cargar la biblioteca: ${error?.message || error}
+    </p>`;
   }
+}
+
+// Carga un karaoke directamente desde Supabase: descarga el audio (y el sidecar
+// de sync si existe) y llena las estructuras internas del monitor karaoke.
+async function loadKaraokeFromSupabase(row) {
+  const audioBlob = await window.SupabaseLibrary.downloadBlob(row.path);
+
+  // Parseo de sidecar de sync si existe (UltraStar o texto plano)
+  let transcription = [];
+  let lyrics = [];
+  if (row.sidecarPath) {
+    try {
+      const rawText = await window.SupabaseLibrary.downloadText(row.sidecarPath);
+      const parsed = (typeof parseUltrastarTxt === "function") ? parseUltrastarTxt(rawText) : null;
+      if (parsed && Array.isArray(parsed.notes) && parsed.notes.length > 0 && typeof ultrastarToSegments === "function") {
+        transcription = ultrastarToSegments(parsed);
+      } else {
+        // Sin marcas UltraStar → texto plano línea por línea (sin sync)
+        lyrics = rawText.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map((line, i) => ({
+          id: i + 1, text: line, renglon: i + 1, startTime: 0, duration: 0, pitch: 0
+        }));
+      }
+    } catch (e) {
+      console.warn("No pude leer sidecar de sync:", e);
+    }
+  }
+
+  // Simulamos un "item" de biblioteca que el flujo actual espera
+  const item = {
+    id: `supabase:${row.path}`,
+    name: window.SupabaseLibrary.displayName(row.path),
+    type: "karaoke",
+    audioBlob,
+    lyrics,
+    transcription,
+    isReadyKaraoke: (lyrics.length > 0)
+  };
+
+  karaokeLoadedItem = item;
+  karaokeSelectedTrackBlob = audioBlob;
+  karaokeSelectedTrackName = item.name;
+
+  const track = $("karaokeTrack") || $("karaokeAudio") || $("audioKaraoke") || $("trackPlayer");
+  if (track) {
+    try { track.pause(); } catch (e) {}
+    track.currentTime = 0;
+    const objectUrl = URL.createObjectURL(audioBlob);
+    track.src = objectUrl;
+    track.dataset.objectUrl = objectUrl;
+    track.dataset.karaokeId = item.id;
+    track.dataset.karaokeLoaded = "1";
+    track.volume = 0.6;
+    track.load();
+  }
+
+  if (Array.isArray(item.transcription) && item.transcription.length) {
+    transcriptionSegments = item.transcription;
+    karaokeLoadedLyrics = item.transcription;
+  } else if (Array.isArray(item.lyrics) && item.lyrics.length) {
+    transcriptionSegments = item.lyrics;
+    karaokeLoadedLyrics = item.lyrics;
+  } else {
+    transcriptionSegments = [];
+    karaokeLoadedLyrics = [];
+  }
+
+  if (typeof cargarLetrasEnMonitor === "function") cargarLetrasEnMonitor();
+
+  const status = $("karaokeStatus");
+  if (status) status.textContent = `Estado: "${item.name}" cargada desde Supabase. ¡A cantar! 🎤`;
+  console.log("✅ Karaoke cargado desde Supabase", { path: row.path, hasLyrics: lyrics.length > 0 });
 }
 function asignarEventosBiblioteca(filter) {
   document.querySelectorAll(".delete-library-btn").forEach((btn) => {
