@@ -225,25 +225,26 @@ async function addLibraryItemToSupabase(item) {
   }
 }
 
-async function getAllLibraryItemsFromSupabase() {
-  // 1. Verificación de seguridad
+async function getLibraryItemsByTypeFromSupabase(type) {
+  // 1. Validación de la base de datos
   if (!db) {
-    throw new Error("❌ No hay conexión con la base de datos.");
+    throw new Error("❌ La base de datos no está disponible.");
   }
 
   try {
-    // 2. Solicitamos todos los objetos de la tabla 'library'
+    // 2. Hacemos la consulta a Supabase filtrando por la columna 'type'
     const { data, error } = await db
-      .from('library')
-      .select('*'); // El asterisco trae todas las filas y columnas
+      .from('library')       // Nombre de tu tabla
+      .select('*')           // Selecciona todas las columnas
+      .eq('type', type);     // Filtra donde la columna 'type' coincida con el argumento
 
-    // 3. Si Supabase devuelve un error, lo manejamos
+    // 3. Si Supabase devuelve un error (ej. la tabla no existe)
     if (error) {
-      throw new Error(`❌ Error al leer la Biblioteca: ${error.message}`);
+      throw new Error(`❌ Error de Supabase: ${error.message}`);
     }
 
-    // 4. Resolvemos con el array de resultados
-    console.log(`✅ Se recuperaron ${data.length} elementos desde Supabase.`);
+    // 4. Mostramos el resultado en consola y lo retornamos
+    console.log(`🔍 Buscando '${type}': se encontraron ${data.length} coincidencias.`);
     return data;
 
   } catch (error) {
