@@ -1105,3 +1105,51 @@ Action: file_editor str_replace /app/frontend/public/style.css --old-str "/* ===
   min-height: 500px !important;
   display: block !important;
 }"
+
+/* Library Container: 2-Column Grid */
+#libraryList {
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 2px !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Library Item: Compact Row Row */
+.library-item {
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 0px 4px !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0 !important;
+}
+
+/* Audio Player and Action Buttons */
+.library-item audio {
+  order: 10;
+  width: 60px !important;
+  height: 16px !important;
+  margin: 0 !important;
+}
+
+.library-item button {
+  font-size: 11px !important;
+  padding: 4px 8px !important;
+  margin-top: 2px;
+}
+
+/* Text Hierarchy */
+.library-item p {
+  display: flex !important;
+  flex-direction: column !important;
+  font-size: 11px !important;
+  line-height: 1.0;
+}
+
+.library-item p span {
+  margin-top: 2px;
+  opacity: 0.7;
+}
