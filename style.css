@@ -1038,7 +1038,7 @@ Action: file_editor str_replace /app/frontend/public/style.css --old-str "/* ===
   font-size: 70%;
 }
 
-#estudio h1, #karaoke h1, #cambiarTono h1 { font-size: 1.6rem !important; margin: 10px 0 !important; }
+#estudio h1, #karaoke h1, #cambiarTono h1 { font-size: 1.6rem !important; margin: 10px 0 !important; text-shadow: rgb(173, 255, 47) 0px 0px 5px, rgb(173, 255, 47) 0px 0px 10px, rgb(173, 255, 47) 0px 0px 20px, rgb(50, 205, 50) 0px 0px 40px; }
 #estudio h2, #karaoke h2, #cambiarTono h2 { font-size: 1.25rem !important; }
 #estudio h3, #karaoke h3, #cambiarTono h3 { font-size: 1.05rem !important; margin: 6px 0 !important; }
 #estudio h4, #karaoke h4, #cambiarTono h4 { font-size: 0.95rem !important; margin: 6px 0 !important; }
@@ -1051,7 +1051,7 @@ Action: file_editor str_replace /app/frontend/public/style.css --old-str "/* ===
 
 #estudio button, #karaoke button, #cambiarTono button {
   padding: 2px 6px !important;
-  font-size: 0.7em !important;
+  font-size: 0.75em !important;
 }
 
 #estudio input, #estudio select, #estudio textarea,
