@@ -929,11 +929,11 @@ textarea {
 */
 .catalog-item-actions, .my-karaoke-item-actions {
   display: flex;
-  gap: 8px;
+  gap: 4px;
 }
 
 .catalog-item-actions button, .my-karaoke-item-actions button {
-  padding: 6px 12px;
+  padding: 2px 6px;
   font-size: 10px;
 }
 
@@ -969,14 +969,14 @@ Action: file_editor str_replace /app/frontend/public/style.css --old-str "/* ===
 #estudio h4, #karaoke h4 { font-size: 0.95rem !important; margin: 6px 0 !important; }
 
 #estudio p, #karaoke p {
-  font-size: 0.92em !important;
-  line-height: 1.35 !important;
-  margin: 6px 0 !important;
+  font-size: 0.7em !important;
+  line-height: 1.1 !important;
+  margin: 2px 0 !important;
 }
 
 #estudio button, #karaoke button {
-  padding: 7px 10px !important;
-  font-size: 0.9em !important;
+  padding: 2px 6px !important;
+  font-size: 0.7em !important;
 }
 
 #estudio input, #estudio select, #estudio textarea,
@@ -991,7 +991,7 @@ Action: file_editor str_replace /app/frontend/public/style.css --old-str "/* ===
 
 #estudio .card, #karaoke .card {
   padding: 14px !important;
-  margin-bottom: 14px !important;
+  margin-bottom: 6px !important;
 }
 
 #estudio audio, #karaoke audio {
@@ -1044,14 +1044,14 @@ Action: file_editor str_replace /app/frontend/public/style.css --old-str "/* ===
 #estudio h4, #karaoke h4, #cambiarTono h4 { font-size: 0.95rem !important; margin: 6px 0 !important; }
 
 #estudio p, #karaoke p, #cambiarTono p {
-  font-size: 0.92em !important;
-  line-height: 1.35 !important;
-  margin: 6px 0 !important;
+  font-size: 0.75em !important;
+  line-height: 1.1 !important;
+  margin: 2px 0 !important;
 }
 
 #estudio button, #karaoke button, #cambiarTono button {
-  padding: 7px 10px !important;
-  font-size: 0.9em !important;
+  padding: 2px 6px !important;
+  font-size: 0.7em !important;
 }
 
 #estudio input, #estudio select, #estudio textarea,
@@ -1066,8 +1066,8 @@ Action: file_editor str_replace /app/frontend/public/style.css --old-str "/* ===
 }
 
 #estudio .card, #karaoke .card, #cambiarTono .card {
-  padding: 14px !important;
-  margin-bottom: 14px !important;
+  padding: 12px !important;
+  margin-bottom: 6px !important;
 }
 
 #estudio audio, #karaoke audio, #cambiarTono audio {
