@@ -241,13 +241,25 @@ audio {
 /* ==========================================
    BIBLIOTECA
 ========================================== */
-#libraryList div {
-  background: var(--bg-card);
-  padding: 12px;
-  border-radius: 10px;
-  margin-bottom: 10px;
+div#libraryList {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
 }
-
+/* Library Item: Compact Row Row */
+.library-item {
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 0px 4px !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0 !important;
+}
+/*
 .library-item {
     background: var(--bg-main);
     border: 1px solid var(--border);
@@ -256,6 +268,8 @@ audio {
     margin-bottom: 10px;
     transition: box-shadow 0.3s ease;
 }
+*/
+   
 
 .library-item:hover {
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
@@ -1116,16 +1130,6 @@ Action: file_editor str_replace /app/frontend/public/style.css --old-str "/* ===
   overflow: hidden;
 }
 
-/* Library Item: Compact Row Row */
-.library-item {
-  display: flex !important;
-  flex-direction: column !important;
-  padding: 0px 4px !important;
-  background-color: transparent !important;
-  box-shadow: none !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 0 !important;
-}
 
 /* Audio Player and Action Buttons */
 .library-item audio {
