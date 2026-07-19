@@ -898,7 +898,7 @@ textarea {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 15px;
+  padding: 10px 12px;
   background: var(--bg-main);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -920,21 +920,21 @@ textarea {
   color: var(--text-main);
   margin: 0 0 4px 0;
 }
-
+/*
 .catalog-item-artist, .my-karaoke-item-artist {
   font-size: 13px;
   color: var(--text-muted);
   margin: 0;
 }
-
+*/
 .catalog-item-actions, .my-karaoke-item-actions {
   display: flex;
   gap: 8px;
 }
 
 .catalog-item-actions button, .my-karaoke-item-actions button {
-  padding: 8px 15px;
-  font-size: 13px;
+  padding: 6px 12px;
+  font-size: 10px;
 }
 
 /* Modal 
