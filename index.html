@@ -19,7 +19,7 @@
         <button id="btnBiblioteca" type="button">🎙️✒️📋Biblioteca</button>
         <button id="btnKaraoke" type="button">👩🎤🧔Karaoke</button>
         <button id="btnCambiarTono" type="button">✏️⏳⚙️Cambiar tono</button>
-        <!-- <button id="btnSplitter" type="button">Splitter</button> -->
+        <button id="btnSplitter" type="button">Splitter</button>
         <button id="btnConfig" type="button">🛠️🔑🗂️Config</button>
       </nav>
       
@@ -597,29 +597,19 @@
           </div>
         </section>
         
-        <!-- SPLITTER 
-    <section id="splitter" class="tab">
-      <h1>✂️ Splitter IA</h1>
-
-      <div class="card">
-        <h3>Separar Voz e Instrumental</h3>
-        <p style="color: var(--text-muted); margin-bottom: 20px;">
-          Sube una canción. La Inteligencia Artificial la separará y la guardará en tu Biblioteca.
-        </p>
-
-        <input type="file" id="splitterFile" accept="audio/*">
-        
-        <div class="studio-controls">
-          <button id="splitBtn" type="button" style="background: #3b82f6; color: white;">✨ Separar Audio con IA</button>
-        </div>
-
-        <div id="splitterStatusBox" style="margin-top: 20px; padding: 15px; background: var(--bg-main); border-radius: 8px; border: 1px solid var(--border); display: none;">
-          <h4 id="splitterStatusText" style="color: var(--accent); margin: 0;">Iniciando IA...</h4>
-          <p id="splitterDetailText" style="color: var(--text-muted); font-size: 14px;">Esto puede tardar un poco.</p>
-        </div>
-      </div>
-    </section>
-    -->
+        <!-- SPLITTER -->
+        <section id="splitter" class="tab">
+          <h1>🎵 Separador de Voz e Instrumental</h1>
+          <p>Sube un archivo MP3 y sepáralo localmente (sin APIs)</p>
+          <input type="file" id="fileInput" accept=".mp3" />
+          <button id="processBtn">Separar voz / instrumental</button>
+          <progress id="progressBar" value="0" max="100" style="width: 100%; margin: 20px 0;"></progress>
+          <div id="results" style="display: none;">
+            <h3>Resultados:</h3>
+            <a id="downloadVocals" download>⬇️ Descargar Voz (vocals.wav)</a><br><br>
+            <a id="downloadInst" download>⬇️ Descargar Instrumental (instrumental.wav)</a>
+          </div>
+        </section>
         
         <!-- CONFIGURACIÓN -->
         <section id="config" class="tab">
@@ -715,5 +705,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./supabase-config.js"></script>
     <script src="./script.js"></script>
+    <script type="module" src="/src/main.js"></script>
   </body>
 </html>
