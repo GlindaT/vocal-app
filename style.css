@@ -1157,3 +1157,13 @@ Action: file_editor str_replace /app/frontend/public/style.css --old-str "/* ===
   margin-top: 2px;
   opacity: 0.7;
 }
+/* Custom Library List Simplification */
+.library-item.card p strong {
+  font-size: 1.25em !important;
+}
+
+.library-item.card small,
+.library-item.card audio,
+.library-item.card p span {
+  display: none !important;
+}
