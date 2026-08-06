@@ -84,42 +84,6 @@ function initSupabase() {
   });
 }
 
-/*function initSupabase() {
-  return new Promise((resolve, reject) => {
-    // 1. Abrimos la base de datos (nombre, versión)
-    const request = database.open("vocalApp", 1);
-
-    // Se ejecuta si la versión cambia o es la primera vez
-    request.onupgradeneeded = function (event) {
-      const database = event.target.result;
-
-      if (!database.objectStoreNames.contains("library")) {
-        // Creamos el almacén de objetos (como una tabla)
-        const store = database.createObjectStore("library", {
-          keyPath: "id",
-          autoIncrement: true
-        });
-
-        // Creamos índices para hacer búsquedas eficientes
-        store.createIndex("type", "type", { unique: false });
-        store.createIndex("date", "date", { unique: false });
-      }
-    };
-
-    // Si todo sale bien
-    request.onsuccess = function (event) {
-      db = event.target.result; // Asignamos a la variable previamente declarada
-      resolve(supabase);
-    };
-
-    // Si hay un error, pasamos el detalle del error
-    request.onerror = function (event) {
-      reject(`❌ Error al abrir Supabase: ${event.target.error}`);
-    };
-  });
-}
-*/
-
 async function addLibraryItemToSupabase(item) {
   if (!db) {
     throw new Error("❌ La base de datos no está inicializada.");
@@ -169,7 +133,6 @@ async function getAllLibraryItemsFromSupabase() {
     throw error; 
   }
 }
-
 
 async function updateLibraryItemFromSupabase(id, changes) {
   if (!db) {
@@ -305,7 +268,6 @@ async function uploadFileToSupabase(fileOrBlob, fileName, mimeType = "applicatio
   };
 }
 
-
 async function saveLibraryItemToSupabase({ name, type, blob, transcription = [], metadata = {} }) {
   if (!db) throw new Error("❌ La base de datos no está inicializada.");
 
@@ -352,73 +314,6 @@ async function saveLibraryItemToSupabase({ name, type, blob, transcription = [],
 
   if (error) throw error;
 }
-
-/*
-async function getAllLibraryItemsFromSupabase() {
-  const { data, error } = await supabaseClient
-    .from("library_items")
-    .select("*")
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    throw error;
-  }
-
-  return data || [];
-}
-
-async function getLibraryItemsByTypeFromSupabase(type) {
-  const { data, error } = await supabaseClient
-    .from("library_items")
-    .select("*")
-    .eq("type", type)
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    throw error;
-  }
-
-  return data || [];
-}
-
-async function getLibraryItemByIdFromSupabase(id) {
-  const { data, error } = await supabaseClient
-    .from("library_items")
-    .select("*")
-    .eq("id", id)
-    .single();
-
-  if (error) {
-    throw error;
-  }
-
-  return data;
-}
-
-async function deleteLibraryItemFromSupabase(id) {
-  // primero buscamos el item para saber qué archivo borrar
-  const item = await getLibraryItemByIdFromSupabase(id);
-
-  if (item?.file_path) {
-    const { error: storageError } = await supabaseClient.storage
-      .from("library")
-      .remove([item.file_path]);
-
-    if (storageError) {
-      console.warn("No se pudo borrar el archivo del storage:", storageError.message);
-    }
-  }
-
-  const { error } = await supabaseClient
-    .from("library_items")
-    .delete()
-    .eq("id", id);
-
-  if (error) {
-    throw error;
-  }
-}
-*/
 
 // ==========================================
 // NAVEGACIÓN
@@ -489,6 +384,9 @@ async function startAfinador() {
   analyser.fftSize = 2048;
   mic.connect(analyser);
 
+  drawTunerNeedle(0);
+  updateCentsDisplay(0);
+
   setTimeout(() => {
     detectPitch();
   }, 300);
@@ -497,18 +395,150 @@ async function startAfinador() {
 function stopAfinador() {
   if (stream) stream.getTracks().forEach(t => t.stop());
   if (audioContext) audioContext.close();
+
+  resetTunerVisuals();
 }
+
+function drawTunerNeedle(cents = 0) {
+  const canvas = $("tunerCanvas");
+  if (!canvas) return;
+
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width;
+  const h = canvas.height;
+  const cx = w / 2;
+  const cy = h / 2;
+  const radius = 125;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Arco base
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, Math.PI * 0.75, Math.PI * 0.25, false);
+  ctx.strokeStyle = "rgba(255,255,255,0.18)";
+  ctx.lineWidth = 8;
+  ctx.lineCap = "round";
+  ctx.stroke();
+
+  // Zona central afinada
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, -Math.PI / 2 - 0.18, -Math.PI / 2 + 0.18, false);
+  ctx.strokeStyle = "#22c55e";
+  ctx.lineWidth = 10;
+  ctx.lineCap = "round";
+  ctx.stroke();
+
+  // Marcas
+  for (let i = -5; i <= 5; i++) {
+    const t = i / 5; // -1 a 1
+    const angle = -Math.PI / 2 + t * (Math.PI / 4);
+
+    const r1 = radius - 18;
+    const r2 = radius - (i === 0 ? 36 : 26);
+
+    const x1 = cx + Math.cos(angle) * r1;
+    const y1 = cy + Math.sin(angle) * r1;
+    const x2 = cx + Math.cos(angle) * r2;
+    const y2 = cy + Math.sin(angle) * r2;
+
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.strokeStyle = i === 0 ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.35)";
+    ctx.lineWidth = i === 0 ? 3 : 2;
+    ctx.stroke();
+  }
+
+  // Limitar cents al rango visual
+  const clamped = Math.max(-50, Math.min(50, cents));
+  const angle = -Math.PI / 2 + (clamped / 50) * (Math.PI / 4);
+
+  const needleLength = radius - 42;
+  const x = cx + Math.cos(angle) * needleLength;
+  const y = cy + Math.sin(angle) * needleLength;
+
+  // Color aguja según afinación
+  let needleColor = "#f59e0b";
+  if (Math.abs(cents) <= 5) needleColor = "#22c55e";
+  else if (Math.abs(cents) <= 15) needleColor = "#eab308";
+
+  // Aguja
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(x, y);
+  ctx.strokeStyle = needleColor;
+  ctx.lineWidth = 5;
+  ctx.lineCap = "round";
+  ctx.shadowColor = needleColor;
+  ctx.shadowBlur = 12;
+  ctx.stroke();
+
+  // Centro
+  ctx.beginPath();
+  ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+  ctx.fillStyle = needleColor;
+  ctx.shadowBlur = 0;
+  ctx.fill();
+}
+
+function updateCentsDisplay(cents = 0) {
+  const centsValue = $("centsValue");
+  const centsFill = $("centsFill");
+
+  if (centsValue) {
+    const rounded = Math.round(cents);
+    centsValue.textContent = rounded > 0 ? `+${rounded}` : `${rounded}`;
+  }
+
+  if (centsFill) {
+    const percent = Math.min(100, Math.abs(cents) * 2);
+    centsFill.style.width = `${percent}%`;
+
+    if (Math.abs(cents) <= 5) {
+      centsFill.style.background = "#22c55e";
+    } else if (Math.abs(cents) <= 15) {
+      centsFill.style.background = "#eab308";
+    } else {
+      centsFill.style.background = "#f59e0b";
+    }
+  }
+}
+
+function resetTunerVisuals() {
+  const display = $("noteDisplay");
+  const guide = $("guideText");
+  const centsValue = $("centsValue");
+  const centsFill = $("centsFill");
+
+  if (display) {
+    display.textContent = "--";
+    display.style.color = "white";
+  }
+
+  if (guide) {
+    guide.textContent = "🎤 Esperando voz...";
+    guide.style.color = "#f59e0b";
+  }
+
+  if (centsValue) {
+    centsValue.textContent = "0";
+  }
+
+  if (centsFill) {
+    centsFill.style.width = "0%";
+  }
+
+  drawTunerNeedle(0);
+}    
 
 function detectPitch() {
   if (!state.isRecording || !analyser) return;
 
-  // Usamos el buffer global en lugar de crear uno nuevo cada 16ms
   analyser.getFloatTimeDomainData(pitchBuffer);
   const pitch = autoCorrelate(pitchBuffer, audioContext.sampleRate);
-  
+
   if (document.getElementById("karaokeCanvas")) {
-    // Asegúrate de que esta función esté definida o comentada para evitar errores
-    if (typeof drawKaraokeMonitor === 'function') drawKaraokeMonitor(0, pitch); 
+    if (typeof drawKaraokeMonitor === 'function') drawKaraokeMonitor(0, pitch);
   }
 
   const display = $("noteDisplay");
@@ -520,37 +550,37 @@ function detectPitch() {
     if (pitch !== -1) {
       const noteFull = getNoteFromFrequency(pitch);
       const targetFreq = getNoteFrequency(targetNote);
-      // Evitar logaritmo de 0 o infinito
       const cents = 1200 * Math.log2(pitch / targetFreq);
 
       display.textContent = noteFull;
+      updateCentsDisplay(cents);
+      drawTunerNeedle(cents);
 
       const dificultad = localStorage.getItem("vocalApp_difficulty") || "medio";
       let maxDesviation = 30;
-        if (dificultad === "facil") maxDesviation = 50;
-        else if (dificultad === "dificil") maxDesviation = 15;
-        else if (dificultad === "experto") maxDesviation = 5;
-        
-        // Asegúrate de que las llaves envuelven correctamente cada bloque
-        if (Math.abs(cents) <= maxDesviation) {
-            display.style.color = "#22c55e"; 
-            guide.textContent = `🎯 ¡En la nota! (${targetNote})`;
-            guide.style.color = "#22c55e";
-        } else if (cents < 0) {
-            display.style.color = "#f59e0b";
-            guide.textContent = `⬆️ Estás grave. Sube a ${targetNote}`;
-            guide.style.color = "#f59e0b";
-        } else {
-            display.style.color = "#f59e0b";
-            guide.textContent = `⬇️ Estás agudo. Baja a ${targetNote}`;
-            guide.style.color = "#f59e0b";
-        }
+
+      if (dificultad === "facil") maxDesviation = 50;
+      else if (dificultad === "dificil") maxDesviation = 15;
+      else if (dificultad === "experto") maxDesviation = 5;
+
+      if (Math.abs(cents) <= maxDesviation) {
+        display.style.color = "#22c55e";
+        guide.textContent = `🎯 ¡En la nota! (${targetNote})`;
+        guide.style.color = "#22c55e";
+      } else if (cents < 0) {
+        display.style.color = "#f59e0b";
+        guide.textContent = `⬆️ Estás grave. Sube a ${targetNote}`;
+        guide.style.color = "#f59e0b";
+      } else {
+        display.style.color = "#f59e0b";
+        guide.textContent = `⬇️ Estás agudo. Baja a ${targetNote}`;
+        guide.style.color = "#f59e0b";
+      }
     } else {
-      display.textContent = "--";
-      display.style.color = "white";
-      guide.textContent = "🎤 Esperando voz...";
+      resetTunerVisuals();
     }
   }
+
   requestAnimationFrame(detectPitch);
 }
 
