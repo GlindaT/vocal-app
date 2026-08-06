@@ -4260,22 +4260,11 @@ function resizeKaraokeCanvas() {
   const canvas = $("karaokeCanvas");
   if (!canvas) return;
 
-  const container = canvas.parentElement;
-  if (!container) return;
-
   const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const cssWidth = Math.max(300, Math.round(rect.width));
+  const cssHeight = Math.max(300, Math.round(rect.height));
 
-  // Ancho visible del contenedor
-  const cssWidth = Math.max(760, Math.min(container.clientWidth, window.innerWidth * 0.66));
-
-  // Altura proporcional: más generosa para que no se vea saturado
-  const cssHeight = Math.round(cssWidth * 0.42);
-
-  // Aplicamos tamaño visual
-  canvas.style.width = `${cssWidth}px`;
-  canvas.style.height = `${cssHeight}px`;
-
-  // Aplicamos tamaño interno real para nitidez
   const realWidth = Math.round(cssWidth * dpr);
   const realHeight = Math.round(cssHeight * dpr);
 
