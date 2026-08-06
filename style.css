@@ -856,13 +856,14 @@ textarea {
   text-shadow: 0 0 10px #a855f7, 0 0 20px #a855f7;
 }
 
-[data-theme="neon"] button {
+[data-theme="neon"] .sidebar button {
   background: #b266ff;
   color: white;
   box-shadow: 0 0 12px rgba(178, 102, 255, 0.6);
 }
 
-[data-theme="neon"] button:hover {
+[data-theme="neon"] button:hover,
+[data-theme="neon"] .sidebar button.active {
   background: #c77dff;
   box-shadow: 0 0 20px rgba(168, 85, 247, 0.8);
 }
