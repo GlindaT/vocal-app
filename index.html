@@ -290,131 +290,17 @@
                 Monitor dividido.
               </span>
             </div>
+            
             <div class="card monitor-karaoke" style="background: #1a1a1a; padding: 0; border: 2px solid var(--border); overflow: hidden;">
             <canvas id="karaokeCanvas" width="1800" height="600" style="width: 100%; display: block; border-radius: 12px; min-height: 500px;"></canvas>
             </div>
-          </div>
-
-          
-          <!-- CATÁLOGO DE CANCIONES LISTAS 
-          <div class="card">
             
-            <div class="encabezado-desplegable" data-target="contenido-catalogo" data-arrow="flecha-catalogo" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;">
-              <h3 style="margin: 0;">🎤 Archivos karaoke listos</h3>
-              <span id="flecha-catalogo" class="flecha" style="transition: transform 0.2s ease; font-size: 1.2rem; color: var(--accent);">▶</span>
-            </div>
-            -->
-            <!-- Contenido que se va a ocultar 
-            <div id="contenido-catalogo" class="contenido-desplegable" style="margin-top: 15px;">
-              -->
-              <!-- Catálogo pre-cargado 
-              <div id="catalogSection"> 
-                <h4 style="color: var(--accent); margin-bottom: 10px;">📚 Catálogo de la App</h4>
-                <div id="catalogList" style="max-height: 200px; overflow-y: auto;">
-                  <p style="color: var(--text-muted);">Cargando catálogo...</p>
-                </div>
-              </div>
-              -->
-              <!-- Mis canciones importadas/creadas 
-              <div id="myKaraokeSongs" style="margin-top: 20px;">
-                <h4 style="color: #f59e0b; margin-bottom: 10px;">📁✒️ MIS KARAOKE</h4>
-                <div id="myKaraokeList" style="max-height: 200px; overflow-y: auto;">
-                  <p style="color: var(--text-muted);">No tienes canciones guardadas aún.</p>
-                </div>
-              </div>
-          -->
-              <!--
-              <div class="studio-controls" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border);">
-                <button id="refreshKaraokeCatalogBtn" type="button" style="background: #6b7280;">🔄 Actualizar Listas de Reproducción</button>
-              </div>
-              -->
-              <!-- Botones de acción 
-              <div class="studio-controls" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border);">
-                <button id="importvocalAppBtn" type="button" style="background: #06b6d4;">📥 Importar .vocalApp</button>
-                <button id="importUltrastarBtn" type="button" style="background: #8b5cf6;">📥 Importar UltraStar</button>
-                <button id="refreshKaraokeCatalogBtn" type="button" style="background: #6b7280;">🔄 Actualizar</button>
-              </div> 
-              <input type="file" id="importvocalAppFile" accept=".vocalApp,application/json" style="display:none;"> 
-              -->
-            </div>
-            <!-- MODAL IMPORTAR ULTRASTAR 
-            <div id="ultrastarModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center;">
-            <div style="background: var(--bg-card); padding: 30px; border-radius: 12px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;">
-            <h3 style="margin-top: 0; color: var(--accent);">📥 Importar Canción UltraStar</h3>
-            <div style="background: var(--bg-main); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <p style="margin: 0 0 10px 0; font-size: 14px; color: var(--text-muted);">
-            <strong>¿Dónde conseguir canciones?</strong>
-          </p>
-            <a href="https://animux.de" target="_blank" style="color: #3b82f6; text-decoration: none;">
-            🔗 USDB (UltraStar Database) - Miles de canciones gratis
-          </a>
-            <p style="margin: 10px 0 0 0; font-size: 12px; color: var(--text-muted);">
-            Descarga el archivo .txt y consigue el audio (MP3) de la canción.
-          </p>
-          </div>
-            <div class="settings-group">
-            <label>📄 Archivo UltraStar (.txt)</label>
-            <input type="file" id="ultrastarTxtFile" accept=".txt">
+            <!-- Contenedores de letras para el monitor karaoke -->
+            <div id="karaokeLyrics" class="karaoke-lyrics" style="display: none;"></div>
+            <div id="karaokeLiveLyrics" class="karaoke-lyrics" style="display: none;"></div>
           </div>
           
-          <div class="settings-group">
-            <label>🎵 Audio de la canción (.mp3, .wav, .ogg)</label>
-            <input type="file" id="ultrastarAudioFile" accept="audio/*">
-          </div>
-          
-          <div class="settings-group">
-            <label>🎤 Voz separada (opcional)</label>
-            <input type="file" id="ultrastarVocalsFile" accept="audio/*">
-            <p style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">
-              Si no tienes la voz separada, puedes usar el Splitter después.
-            </p>
-          </div>
-          
-          <div id="ultrastarPreview" style="display: none; background: var(--bg-main); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <h4 style="margin: 0 0 10px 0; color: #22c55e;">Vista previa:</h4>
-            <p id="ultrastarTitle" style="margin: 5px 0;"><strong>Título:</strong> ---</p>
-            <p id="ultrastarArtist" style="margin: 5px 0;"><strong>Artista:</strong> ---</p>
-            <p id="ultrastarBpm" style="margin: 5px 0;"><strong>BPM:</strong> ---</p>
-            <p id="ultrastarNotes" style="margin: 5px 0;"><strong>Notas:</strong> ---</p>
-          </div>
-        
-        <div class="studio-controls">
-          <button id="confirmImportBtn" type="button" style="background: #22c55e;">✅ Importar a Mi Biblioteca</button>
-          <button id="cancelImportBtn" type="button" style="background: #ef4444;">❌ Cancelar</button>
-        </div>
-            -->
-            
-            <!-- Paso 1: Pista 
-            <div class="card">
-              <div class="encabezado-desplegable" data-target="contenido-pista" data-arrow="flecha-pista" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none;">
-                <h3 style="margin: 0;">Cargar Pista</h3>
-                <span id="flecha-pista" class="flecha" style="transition: transform 0.2s ease; font-size: 1.2rem; color: var(--accent);">▶</span>
-              </div>
-              -->
-            <!-- Contenido que se va a ocultar 
-            <div id="contenido-pista" class="contenido-desplegable" style="margin-top: 15px;">
-              <!--Opción A: Desde la Biblioteca 
-              <div class="studio-controls">
-                <button id="refreshKaraokeTrackBtn" type="button">🔄 Actualizar lista</button>
-              </div>
-              <select id="karaokeTrackSelect" style="width: 100%; margin: 10px 0;">
-                <option value="">Selecciona una pista desde tu Biblioteca</option>
-              </select>
-              <div class="studio-controls" style="margin-bottom: 15px;">
-                <button id="loadKaraokeTrackBtn" type="button" style="background: #3b82f6; color: white;">📥 Cargar Pista de Biblioteca</button>
-              </div> 
-              
-              <!-- Opción B: Desde la PC 
-              <p style="color: var(--text-muted); font-size: 14px;">O sube una pista desde tu PC:</p>
-              <input type="file" id="karaokeTrackFile" accept="audio/*">
-           
-              <audio id="karaokeTrack" preload="auto" style="display:none;"></audio>
-            </div>
-            -->
-        </div>
-           
-            
-            <!-- Paso 1: Grabación -->
+          <!-- Paso 1: Grabación -->
           <div class="card">
             <h3>🎙️ Grabación Sincronizada 🎙️</h3>
             <p id="karaokeStatus" style="color: var(--text-muted); margin-bottom: 15px;">Estado: selecciona un karaoke de la lista y presiona Cantar.</p>
