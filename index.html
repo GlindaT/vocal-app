@@ -415,50 +415,47 @@
            
             
             <!-- Paso 1: Grabación -->
-<div class="card">
-  <h3>🎙️ Grabación Sincronizada 🎙️</h3>
-  <p id="karaokeStatus" style="color: var(--text-muted); margin-bottom: 15px;">Estado: selecciona un karaoke de la lista y presiona Cantar.</p>
-
-  <audio id="karaokeTrack" preload="auto" style="display:none;"></audio>
-
-  <!--mon-->
-  <div id="karaokeDuoIndicator" style="display: none; margin-bottom: 15px; padding: 15px; background: var(--bg-main); border-radius: 8px; border: 1px solid var(--border);">
-    <p style="margin: 0 0 10px 0; font-weight: bold; color: var(--accent);">🎤🎤 Modo Dúo Activo</p>
-    <div style="display: flex; gap: 20px;">
-      <div style="flex: 1;">
-        <small>Mic 1:</small>
-        <div class="mic-level-bar"><div id="karaokeDuoMic1Level" class="mic-level-fill"></div></div>
-      </div>
-      <div style="flex: 1;">
-        <small>Mic 2:</small>
-        <div class="mic-level-bar"><div id="karaokeDuoMic2Level" class="mic-level-fill"></div></div>
-      </div>
-    </div>
-  </div>
-  
-  <div class="studio-controls">
-    <button id="karaokeStartBtn" class="btn-xl" type="button">▶️ Iniciar Grabación</button>
-    <button id="karaokeStopBtn" class="btn-xl" type="button">⏹️ Detener</button>
-    <button id="karaokeRestartBtn" class="btn-xl" type="button">🔄 Volver a intentar</button>
-  </div>
-</div>
-
-<div class="card">
-  <h4 style="margin-top: 20px;">🗣️ Tu voz grabada: Escucha tu voz sin la pista</h4>
-  <audio id="karaokeVoicePlayer" controls></audio>
-</div>
-
-<!-- Paso 2: Mezcla -->
-<div class="card">
-  <h3>🎚️ Mezcla Final 🎚️</h3>
-  <p style="color: var(--text-muted); margin-bottom: 15px;">Tu voz y la pista en un solo archivo.</p>
-  <div class="studio-controls">
-    <button id="karaokeMixBtn" class="btn-xl" type="button">⚙️ Mezclar ⚙️</button>
-  </div>
-  <div id="karaokeMixResult" style="margin-top: 15px;"></div>
-</div>
-    </section>
-
+          <div class="card">
+            <h3>🎙️ Grabación Sincronizada 🎙️</h3>
+            <p id="karaokeStatus" style="color: var(--text-muted); margin-bottom: 15px;">Estado: selecciona un karaoke de la lista y presiona Cantar.</p>
+            <audio id="karaokeTrack" preload="auto" style="display:none;"></audio>
+            
+            <!--mon-->
+            <div id="karaokeDuoIndicator" style="display: none; margin-bottom: 15px; padding: 15px; background: var(--bg-main); border-radius: 8px; border: 1px solid var(--border);">
+              <p style="margin: 0 0 10px 0; font-weight: bold; color: var(--accent);">🎤🎤 Modo Dúo Activo</p>
+              <div style="display: flex; gap: 20px;">
+                <div style="flex: 1;">
+                  <small>Mic 1:</small>
+                  <div class="mic-level-bar"><div id="karaokeDuoMic1Level" class="mic-level-fill"></div></div>
+                </div>
+                <div style="flex: 1;">
+                  <small>Mic 2:</small>
+                  <div class="mic-level-bar"><div id="karaokeDuoMic2Level" class="mic-level-fill"></div></div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="studio-controls">
+              <button id="karaokeStartBtn" class="btn-xl" type="button">▶️ Iniciar Grabación</button>
+              <button id="karaokeStopBtn" class="btn-xl" type="button">⏹️ Detener</button>
+              <button id="karaokeRestartBtn" class="btn-xl" type="button">🔄 Volver a intentar</button>
+            </div>
+          </div>
+          
+          <div class="card">
+            <h4 style="margin-top: 20px;">🗣️ Tu voz grabada: Escucha tu voz sin la pista</h4>
+            <audio id="karaokeVoicePlayer" controls></audio>
+          </div>
+          
+          <!-- Paso 2: Mezcla -->
+          <div class="card">
+            <h3>🎚️ Mezcla Final 🎚️</h3>
+            <p style="color: var(--text-muted); margin-bottom: 15px;">Tu voz y la pista en un solo archivo.</p>
+            <div class="studio-controls">
+              <button id="karaokeMixBtn" class="btn-xl" type="button">⚙️ Mezclar ⚙️</button>
+            </div>
+            <div id="karaokeMixResult" style="margin-top: 15px;"></div>
+          </div>
         </section>
         
         <!-- CAMBIAR TONO -->
