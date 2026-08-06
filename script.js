@@ -3139,11 +3139,6 @@ function initSettings() {
 function applyAppTheme(theme) {
   // Aplicamos el tema al elemento raíz (html)
   document.documentElement.setAttribute("data-theme", theme);
-  
-  /* También al body por si acaso
-  document.body.setAttribute("data-theme", theme);
-  */
-  
   console.log("🎨 Tema aplicado:", theme);
 }
 
@@ -3997,7 +3992,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       showTab("cambiarTono");
       if (typeof loadPitchKaraokeOptions === "function") loadPitchKaraokeOptions();
     });
-    safeAdd("btnSplitter", "click", () => showTab("splitter"));
+
+    // ===== INIT VISUAL DEL MONITOR KARAOKE =====
+    if ($("karaokeCanvas")) {
+      resizeKaraokeCanvas();
+      drawKaraokeMonitor(0, -1, -1);
+    }
+    
     safeAdd("btnConfig", "click", () => showTab("config"));
 
     // cambiar tono (pitch shifter)
@@ -4024,18 +4025,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     safeAdd("pauseTrackBtn", "click", pauseTrack);
     safeAdd("stopTrackBtn", "click", stopTrack);
     
+    /*
     safeAdd("startStudioRecBtn", "click", startStudioRecording);
     safeAdd("stopStudioRecBtn", "click", stopStudioRecording);
     safeAdd("redoStudioRecBtn", "click", redoStudioRecording);
     safeAdd("saveStudioRecBtn", "click", saveStudioRecording);
+    */
     
     safeAdd("refreshVoiceListBtn", "click", loadVoiceOptionsInStudio);
     safeAdd("loadSelectedVoiceBtn", "click", loadSelectedVoiceFromLibrary);
 
     safeAdd("refreshStudioTextListBtn", "click", loadTextOptionsInStudio);
     safeAdd("loadSelectedTextBtn", "click", loadSelectedTextFromLibrary);
-    
-    safeAdd("transcribeVoiceBtn", "click", transcribeSelectedVoice);
     safeAdd("applyCorrectedLyricsBtn", "click", applyCorrectedLyrics);
 
     // Toggle auto-scroll
@@ -4048,6 +4049,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     });
 
+    /*
     // EVENTO DE SINCRONIZACIÓN AUTOMÁTICA INTELIGENTE (ACTUALIZADO)
     const autoSyncBtn = $("autoSyncBtn");
     if (autoSyncBtn) {
@@ -4071,7 +4073,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       });
     }
-
+    */
     // Eventos de sincronización con Taps
     safeAdd("startTapSyncBtn", "click", startTapSync);
     safeAdd("cancelTapSyncBtn", "click", cancelTapSync);
@@ -4125,7 +4127,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
     
     // karaoke
-    // safeAdd("karaokeTrackFile", "change", cargarPistaKaraoke);
     safeAdd("karaokeStartBtn", "click", startKaraokeRecording);
     safeAdd("karaokeStopBtn", "click", stopKaraokeRecording);
     safeAdd("karaokeRestartBtn", "click", restartKaraokeRecording);
@@ -4139,9 +4140,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         syncKaraokeMonitor(kTrack.currentTime);
       });
     }
-
-    // splitter
-    safeAdd("splitBtn", "click", splitAudio);
 
     // micrófonos
       safeAdd("refreshMicsBtn", "click", loadAvailableMics);
@@ -4185,6 +4183,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     alert("❌ Error inicializando la app");
   }
 });
+
+window.addEventListener("resize", () => {
+  const track = $("karaokeTrack") || $("karaokeAudio") || $("audioKaraoke") || $("trackPlayer");
+  const currentTime = track ? track.currentTime : 0;
+  drawKaraokeMonitor(currentTime, karaokePitchP1 || -1, karaokePitchP2 || -1);
+});
+
 // ==========================================
 // MONITOR DE KARAOKE (CANVAS)
 // ==========================================
@@ -4251,10 +4256,50 @@ function stopP2PitchTracking() {
   pitchHistoryP2 = [];
 }
 
+function resizeKaraokeCanvas() {
+  const canvas = $("karaokeCanvas");
+  if (!canvas) return;
+
+  const container = canvas.parentElement;
+  if (!container) return;
+
+  const dpr = window.devicePixelRatio || 1;
+
+  // Ancho visible del contenedor
+  const cssWidth = Math.max(760, Math.min(container.clientWidth, window.innerWidth * 0.66));
+
+  // Altura proporcional: más generosa para que no se vea saturado
+  const cssHeight = Math.round(cssWidth * 0.42);
+
+  // Aplicamos tamaño visual
+  canvas.style.width = `${cssWidth}px`;
+  canvas.style.height = `${cssHeight}px`;
+
+  // Aplicamos tamaño interno real para nitidez
+  const realWidth = Math.round(cssWidth * dpr);
+  const realHeight = Math.round(cssHeight * dpr);
+
+  if (canvas.width !== realWidth || canvas.height !== realHeight) {
+    canvas.width = realWidth;
+    canvas.height = realHeight;
+  }
+
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(dpr, dpr);
+}
+
 function drawKaraokeMonitor(currentTime, currentFreq, currentFreq2) {
   const canvas = $("karaokeCanvas");
   if (!canvas) return;
+
+  resizeKaraokeCanvas();
+
   const ctx = canvas.getContext("2d");
+  const dpr = window.devicePixelRatio || 1;
+  const width = canvas.width / dpr;
+  const height = canvas.height / dpr;
+
   const hueFiesta = (currentTime * 50) % 360;
   const paleta = obtenerPaletaTema(hueFiesta);
 
@@ -4266,7 +4311,7 @@ function drawKaraokeMonitor(currentTime, currentFreq, currentFreq2) {
   const MIDI_MIN = 36;
   const MIDI_MAX = 84;
   const lineX = 80; // Línea roja (Ahora)
-  const pixelsPerSecond = (canvas.width - 50) / 7;
+  const pixelsPerSecond = (width - 50) / 7;
 
   function obtenerPaletaTema(hue = 0) {
     const temaActual = localStorage.getItem("vocalApp_stage") || "theme-clasico";
@@ -4297,7 +4342,7 @@ function drawKaraokeMonitor(currentTime, currentFreq, currentFreq2) {
 
   // 1. LIMPIAR TODO EL CANVAS
   ctx.fillStyle = paleta.fondo;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillRect(0, 0, width, height);
 
   // Fuente de datos (palabras con tiempos)
   const datos = (textSegments && textSegments.length > 0) ? textSegments : transcriptionSegments;
@@ -4395,7 +4440,7 @@ function drawKaraokeMonitor(currentTime, currentFreq, currentFreq2) {
       const y = pTop + (pHeight / numLines) * i;
       ctx.beginPath();
       ctx.moveTo(pentagramStartX, y);
-      ctx.lineTo(canvas.width, y);
+      ctx.lineTo(width, y);
       ctx.stroke();
     }
 
@@ -4423,7 +4468,7 @@ function drawKaraokeMonitor(currentTime, currentFreq, currentFreq2) {
         words.forEach(w => {
           const start = w.start || w.startTime || seg.start || 0;
           const end = w.end || (start + (w.duration || 0.5));
-          if (end < currentTime - 1 || start > currentTime + (canvas.width / pixelsPerSecond)) return;
+          if (end < currentTime - 1 || start > currentTime + (width / pixelsPerSecond)) return;
 
           const x = dynLineX + (start - currentTime) * pixelsPerSecond;
           const width = (end - start) * pixelsPerSecond;
@@ -4517,7 +4562,7 @@ function drawKaraokeMonitor(currentTime, currentFreq, currentFreq2) {
     // Dos regiones apiladas: P1 arriba, P2 abajo. Teleprompter compartido al fondo.
     const TELE_H = 100;
     const GAP = 14;
-    const totalUsable = canvas.height - TELE_H - 20;
+    const totalUsable = height - TELE_H - 20;
     const regionH = (totalUsable - GAP) / 2;
     const topP1 = 20;
     const bottomP1 = topP1 + regionH;
@@ -4532,14 +4577,14 @@ function drawKaraokeMonitor(currentTime, currentFreq, currentFreq2) {
 
     // Línea divisoria sutil entre regiones
     ctx.fillStyle = "rgba(255,255,255,0.06)";
-    ctx.fillRect(0, bottomP1, canvas.width, GAP);
+    ctx.fillRect(0, bottomP1, width, GAP);
 
     drawRegion(topP1, bottomP1, currentFreq, pitchHistoryP1, "P1", "P1");
     drawRegion(topP2, bottomP2, currentFreq2, pitchHistoryP2, "P2", "P2");
   } else {
     // Modo clásico: una sola región a todo lo alto (sin filtro de parte)
     const P_TOP = 40;
-    const P_BOTTOM = canvas.height - 110;
+    const P_BOTTOM = height - 110;
 
     if (typeof pitchHistory !== 'undefined') {
       pitchHistory.push(currentFreq > 0 ? currentFreq : null);
@@ -4553,7 +4598,7 @@ function drawKaraokeMonitor(currentTime, currentFreq, currentFreq2) {
     const idx = datos.findIndex(s => currentTime >= (s.start || 0) && currentTime <= (s.end || (s.start + 1)));
     if (idx !== -1) {
       ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
-      ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
+      ctx.fillRect(0, height - 100, width, 100);
 
       ctx.textAlign = "center";
       ctx.fillStyle = "white";
@@ -4562,12 +4607,12 @@ function drawKaraokeMonitor(currentTime, currentFreq, currentFreq2) {
       // En split, mostramos también la parte cantando
       const parteActual = datos[idx].parte || "P1";
       const prefijo = karaokeDuoSplitMode ? (parteActual === "DUO" ? "🟪 DÚO · " : (parteActual === "P2" ? "🟧 P2 · " : "🟦 P1 · ")) : "";
-      ctx.fillText(prefijo + (datos[idx].text || ""), canvas.width / 2, canvas.height - 65);
+      ctx.fillText(prefijo + (datos[idx].text || ""), width / 2, height - 65);
 
       if (datos[idx + 1]) {
         ctx.fillStyle = "#94a3b8";
         ctx.font = "italic 22px Arial";
-        ctx.fillText(datos[idx + 1].text || "", canvas.width / 2, canvas.height - 25);
+        ctx.fillText(datos[idx + 1].text || "", width / 2, height - 25);
       }
     }
   }
