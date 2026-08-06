@@ -27,6 +27,7 @@
 body {
   margin: 0;
   font-family: 'Monserrat', sans-serif;
+  font-size: 18px;
   background: var(--bg-main);
   color: var(--text-main);
 }
