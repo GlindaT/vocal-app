@@ -40,9 +40,9 @@ body {
 }
 
 .sidebar {
-  width: 220px;
+  width: 260px;
   background: var(--bg-sidebar);
-  padding: 20px; /* Añade espacio interior de 20px por todos los lados. */
+  padding: 24px 18px;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -57,15 +57,15 @@ body {
 ========================================== */
 .sidebar button {
   background: linear-gradient(180deg, #334155 0%, #1e293b 100%);
-  border: 1px solid #475569;
+  border: 2px solid #607af7;
   color: #e2e8f0;
-  padding: 14px 16px;
-  text-align: left;
+  padding: 14px 18px;
+  text-align: center;
   cursor: pointer;
-  border-radius: 12px;
+  border-radius: 14px;
   font-weight: 600;
   letter-spacing: 0.3px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   position: relative;
   box-shadow:
     0 4px 0 #0f172a,
