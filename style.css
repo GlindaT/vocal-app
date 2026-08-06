@@ -26,7 +26,7 @@
 
 body {
   margin: 0;
-  font-family: Arial, sans-serif;
+  font-family: 'Monserrat', sans-serif;
   background: var(--bg-main);
   color: var(--text-main);
 }
@@ -40,12 +40,12 @@ body {
 }
 
 .sidebar {
-  width: 280px;
+  width: 300px;
   background: var(--bg-sidebar);
   padding: 24px 18px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
   overflow-y: auto;
 }
 
