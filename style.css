@@ -676,8 +676,9 @@ textarea#lyricsText {
 #karaokeCanvas {
   background: linear-gradient(180deg, #0a0a0a 0%, #1a1a2e 100%);
   display: block;
-  height: 420px; /* Aumentado de 300px a 420px para ocupar más de la mitad */
   width: 100%;
+  height: auto;
+  min-height: 540px;
   border-radius: 12px;
   border: 2px solid #3b82f6;
 }
@@ -1174,16 +1175,32 @@ textarea#lyricsText {
     display: block !important; /* Evita que se comporte como columnas */
 }
 
-/* Excepción en Karaoke: el monitor (canvas) mantiene su tamaño y tipografía */
+
 #karaoke .monitor-karaoke {
-  font-size: 1rem !important;
+  width: min(66vw, 1120px);
+  min-width: 760px;
+  margin: 0 auto 18px auto !important;
   padding: 0 !important;
-  margin-bottom: 14px !important;
+  border-radius: 14px;
+  overflow: hidden;
 }
+
 #karaoke .monitor-karaoke #karaokeCanvas {
   width: 100% !important;
-  min-height: 500px !important;
+  height: auto !important;
+  min-height: 540px !important;
   display: block !important;
+}
+
+@media (max-width: 1100px) {
+  #karaoke .monitor-karaoke {
+    width: 100%;
+    min-width: 0;
+  }
+
+  #karaokeCanvas {
+    min-height: 460px;
+  }
 }
 
 .library-item audio,
