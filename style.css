@@ -749,7 +749,7 @@ textarea {
   font-size: 26px;
 }
 
-.modern-editor,
+.modern-textarea,
 .modern-editor-text {
   font-family: "JetBrains Mono", "Fira Code", "SF Mono", "Monaco", "Inconsolata", "Fira Mono", "Droid Sans Mono", monospace !important;
   font-size: 15px !important;
@@ -759,7 +759,7 @@ textarea {
   letter-spacing: 0.02em !important;
 }
 
-.modern-editor {
+.modern-textarea {
   background: var(--bg-main) !important;
   border: 2px solid #e8902c !important;
   border-radius: 10px !important;
@@ -768,13 +768,13 @@ textarea {
   transition: box-shadow 0.2s ease, border-color 0.2s ease !important;
 }
 
-.modern-editor:focus {
+.modern-textarea:focus {
   outline: none !important;
   box-shadow: 0 0 0 3px rgba(132, 204, 22, 0.3) !important;
   border-color: #e8902c !important;
 }
 
-.modern-editor::placeholder {
+.modern-textarea::placeholder {
   color: rgba(132, 204, 22, 0.4) !important;
   font-weight: 400 !important;
 }
@@ -1186,13 +1186,14 @@ textarea {
   display: block !important;
 }
 
-/* Audio Player and Action Buttons */
+/* Audio Player and Action Buttons 
 .library-item audio {
   order: 10;
   width: 60px !important;
   height: 16px !important;
   margin: 0 !important;
 }
+*/
 
 .library-item button {
   font-size: 11px !important;
