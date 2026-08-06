@@ -214,7 +214,7 @@ audio {
 }
 
 #guideText {
-  font-size: 32px;
+  font-size: 48px;
   margin: 20px 0;
   font-weight: bold;
   text-align: center;
@@ -226,7 +226,7 @@ audio {
   background-color: #22c55e !important;
   color: white !important;
   padding: 12px 48px;
-  font-size: 20px;
+  font-size: 26px;
   border-radius: 50px;
   box-shadow: 0 4px 16px rgba(34, 197, 94, 0.4); 
   transition: all 0.2s ease;
@@ -266,17 +266,6 @@ div#libraryList {
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 0 !important;
 }
-/*
-.library-item {
-    background: var(--bg-main);
-    border: 1px solid var(--border);
-    padding: 15px;
-    border-radius: 10px;
-    margin-bottom: 10px;
-    transition: box-shadow 0.3s ease;
-}
-*/
-   
 
 .library-item:hover {
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
@@ -959,16 +948,6 @@ textarea {
   padding: 2px 6px;
   font-size: 10px;
 }
-
-/* Modal 
-#ultrastarModal .settings-group {
-  margin-bottom: 15px;
-}
-
-#ultrastarModal input[type="file"] {
-  margin-top: 8px;
-}
-*/
 
 /* Asegura que el contenedor no divida el espacio */
 .card {
