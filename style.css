@@ -213,6 +213,11 @@ audio {
   transition: color 0.3s ease;
 }
 
+#targetNote {
+  font-size: 18px;
+  padding: 8px; /* Adding padding helps make the larger font look better in selects */
+}
+
 #guideText {
   font-size: 48px;
   margin: 20px 0;
