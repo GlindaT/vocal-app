@@ -999,122 +999,6 @@ async function saveToLibrary(blob, options = {}) {
   }
 }
 
-/*
-async function renderLibrary(filter = 'todos') {
-  const container = $("libraryList");
-  if (!container) return;
-
-  document.querySelectorAll(".folder-btn").forEach(btn => {
-    const clickAttr = btn.getAttribute("onclick") || "";
-    if (clickAttr.includes(`'${filter}'`)) {
-      btn.classList.add("active"); 
-    } else {
-      btn.classList.remove("active"); 
-    }
-  });
-
-  container.innerHTML = "<p>Cargando archivos...</p>";
-
-  try {
-    // 1. Mejora de eficiencia: Si no es 'todos', usamos el índice de la DB
-    let filteredItems;
-    if (filter === 'todos') {
-      filteredItems = await getAllLibraryItems();
-    } else {
-      //getLibraryItemsByType es la función que definimos antes, ¡mucho más rápida!
-      filteredItems = await getLibraryItemsByType(filter);
-    }
-    let library = await getAllLibraryItems();
-    let libraryItems = filter !== 'todos' ? library.filter(item => item.type === filter) : library;
-    
-    container.innerHTML = "";
-
-    if (filteredItems.length === 0) {
-      container.innerHTML = `<p>La carpeta '${filter}' está vacía.</p>`;
-    } else {
-      filteredItems.forEach((item) => {
-        const div = document.createElement("div");
-        div.className = "library-item card";
-        div.style.marginBottom = "10px";
-        
-        // Convertimos el timestamp (Date.now) a algo bonito para el usuario
-        const fechaLegible = typeof item.date === 'number' 
-          ? new Date(item.date).toLocaleString() 
-          : item.date;
-
-        if (item.type === "texto") {
-          const totalPalabras = item.lyrics ? item.lyrics.length : 0;
-          div.innerHTML = `
-            <p><strong>📄 ${item.name}</strong></p>
-            <small>Tipo: LETRA | ${fechaLegible} | ${totalPalabras} palabras</small>
-            <div style="display: flex; gap: 10px;">
-              <button type="button" data-id="${item.id}" class="load-monitor-btn" style="background:#3b82f6; color:white;">📥 Cargar en Monitor</button>
-              <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#e11d48;">🗑️ Eliminar</button>
-            </div>
-          `;
-        } else {
-          // Crear URL temporal para el audio
-          const audioURL = item.audioBlob ? URL.createObjectURL(item.audioBlob) : "";
-          
-          div.innerHTML = `
-            <p><strong>🎵 ${item.name}</strong></p>
-            <small>Tipo: ${item.type.toUpperCase()} | ${fechaLegible}</small>
-            <audio controls src="${audioURL}" style="width:100%; margin: 10px 0;"></audio>
-            <button type="button" data-id="${item.id}" class="delete-library-btn" style="...">🗑️ Eliminar</button>
-          `;
-        }
-        container.appendChild(div);
-      });
-    }
-
-    // 2. Delegación de eventos (Mejorado)
-    // En lugar de reactivar botones, usamos una pequeña función de ayuda
-    asignarEventosBiblioteca(filter);
-
-    // 3. Actualizar el resto de la app
-    actualizarSelectoresGlobales();
-
-  } catch (error) {
-    console.error("Error en renderLibrary:", error);
-    container.innerHTML = "<p>❌ Error al cargar la biblioteca.</p>";
-  }
-}
-
-// Función separada para no ensuciar renderLibrary
-
-function asignarEventosBiblioteca(filter) {
-  // Evento Borrar
-  document.querySelectorAll(".delete-library-btn").forEach((btn) => {
-    btn.onclick = async () => {
-      if (confirm("¿Estás seguro de eliminar este archivo?")) {
-        const id = Number(btn.dataset.id);
-        await deleteLibraryItemFromDB(id); // Nombre corregido
-        renderLibrary(filter); 
-      }
-    };
-  });
-
-  // Evento Monitor
-  document.querySelectorAll(".load-monitor-btn").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const id = Number(btn.dataset.id);
-      const item = library.find(i => i.id === id);
-
-      //if (item && item.textoPlano) {
-        const monitor = document.getElementById("lyricsText") || document.getElementById("miniMonitorTextArea");
-
-        if (monitor) {
-          monitor.value = id.textoPlano;
-        }
-        await cargarTextoEnMonitor(Number(btn.dataset.id));
-      //} else {
-        alert("No se encontró el contenedor");
-      });
-    });
-  });
-}
-*/
-
 async function renderLibrary(filter = "todos") {
   const container = $("libraryList");
   if (!container) return;
@@ -2129,44 +2013,6 @@ async function procesarSincronizacionAutomaticaYPitch() {
 
   try {
     let todasLasPalabrasIA = [];
-    
-    // ===================================================
-    // RAMIFICACIÓN PARA AHORRO DE SALDO (MOCK REALISTA INTEGRADO)
-    // ===================================================
-    
-   /* if (MODO_DESARROLLADOR_GRATIS) {
-      if (status) status.textContent = "🤖 Modo Desarrollador: Distribuyendo palabras de forma musical... ⚡";
-      
-      // 1. Separamos el texto pegado en palabras individuales
-      const palabras = letraPegada.split(/\s+/).filter(Boolean);
-      
-      let tiempoActual = 4.0; // Dejamos 4 segundos de intro musical antes de la primera palabra
-      
-      // 2. Mapeamos las palabras con espaciados humanos de karaoke
-      todasLasPalabrasIA = palabras.map((palabra, index) => {
-        // Cada 6 palabras simulamos que termina un renglón/estrofa
-        const esFinDeLinea = (index + 1) % 6 === 0;
-        
-        // Las palabras normales duran medio segundo; la última de la frase se sostiene más tiempo (1.1s)
-        const duracionPalabra = esFinDeLinea ? 1.1 : 0.5;
-        
-        const start = tiempoActual;
-        const end = tiempoActual + duracionPalabra;
-        
-        // Si termina la línea, dejamos 2.5 segundos de pausa para respirar. Si no, un microespacio fluido de 0.15s
-        const pausaEntrePalabras = esFinDeLinea ? 2.5 : 0.15;
-        tiempoActual = end + pausaEntrePalabras;
-        
-        return { 
-          word: palabra, 
-          start: Number(start.toFixed(2)), 
-          end: Number(end.toFixed(2)) 
-        };
-      });
-      
-    } else {
-    */
-      // FLUJO REAL CON CONSUMO DE SALDO (Se queda exactamente como lo tenías)
     let idiomaDetectado = "es";
     const palabrasIngles = ["the", "and", "you", "that", "was", "for", "with", "this", "have"];
     const palabrasLetra = letraPegada.toLowerCase().split(/\s+/);
@@ -2498,7 +2344,6 @@ let karaokeDuoAnimationId = null;
 let karaokeDuoMonitorActive = false;
 let karaokeLoadedItem = null;
 let karaokeLoadedLyrics = [];
-//let karaokeReadyToSing = false;
 let karaokeTrackObjectUrl = "";
 
 
@@ -2562,25 +2407,6 @@ async function loadKaraokeSong(id) {
     alert("❌ Error al cargar el karaoke.");
   }
 }
-
-/*
-function cargarPistaKaraoke(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  karaokeLoadedItem = null;
-  karaokeSelectedTrackBlob = file;
-  karaokeSelectedTrackName = file.name;
-  karaokeLoadedLyrics = [];
-
-  const track = $("karaokeTrack");
-  track.src = URL.createObjectURL(file);
-  track.volume = 0.5;
-
-  $("karaokeStatus").textContent = "Estado: Pista lista. ¡Presiona Iniciar Grabación!";
-  cargarLetrasEnMonitor();
-}
-*/
 
 async function loadTrackOptionsInKaraoke() {
   const select = $("karaokeTrackSelect");
@@ -4268,28 +4094,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (file) importKaraokeFile(file);
       e.target.value = "";
     });
-    
-    /*
-    // Importador UltraStar
-    safeAdd("importUltrastarBtn", "click", openUltrastarModal);
-    safeAdd("cancelImportBtn", "click", closeUltrastarModal);
-    safeAdd("confirmImportBtn", "click", confirmUltrastarImport);
-    safeAdd("ultrastarTxtFile", "change", handleUltrastarTxtChange);
-    safeAdd("refreshKaraokeCatalogBtn", "click", async () => {
-      await loadKaraokeCatalog();
-      await loadMyKaraokeSongs();
-    });
-      
-    // Cerrar modal al hacer clic fuera
-    $("ultrastarModal")?.addEventListener("click", (e) => {
-      if (e.target.id === "ultrastarModal") {
-        closeUltrastarModal();
-      }
-    });
-    */
-      
-    // Cargar catálogo y mis canciones al iniciar
-   // loadKaraokeCatalog();
+   
     loadMyKaraokeSongs();
     
     
@@ -4821,34 +4626,6 @@ async function startKaraokePitchDetection() {
   }
   loop();
 }
-
-/*
-// ==========================================
-// IMPORTADOR ULTRASTAR
-// ==========================================
-let parsedUltrastar = null;
-
-function openUltrastarModal() {
-  const modal = $("ultrastarModal");
-  if (modal) {
-    modal.style.display = "flex";
-    // Limpiar campos
-    $("ultrastarTxtFile").value = "";
-    $("ultrastarAudioFile").value = "";
-    $("ultrastarVocalsFile").value = "";
-    $("ultrastarPreview").style.display = "none";
-    parsedUltrastar = null;
-  }
-}
-
-function closeUltrastarModal() {
-  const modal = $("ultrastarModal");
-  if (modal) {
-    modal.style.display = "none";
-    parsedUltrastar = null;
-  }
-}
-*/
 
 function parseUltrastarTxt(content) {
   const lines = content.split("\n");
