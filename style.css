@@ -848,6 +848,7 @@ textarea {
   --accent-hover: #9333ea;
   --danger: #f43f5e;
   --border: #3f3f46;
+   font-family: 'Orbitron', sans-serif;
 }
 
 [data-theme="neon"] .sidebar h2 {
@@ -856,13 +857,13 @@ textarea {
 }
 
 [data-theme="neon"] button {
-  background: #a855f7;
+  background: #b266ff;
   color: white;
-  box-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+  box-shadow: 0 0 12px rgba(178, 102, 255, 0.6);
 }
 
 [data-theme="neon"] button:hover {
-  background: #9333ea;
+  background: #c77dff;
   box-shadow: 0 0 20px rgba(168, 85, 247, 0.8);
 }
 
