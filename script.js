@@ -84,42 +84,6 @@ function initSupabase() {
   });
 }
 
-/*function initSupabase() {
-  return new Promise((resolve, reject) => {
-    // 1. Abrimos la base de datos (nombre, versión)
-    const request = database.open("vocalApp", 1);
-
-    // Se ejecuta si la versión cambia o es la primera vez
-    request.onupgradeneeded = function (event) {
-      const database = event.target.result;
-
-      if (!database.objectStoreNames.contains("library")) {
-        // Creamos el almacén de objetos (como una tabla)
-        const store = database.createObjectStore("library", {
-          keyPath: "id",
-          autoIncrement: true
-        });
-
-        // Creamos índices para hacer búsquedas eficientes
-        store.createIndex("type", "type", { unique: false });
-        store.createIndex("date", "date", { unique: false });
-      }
-    };
-
-    // Si todo sale bien
-    request.onsuccess = function (event) {
-      db = event.target.result; // Asignamos a la variable previamente declarada
-      resolve(supabase);
-    };
-
-    // Si hay un error, pasamos el detalle del error
-    request.onerror = function (event) {
-      reject(`❌ Error al abrir Supabase: ${event.target.error}`);
-    };
-  });
-}
-*/
-
 async function addLibraryItemToSupabase(item) {
   if (!db) {
     throw new Error("❌ La base de datos no está inicializada.");
@@ -269,42 +233,64 @@ async function getLibraryItemByIdFromSupabase(id) {
 
 //Agregado Supabase 04/07/2026
 
-async function uploadFileToSupabase(fileOrBlob, fileName, mimeType = "application/octet-stream") {
-  if (!db) throw new Error("❌ La base de datos no está inicializada.");
+sync function uploadFileToSupabase(fileOrBlob, fileName, mimeType = "application/octet-stream") {
+  // NOTA: Mantenemos el nombre de la función idéntico para que no tengas que cambiar 
+  // ninguna otra parte de tu código, pero ahora por dentro subirá a Cloudflare R2.
 
   // 1. Limpiamos el nombre original quitando tildes y caracteres prohibidos
   let cleanName = fileName
-    .normalize("NFD") // Descompone caracteres con tildes (ej: ó -> o + ´)
-    .replace(/[\u0300-\u036f]/g, "") // Borra los acentos/tildes dejando la letra limpia
-    .replace(/[^a-zA-Z0-9._]/g, "_") // Reemplaza guiones, espacios y símbolos por guiones bajos
-    .replace(/__+/g, "_"); // Si quedan guiones bajos dobles (如 __), los reduce a uno solo
+    .normalize("NFD") 
+    .replace(/[\u0300-\u036f]/g, "") 
+    .replace(/[^a-zA-Z0-9._]/g, "_") 
+    .replace(/__+/g, "_"); 
 
   // 2. Le pegamos el número de seguridad al inicio (Esto evita duplicados)
   const safePath = `${Date.now()}_${cleanName}`;
 
-  console.log(`📤 Subiendo archivo con nombre limpio seguro: ${safePath}`);
+  console.log(`📤 Redirigiendo subida a Cloudflare R2 con nombre: ${safePath}`);
 
-  // 3. Subida oficial al Storage de Supabase
-  const { error: uploadError } = await db.storage
-    .from("library") 
-    .upload(safePath, fileOrBlob, {
-      contentType: mimeType,
-      upsert: false
+  try {
+    // PASO A: Solicitar la URL de subida firmada a nuestra Edge Function de Vercel
+    const response = await fetch('/api/get-upload-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        filename: safePath, 
+        contentType: mimeType 
+      })
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || "Error al obtener la URL firmada de Vercel");
+    }
+
+    const { uploadUrl, publicUrl } = await response.json();
+
+    // PASO B: Subir el archivo (pista, voz o letra) directamente desde el navegador a Cloudflare
+    const uploadResponse = await fetch(uploadUrl, {
+      method: 'PUT',
+      body: fileOrBlob,
+      headers: { 'Content-Type': mimeType }
     });
 
-  if (uploadError) throw uploadError;
+    if (!uploadResponse.ok) {
+      throw new Error(`Cloudflare rechazó la subida. Código: ${uploadResponse.status}`);
+    }
 
-  // 4. Obtenemos la URL pública para guardarla en tu tabla
-  const { data } = db.storage
-    .from("library")
-    .getPublicUrl(safePath);
+    console.log("✅ Archivo alojado en Cloudflare R2 con éxito");
 
-  return {
-    filePath: safePath,
-    fileUrl: data.publicUrl
-  };
+    // Devolvemos exactamente la misma estructura para mantener compatibilidad con tus tablas
+    return {
+      filePath: safePath,
+      fileUrl: publicUrl // Esta es la nueva URL de Cloudflare que se guardará en tu base de datos
+    };
+
+  } catch (error) {
+    console.error("❌ Error en el proceso de subida a Cloudflare R2:", error);
+    throw error;
+  }
 }
-
 
 async function saveLibraryItemToSupabase({ name, type, blob, transcription = [], metadata = {} }) {
   if (!db) throw new Error("❌ La base de datos no está inicializada.");
@@ -352,73 +338,6 @@ async function saveLibraryItemToSupabase({ name, type, blob, transcription = [],
 
   if (error) throw error;
 }
-
-/*
-async function getAllLibraryItemsFromSupabase() {
-  const { data, error } = await supabaseClient
-    .from("library_items")
-    .select("*")
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    throw error;
-  }
-
-  return data || [];
-}
-
-async function getLibraryItemsByTypeFromSupabase(type) {
-  const { data, error } = await supabaseClient
-    .from("library_items")
-    .select("*")
-    .eq("type", type)
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    throw error;
-  }
-
-  return data || [];
-}
-
-async function getLibraryItemByIdFromSupabase(id) {
-  const { data, error } = await supabaseClient
-    .from("library_items")
-    .select("*")
-    .eq("id", id)
-    .single();
-
-  if (error) {
-    throw error;
-  }
-
-  return data;
-}
-
-async function deleteLibraryItemFromSupabase(id) {
-  // primero buscamos el item para saber qué archivo borrar
-  const item = await getLibraryItemByIdFromSupabase(id);
-
-  if (item?.file_path) {
-    const { error: storageError } = await supabaseClient.storage
-      .from("library")
-      .remove([item.file_path]);
-
-    if (storageError) {
-      console.warn("No se pudo borrar el archivo del storage:", storageError.message);
-    }
-  }
-
-  const { error } = await supabaseClient
-    .from("library_items")
-    .delete()
-    .eq("id", id);
-
-  if (error) {
-    throw error;
-  }
-}
-*/
 
 // ==========================================
 // NAVEGACIÓN
