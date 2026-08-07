@@ -233,7 +233,7 @@ async function getLibraryItemByIdFromSupabase(id) {
 
 //Agregado Supabase 04/07/2026
 
-sync function uploadFileToSupabase(fileOrBlob, fileName, mimeType = "application/octet-stream") {
+async function uploadFileToSupabase(fileOrBlob, fileName, mimeType = "application/octet-stream") {
   // NOTA: Mantenemos el nombre de la función idéntico para que no tengas que cambiar 
   // ninguna otra parte de tu código, pero ahora por dentro subirá a Cloudflare R2.
 
