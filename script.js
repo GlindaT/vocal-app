@@ -888,122 +888,6 @@ async function saveToLibrary(blob, options = {}) {
   }
 }
 
-/*
-async function renderLibrary(filter = 'todos') {
-  const container = $("libraryList");
-  if (!container) return;
-
-  document.querySelectorAll(".folder-btn").forEach(btn => {
-    const clickAttr = btn.getAttribute("onclick") || "";
-    if (clickAttr.includes(`'${filter}'`)) {
-      btn.classList.add("active"); 
-    } else {
-      btn.classList.remove("active"); 
-    }
-  });
-
-  container.innerHTML = "<p>Cargando archivos...</p>";
-
-  try {
-    // 1. Mejora de eficiencia: Si no es 'todos', usamos el índice de la DB
-    let filteredItems;
-    if (filter === 'todos') {
-      filteredItems = await getAllLibraryItems();
-    } else {
-      //getLibraryItemsByType es la función que definimos antes, ¡mucho más rápida!
-      filteredItems = await getLibraryItemsByType(filter);
-    }
-    let library = await getAllLibraryItems();
-    let libraryItems = filter !== 'todos' ? library.filter(item => item.type === filter) : library;
-    
-    container.innerHTML = "";
-
-    if (filteredItems.length === 0) {
-      container.innerHTML = `<p>La carpeta '${filter}' está vacía.</p>`;
-    } else {
-      filteredItems.forEach((item) => {
-        const div = document.createElement("div");
-        div.className = "library-item card";
-        div.style.marginBottom = "10px";
-        
-        // Convertimos el timestamp (Date.now) a algo bonito para el usuario
-        const fechaLegible = typeof item.date === 'number' 
-          ? new Date(item.date).toLocaleString() 
-          : item.date;
-
-        if (item.type === "texto") {
-          const totalPalabras = item.lyrics ? item.lyrics.length : 0;
-          div.innerHTML = `
-            <p><strong>📄 ${item.name}</strong></p>
-            <small>Tipo: LETRA | ${fechaLegible} | ${totalPalabras} palabras</small>
-            <div style="display: flex; gap: 10px;">
-              <button type="button" data-id="${item.id}" class="load-monitor-btn" style="background:#3b82f6; color:white;">📥 Cargar en Monitor</button>
-              <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#e11d48;">🗑️ Eliminar</button>
-            </div>
-          `;
-        } else {
-          // Crear URL temporal para el audio
-          const audioURL = item.audioBlob ? URL.createObjectURL(item.audioBlob) : "";
-          
-          div.innerHTML = `
-            <p><strong>🎵 ${item.name}</strong></p>
-            <small>Tipo: ${item.type.toUpperCase()} | ${fechaLegible}</small>
-            <audio controls src="${audioURL}" style="width:100%; margin: 10px 0;"></audio>
-            <button type="button" data-id="${item.id}" class="delete-library-btn" style="...">🗑️ Eliminar</button>
-          `;
-        }
-        container.appendChild(div);
-      });
-    }
-
-    // 2. Delegación de eventos (Mejorado)
-    // En lugar de reactivar botones, usamos una pequeña función de ayuda
-    asignarEventosBiblioteca(filter);
-
-    // 3. Actualizar el resto de la app
-    actualizarSelectoresGlobales();
-
-  } catch (error) {
-    console.error("Error en renderLibrary:", error);
-    container.innerHTML = "<p>❌ Error al cargar la biblioteca.</p>";
-  }
-}
-
-// Función separada para no ensuciar renderLibrary
-
-function asignarEventosBiblioteca(filter) {
-  // Evento Borrar
-  document.querySelectorAll(".delete-library-btn").forEach((btn) => {
-    btn.onclick = async () => {
-      if (confirm("¿Estás seguro de eliminar este archivo?")) {
-        const id = Number(btn.dataset.id);
-        await deleteLibraryItemFromDB(id); // Nombre corregido
-        renderLibrary(filter); 
-      }
-    };
-  });
-
-  // Evento Monitor
-  document.querySelectorAll(".load-monitor-btn").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const id = Number(btn.dataset.id);
-      const item = library.find(i => i.id === id);
-
-      //if (item && item.textoPlano) {
-        const monitor = document.getElementById("lyricsText") || document.getElementById("miniMonitorTextArea");
-
-        if (monitor) {
-          monitor.value = id.textoPlano;
-        }
-        await cargarTextoEnMonitor(Number(btn.dataset.id));
-      //} else {
-        alert("No se encontró el contenedor");
-      });
-    });
-  });
-}
-*/
-
 async function renderLibrary(filter = "todos") {
   const container = $("libraryList");
   if (!container) return;
@@ -2018,44 +1902,6 @@ async function procesarSincronizacionAutomaticaYPitch() {
 
   try {
     let todasLasPalabrasIA = [];
-    
-    // ===================================================
-    // RAMIFICACIÓN PARA AHORRO DE SALDO (MOCK REALISTA INTEGRADO)
-    // ===================================================
-    
-   /* if (MODO_DESARROLLADOR_GRATIS) {
-      if (status) status.textContent = "🤖 Modo Desarrollador: Distribuyendo palabras de forma musical... ⚡";
-      
-      // 1. Separamos el texto pegado en palabras individuales
-      const palabras = letraPegada.split(/\s+/).filter(Boolean);
-      
-      let tiempoActual = 4.0; // Dejamos 4 segundos de intro musical antes de la primera palabra
-      
-      // 2. Mapeamos las palabras con espaciados humanos de karaoke
-      todasLasPalabrasIA = palabras.map((palabra, index) => {
-        // Cada 6 palabras simulamos que termina un renglón/estrofa
-        const esFinDeLinea = (index + 1) % 6 === 0;
-        
-        // Las palabras normales duran medio segundo; la última de la frase se sostiene más tiempo (1.1s)
-        const duracionPalabra = esFinDeLinea ? 1.1 : 0.5;
-        
-        const start = tiempoActual;
-        const end = tiempoActual + duracionPalabra;
-        
-        // Si termina la línea, dejamos 2.5 segundos de pausa para respirar. Si no, un microespacio fluido de 0.15s
-        const pausaEntrePalabras = esFinDeLinea ? 2.5 : 0.15;
-        tiempoActual = end + pausaEntrePalabras;
-        
-        return { 
-          word: palabra, 
-          start: Number(start.toFixed(2)), 
-          end: Number(end.toFixed(2)) 
-        };
-      });
-      
-    } else {
-    */
-      // FLUJO REAL CON CONSUMO DE SALDO (Se queda exactamente como lo tenías)
     let idiomaDetectado = "es";
     const palabrasIngles = ["the", "and", "you", "that", "was", "for", "with", "this", "have"];
     const palabrasLetra = letraPegada.toLowerCase().split(/\s+/);
@@ -2451,25 +2297,6 @@ async function loadKaraokeSong(id) {
     alert("❌ Error al cargar el karaoke.");
   }
 }
-
-/*
-function cargarPistaKaraoke(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  karaokeLoadedItem = null;
-  karaokeSelectedTrackBlob = file;
-  karaokeSelectedTrackName = file.name;
-  karaokeLoadedLyrics = [];
-
-  const track = $("karaokeTrack");
-  track.src = URL.createObjectURL(file);
-  track.volume = 0.5;
-
-  $("karaokeStatus").textContent = "Estado: Pista lista. ¡Presiona Iniciar Grabación!";
-  cargarLetrasEnMonitor();
-}
-*/
 
 async function loadTrackOptionsInKaraoke() {
   const select = $("karaokeTrackSelect");
@@ -3202,11 +3029,7 @@ function initSettings() {
 function applyAppTheme(theme) {
   // Aplicamos el tema al elemento raíz (html)
   document.documentElement.setAttribute("data-theme", theme);
-  
-  /* También al body por si acaso
-  document.body.setAttribute("data-theme", theme);
-  */
-  
+ 
   console.log("🎨 Tema aplicado:", theme);
 }
 
@@ -4060,7 +3883,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       showTab("cambiarTono");
       if (typeof loadPitchKaraokeOptions === "function") loadPitchKaraokeOptions();
     });
-    safeAdd("btnSplitter", "click", () => showTab("splitter"));
     safeAdd("btnConfig", "click", () => showTab("config"));
 
     // cambiar tono (pitch shifter)
@@ -4079,26 +3901,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // estudio
     safeAdd("audioFile", "change", cargarAudioEstudio);
-    safeAdd("refreshStudioTrackListBtn", "click", loadTrackOptionsInStudio);
     safeAdd("loadStudioTrackBtn", "click", loadSelectedTrackFromLibraryStudio);
-    
-    
     safeAdd("playTrackBtn", "click", playTrack);
     safeAdd("pauseTrackBtn", "click", pauseTrack);
     safeAdd("stopTrackBtn", "click", stopTrack);
-    
     safeAdd("startStudioRecBtn", "click", startStudioRecording);
     safeAdd("stopStudioRecBtn", "click", stopStudioRecording);
     safeAdd("redoStudioRecBtn", "click", redoStudioRecording);
     safeAdd("saveStudioRecBtn", "click", saveStudioRecording);
-    
-    safeAdd("refreshVoiceListBtn", "click", loadVoiceOptionsInStudio);
     safeAdd("loadSelectedVoiceBtn", "click", loadSelectedVoiceFromLibrary);
-
-    safeAdd("refreshStudioTextListBtn", "click", loadTextOptionsInStudio);
     safeAdd("loadSelectedTextBtn", "click", loadSelectedTextFromLibrary);
-    
-    safeAdd("transcribeVoiceBtn", "click", transcribeSelectedVoice);
     safeAdd("applyCorrectedLyricsBtn", "click", applyCorrectedLyrics);
 
     // Toggle auto-scroll
@@ -4110,30 +3922,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         btn.style.background = autoScrollEnabled ? "#f59e0b" : "#6b7280";
       }
     });
-
-    // EVENTO DE SINCRONIZACIÓN AUTOMÁTICA INTELIGENTE (ACTUALIZADO)
-    const autoSyncBtn = $("autoSyncBtn");
-    if (autoSyncBtn) {
-      autoSyncBtn.addEventListener("click", async () => {
-        // 1. Evitamos que el usuario haga múltiples clics bloqueando el botón
-        autoSyncBtn.disabled = true;
-        autoSyncBtn.style.opacity = "0.6";
-        const originalText = autoSyncBtn.innerHTML;
-        autoSyncBtn.innerHTML = "⏳ Procesando Sincronización...";
-        
-        try {
-          // 2. Ejecutamos la nueva lógica que se conecta a Vercel y calcula el Pitch
-          await procesarSincronizacionAutomaticaYPitch();
-        } catch (error) {
-          console.error("Error en el flujo del botón autoSync:", error);
-        } finally {
-          // 3. Pase lo que pase (éxito o error), liberamos el botón al terminar
-          autoSyncBtn.disabled = false;
-          autoSyncBtn.style.opacity = "1";
-          autoSyncBtn.innerHTML = originalText;
-        }
-      });
-    }
 
     // Eventos de sincronización con Taps
     safeAdd("startTapSyncBtn", "click", startTapSync);
@@ -4157,30 +3945,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (file) importKaraokeFile(file);
       e.target.value = "";
     });
-    
-    /*
-    // Importador UltraStar
-    safeAdd("importUltrastarBtn", "click", openUltrastarModal);
-    safeAdd("cancelImportBtn", "click", closeUltrastarModal);
-    safeAdd("confirmImportBtn", "click", confirmUltrastarImport);
-    safeAdd("ultrastarTxtFile", "change", handleUltrastarTxtChange);
-    safeAdd("refreshKaraokeCatalogBtn", "click", async () => {
-      await loadKaraokeCatalog();
-      await loadMyKaraokeSongs();
-    });
-      
-    // Cerrar modal al hacer clic fuera
-    $("ultrastarModal")?.addEventListener("click", (e) => {
-      if (e.target.id === "ultrastarModal") {
-        closeUltrastarModal();
-      }
-    });
-    */
-      
-    // Cargar catálogo y mis canciones al iniciar
-   // loadKaraokeCatalog();
+
     loadMyKaraokeSongs();
-    
     
     // --- BIBLIOTECA ---
     // Guarda el archivo (audio o texto manual) en el ecosistema Supabase (Storage + Tablas)
@@ -4209,7 +3975,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
     
     // karaoke
-    // safeAdd("karaokeTrackFile", "change", cargarPistaKaraoke);
     safeAdd("karaokeStartBtn", "click", startKaraokeRecording);
     safeAdd("karaokeStopBtn", "click", stopKaraokeRecording);
     safeAdd("karaokeRestartBtn", "click", restartKaraokeRecording);
@@ -4223,21 +3988,18 @@ document.addEventListener("DOMContentLoaded", async () => {
         syncKaraokeMonitor(kTrack.currentTime);
       });
     }
-
-    // splitter
-    safeAdd("splitBtn", "click", splitAudio);
-
+    
     // micrófonos
-      safeAdd("refreshMicsBtn", "click", loadAvailableMics);
-      safeAdd("testMic1Btn", "click", () => testMicrophone(1));
-      safeAdd("testMic2Btn", "click", () => testMicrophone(2));
-      safeAdd("mic1Select", "change", () => saveMicSelection(1));
-      safeAdd("mic2Select", "change", () => saveMicSelection(2));
-      safeAdd("micCount", "change", toggleMic2Visibility);
+    safeAdd("refreshMicsBtn", "click", loadAvailableMics);
+    safeAdd("testMic1Btn", "click", () => testMicrophone(1));
+    safeAdd("testMic2Btn", "click", () => testMicrophone(2));
+    safeAdd("mic1Select", "change", () => saveMicSelection(1));
+    safeAdd("mic2Select", "change", () => saveMicSelection(2));
+    safeAdd("micCount", "change", toggleMic2Visibility);
     
     // Cargar micrófonos al iniciar
-      loadAvailableMics();
-      toggleMic2Visibility();
+    loadAvailableMics();
+    toggleMic2Visibility();
 
     // init
     await renderLibrary('todos');
@@ -4710,34 +4472,6 @@ async function startKaraokePitchDetection() {
   }
   loop();
 }
-
-/*
-// ==========================================
-// IMPORTADOR ULTRASTAR
-// ==========================================
-let parsedUltrastar = null;
-
-function openUltrastarModal() {
-  const modal = $("ultrastarModal");
-  if (modal) {
-    modal.style.display = "flex";
-    // Limpiar campos
-    $("ultrastarTxtFile").value = "";
-    $("ultrastarAudioFile").value = "";
-    $("ultrastarVocalsFile").value = "";
-    $("ultrastarPreview").style.display = "none";
-    parsedUltrastar = null;
-  }
-}
-
-function closeUltrastarModal() {
-  const modal = $("ultrastarModal");
-  if (modal) {
-    modal.style.display = "none";
-    parsedUltrastar = null;
-  }
-}
-*/
 
 function parseUltrastarTxt(content) {
   const lines = content.split("\n");
