@@ -84,6 +84,42 @@ function initSupabase() {
   });
 }
 
+/*function initSupabase() {
+  return new Promise((resolve, reject) => {
+    // 1. Abrimos la base de datos (nombre, versión)
+    const request = database.open("vocalApp", 1);
+
+    // Se ejecuta si la versión cambia o es la primera vez
+    request.onupgradeneeded = function (event) {
+      const database = event.target.result;
+
+      if (!database.objectStoreNames.contains("library")) {
+        // Creamos el almacén de objetos (como una tabla)
+        const store = database.createObjectStore("library", {
+          keyPath: "id",
+          autoIncrement: true
+        });
+
+        // Creamos índices para hacer búsquedas eficientes
+        store.createIndex("type", "type", { unique: false });
+        store.createIndex("date", "date", { unique: false });
+      }
+    };
+
+    // Si todo sale bien
+    request.onsuccess = function (event) {
+      db = event.target.result; // Asignamos a la variable previamente declarada
+      resolve(supabase);
+    };
+
+    // Si hay un error, pasamos el detalle del error
+    request.onerror = function (event) {
+      reject(`❌ Error al abrir Supabase: ${event.target.error}`);
+    };
+  });
+}
+*/
+
 async function addLibraryItemToSupabase(item) {
   if (!db) {
     throw new Error("❌ La base de datos no está inicializada.");
@@ -133,6 +169,7 @@ async function getAllLibraryItemsFromSupabase() {
     throw error; 
   }
 }
+
 
 async function updateLibraryItemFromSupabase(id, changes) {
   if (!db) {
@@ -268,6 +305,7 @@ async function uploadFileToSupabase(fileOrBlob, fileName, mimeType = "applicatio
   };
 }
 
+
 async function saveLibraryItemToSupabase({ name, type, blob, transcription = [], metadata = {} }) {
   if (!db) throw new Error("❌ La base de datos no está inicializada.");
 
@@ -314,6 +352,73 @@ async function saveLibraryItemToSupabase({ name, type, blob, transcription = [],
 
   if (error) throw error;
 }
+
+/*
+async function getAllLibraryItemsFromSupabase() {
+  const { data, error } = await supabaseClient
+    .from("library_items")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return data || [];
+}
+
+async function getLibraryItemsByTypeFromSupabase(type) {
+  const { data, error } = await supabaseClient
+    .from("library_items")
+    .select("*")
+    .eq("type", type)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return data || [];
+}
+
+async function getLibraryItemByIdFromSupabase(id) {
+  const { data, error } = await supabaseClient
+    .from("library_items")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+async function deleteLibraryItemFromSupabase(id) {
+  // primero buscamos el item para saber qué archivo borrar
+  const item = await getLibraryItemByIdFromSupabase(id);
+
+  if (item?.file_path) {
+    const { error: storageError } = await supabaseClient.storage
+      .from("library")
+      .remove([item.file_path]);
+
+    if (storageError) {
+      console.warn("No se pudo borrar el archivo del storage:", storageError.message);
+    }
+  }
+
+  const { error } = await supabaseClient
+    .from("library_items")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    throw error;
+  }
+}
+*/
 
 // ==========================================
 // NAVEGACIÓN
@@ -384,9 +489,6 @@ async function startAfinador() {
   analyser.fftSize = 2048;
   mic.connect(analyser);
 
-  drawTunerNeedle(0);
-  updateCentsDisplay(0);
-
   setTimeout(() => {
     detectPitch();
   }, 300);
@@ -395,150 +497,18 @@ async function startAfinador() {
 function stopAfinador() {
   if (stream) stream.getTracks().forEach(t => t.stop());
   if (audioContext) audioContext.close();
-
-  resetTunerVisuals();
 }
-
-function drawTunerNeedle(cents = 0) {
-  const canvas = $("tunerCanvas");
-  if (!canvas) return;
-
-  const ctx = canvas.getContext("2d");
-  const w = canvas.width;
-  const h = canvas.height;
-  const cx = w / 2;
-  const cy = h / 2;
-  const radius = 125;
-
-  ctx.clearRect(0, 0, w, h);
-
-  // Arco base
-  ctx.beginPath();
-  ctx.arc(cx, cy, radius, Math.PI * 0.75, Math.PI * 0.25, false);
-  ctx.strokeStyle = "rgba(255,255,255,0.18)";
-  ctx.lineWidth = 8;
-  ctx.lineCap = "round";
-  ctx.stroke();
-
-  // Zona central afinada
-  ctx.beginPath();
-  ctx.arc(cx, cy, radius, -Math.PI / 2 - 0.18, -Math.PI / 2 + 0.18, false);
-  ctx.strokeStyle = "#22c55e";
-  ctx.lineWidth = 10;
-  ctx.lineCap = "round";
-  ctx.stroke();
-
-  // Marcas
-  for (let i = -5; i <= 5; i++) {
-    const t = i / 5; // -1 a 1
-    const angle = -Math.PI / 2 + t * (Math.PI / 4);
-
-    const r1 = radius - 18;
-    const r2 = radius - (i === 0 ? 36 : 26);
-
-    const x1 = cx + Math.cos(angle) * r1;
-    const y1 = cy + Math.sin(angle) * r1;
-    const x2 = cx + Math.cos(angle) * r2;
-    const y2 = cy + Math.sin(angle) * r2;
-
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.strokeStyle = i === 0 ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.35)";
-    ctx.lineWidth = i === 0 ? 3 : 2;
-    ctx.stroke();
-  }
-
-  // Limitar cents al rango visual
-  const clamped = Math.max(-50, Math.min(50, cents));
-  const angle = -Math.PI / 2 + (clamped / 50) * (Math.PI / 4);
-
-  const needleLength = radius - 42;
-  const x = cx + Math.cos(angle) * needleLength;
-  const y = cy + Math.sin(angle) * needleLength;
-
-  // Color aguja según afinación
-  let needleColor = "#f59e0b";
-  if (Math.abs(cents) <= 5) needleColor = "#22c55e";
-  else if (Math.abs(cents) <= 15) needleColor = "#eab308";
-
-  // Aguja
-  ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.lineTo(x, y);
-  ctx.strokeStyle = needleColor;
-  ctx.lineWidth = 5;
-  ctx.lineCap = "round";
-  ctx.shadowColor = needleColor;
-  ctx.shadowBlur = 12;
-  ctx.stroke();
-
-  // Centro
-  ctx.beginPath();
-  ctx.arc(cx, cy, 8, 0, Math.PI * 2);
-  ctx.fillStyle = needleColor;
-  ctx.shadowBlur = 0;
-  ctx.fill();
-}
-
-function updateCentsDisplay(cents = 0) {
-  const centsValue = $("centsValue");
-  const centsFill = $("centsFill");
-
-  if (centsValue) {
-    const rounded = Math.round(cents);
-    centsValue.textContent = rounded > 0 ? `+${rounded}` : `${rounded}`;
-  }
-
-  if (centsFill) {
-    const percent = Math.min(100, Math.abs(cents) * 2);
-    centsFill.style.width = `${percent}%`;
-
-    if (Math.abs(cents) <= 5) {
-      centsFill.style.background = "#22c55e";
-    } else if (Math.abs(cents) <= 15) {
-      centsFill.style.background = "#eab308";
-    } else {
-      centsFill.style.background = "#f59e0b";
-    }
-  }
-}
-
-function resetTunerVisuals() {
-  const display = $("noteDisplay");
-  const guide = $("guideText");
-  const centsValue = $("centsValue");
-  const centsFill = $("centsFill");
-
-  if (display) {
-    display.textContent = "--";
-    display.style.color = "white";
-  }
-
-  if (guide) {
-    guide.textContent = "🎤 Esperando voz...";
-    guide.style.color = "#f59e0b";
-  }
-
-  if (centsValue) {
-    centsValue.textContent = "0";
-  }
-
-  if (centsFill) {
-    centsFill.style.width = "0%";
-  }
-
-  drawTunerNeedle(0);
-}    
 
 function detectPitch() {
   if (!state.isRecording || !analyser) return;
 
+  // Usamos el buffer global en lugar de crear uno nuevo cada 16ms
   analyser.getFloatTimeDomainData(pitchBuffer);
   const pitch = autoCorrelate(pitchBuffer, audioContext.sampleRate);
-
+  
   if (document.getElementById("karaokeCanvas")) {
-    if (typeof drawKaraokeMonitor === 'function') drawKaraokeMonitor(0, pitch);
+    // Asegúrate de que esta función esté definida o comentada para evitar errores
+    if (typeof drawKaraokeMonitor === 'function') drawKaraokeMonitor(0, pitch); 
   }
 
   const display = $("noteDisplay");
@@ -550,37 +520,37 @@ function detectPitch() {
     if (pitch !== -1) {
       const noteFull = getNoteFromFrequency(pitch);
       const targetFreq = getNoteFrequency(targetNote);
+      // Evitar logaritmo de 0 o infinito
       const cents = 1200 * Math.log2(pitch / targetFreq);
 
       display.textContent = noteFull;
-      updateCentsDisplay(cents);
-      drawTunerNeedle(cents);
 
       const dificultad = localStorage.getItem("vocalApp_difficulty") || "medio";
       let maxDesviation = 30;
-
-      if (dificultad === "facil") maxDesviation = 50;
-      else if (dificultad === "dificil") maxDesviation = 15;
-      else if (dificultad === "experto") maxDesviation = 5;
-
-      if (Math.abs(cents) <= maxDesviation) {
-        display.style.color = "#22c55e";
-        guide.textContent = `🎯 ¡En la nota! (${targetNote})`;
-        guide.style.color = "#22c55e";
-      } else if (cents < 0) {
-        display.style.color = "#f59e0b";
-        guide.textContent = `⬆️ Estás grave. Sube a ${targetNote}`;
-        guide.style.color = "#f59e0b";
-      } else {
-        display.style.color = "#f59e0b";
-        guide.textContent = `⬇️ Estás agudo. Baja a ${targetNote}`;
-        guide.style.color = "#f59e0b";
-      }
+        if (dificultad === "facil") maxDesviation = 50;
+        else if (dificultad === "dificil") maxDesviation = 15;
+        else if (dificultad === "experto") maxDesviation = 5;
+        
+        // Asegúrate de que las llaves envuelven correctamente cada bloque
+        if (Math.abs(cents) <= maxDesviation) {
+            display.style.color = "#22c55e"; 
+            guide.textContent = `🎯 ¡En la nota! (${targetNote})`;
+            guide.style.color = "#22c55e";
+        } else if (cents < 0) {
+            display.style.color = "#f59e0b";
+            guide.textContent = `⬆️ Estás grave. Sube a ${targetNote}`;
+            guide.style.color = "#f59e0b";
+        } else {
+            display.style.color = "#f59e0b";
+            guide.textContent = `⬇️ Estás agudo. Baja a ${targetNote}`;
+            guide.style.color = "#f59e0b";
+        }
     } else {
-      resetTunerVisuals();
+      display.textContent = "--";
+      display.style.color = "white";
+      guide.textContent = "🎤 Esperando voz...";
     }
   }
-
   requestAnimationFrame(detectPitch);
 }
 
@@ -998,6 +968,122 @@ async function saveToLibrary(blob, options = {}) {
     alert("❌ No se pudo guardar en la nube: " + error.message);
   }
 }
+
+/*
+async function renderLibrary(filter = 'todos') {
+  const container = $("libraryList");
+  if (!container) return;
+
+  document.querySelectorAll(".folder-btn").forEach(btn => {
+    const clickAttr = btn.getAttribute("onclick") || "";
+    if (clickAttr.includes(`'${filter}'`)) {
+      btn.classList.add("active"); 
+    } else {
+      btn.classList.remove("active"); 
+    }
+  });
+
+  container.innerHTML = "<p>Cargando archivos...</p>";
+
+  try {
+    // 1. Mejora de eficiencia: Si no es 'todos', usamos el índice de la DB
+    let filteredItems;
+    if (filter === 'todos') {
+      filteredItems = await getAllLibraryItems();
+    } else {
+      //getLibraryItemsByType es la función que definimos antes, ¡mucho más rápida!
+      filteredItems = await getLibraryItemsByType(filter);
+    }
+    let library = await getAllLibraryItems();
+    let libraryItems = filter !== 'todos' ? library.filter(item => item.type === filter) : library;
+    
+    container.innerHTML = "";
+
+    if (filteredItems.length === 0) {
+      container.innerHTML = `<p>La carpeta '${filter}' está vacía.</p>`;
+    } else {
+      filteredItems.forEach((item) => {
+        const div = document.createElement("div");
+        div.className = "library-item card";
+        div.style.marginBottom = "10px";
+        
+        // Convertimos el timestamp (Date.now) a algo bonito para el usuario
+        const fechaLegible = typeof item.date === 'number' 
+          ? new Date(item.date).toLocaleString() 
+          : item.date;
+
+        if (item.type === "texto") {
+          const totalPalabras = item.lyrics ? item.lyrics.length : 0;
+          div.innerHTML = `
+            <p><strong>📄 ${item.name}</strong></p>
+            <small>Tipo: LETRA | ${fechaLegible} | ${totalPalabras} palabras</small>
+            <div style="display: flex; gap: 10px;">
+              <button type="button" data-id="${item.id}" class="load-monitor-btn" style="background:#3b82f6; color:white;">📥 Cargar en Monitor</button>
+              <button type="button" data-id="${item.id}" class="delete-library-btn" style="background:#e11d48;">🗑️ Eliminar</button>
+            </div>
+          `;
+        } else {
+          // Crear URL temporal para el audio
+          const audioURL = item.audioBlob ? URL.createObjectURL(item.audioBlob) : "";
+          
+          div.innerHTML = `
+            <p><strong>🎵 ${item.name}</strong></p>
+            <small>Tipo: ${item.type.toUpperCase()} | ${fechaLegible}</small>
+            <audio controls src="${audioURL}" style="width:100%; margin: 10px 0;"></audio>
+            <button type="button" data-id="${item.id}" class="delete-library-btn" style="...">🗑️ Eliminar</button>
+          `;
+        }
+        container.appendChild(div);
+      });
+    }
+
+    // 2. Delegación de eventos (Mejorado)
+    // En lugar de reactivar botones, usamos una pequeña función de ayuda
+    asignarEventosBiblioteca(filter);
+
+    // 3. Actualizar el resto de la app
+    actualizarSelectoresGlobales();
+
+  } catch (error) {
+    console.error("Error en renderLibrary:", error);
+    container.innerHTML = "<p>❌ Error al cargar la biblioteca.</p>";
+  }
+}
+
+// Función separada para no ensuciar renderLibrary
+
+function asignarEventosBiblioteca(filter) {
+  // Evento Borrar
+  document.querySelectorAll(".delete-library-btn").forEach((btn) => {
+    btn.onclick = async () => {
+      if (confirm("¿Estás seguro de eliminar este archivo?")) {
+        const id = Number(btn.dataset.id);
+        await deleteLibraryItemFromDB(id); // Nombre corregido
+        renderLibrary(filter); 
+      }
+    };
+  });
+
+  // Evento Monitor
+  document.querySelectorAll(".load-monitor-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = Number(btn.dataset.id);
+      const item = library.find(i => i.id === id);
+
+      //if (item && item.textoPlano) {
+        const monitor = document.getElementById("lyricsText") || document.getElementById("miniMonitorTextArea");
+
+        if (monitor) {
+          monitor.value = id.textoPlano;
+        }
+        await cargarTextoEnMonitor(Number(btn.dataset.id));
+      //} else {
+        alert("No se encontró el contenedor");
+      });
+    });
+  });
+}
+*/
 
 async function renderLibrary(filter = "todos") {
   const container = $("libraryList");
@@ -2013,6 +2099,44 @@ async function procesarSincronizacionAutomaticaYPitch() {
 
   try {
     let todasLasPalabrasIA = [];
+    
+    // ===================================================
+    // RAMIFICACIÓN PARA AHORRO DE SALDO (MOCK REALISTA INTEGRADO)
+    // ===================================================
+    
+   /* if (MODO_DESARROLLADOR_GRATIS) {
+      if (status) status.textContent = "🤖 Modo Desarrollador: Distribuyendo palabras de forma musical... ⚡";
+      
+      // 1. Separamos el texto pegado en palabras individuales
+      const palabras = letraPegada.split(/\s+/).filter(Boolean);
+      
+      let tiempoActual = 4.0; // Dejamos 4 segundos de intro musical antes de la primera palabra
+      
+      // 2. Mapeamos las palabras con espaciados humanos de karaoke
+      todasLasPalabrasIA = palabras.map((palabra, index) => {
+        // Cada 6 palabras simulamos que termina un renglón/estrofa
+        const esFinDeLinea = (index + 1) % 6 === 0;
+        
+        // Las palabras normales duran medio segundo; la última de la frase se sostiene más tiempo (1.1s)
+        const duracionPalabra = esFinDeLinea ? 1.1 : 0.5;
+        
+        const start = tiempoActual;
+        const end = tiempoActual + duracionPalabra;
+        
+        // Si termina la línea, dejamos 2.5 segundos de pausa para respirar. Si no, un microespacio fluido de 0.15s
+        const pausaEntrePalabras = esFinDeLinea ? 2.5 : 0.15;
+        tiempoActual = end + pausaEntrePalabras;
+        
+        return { 
+          word: palabra, 
+          start: Number(start.toFixed(2)), 
+          end: Number(end.toFixed(2)) 
+        };
+      });
+      
+    } else {
+    */
+      // FLUJO REAL CON CONSUMO DE SALDO (Se queda exactamente como lo tenías)
     let idiomaDetectado = "es";
     const palabrasIngles = ["the", "and", "you", "that", "was", "for", "with", "this", "have"];
     const palabrasLetra = letraPegada.toLowerCase().split(/\s+/);
@@ -2344,6 +2468,7 @@ let karaokeDuoAnimationId = null;
 let karaokeDuoMonitorActive = false;
 let karaokeLoadedItem = null;
 let karaokeLoadedLyrics = [];
+//let karaokeReadyToSing = false;
 let karaokeTrackObjectUrl = "";
 
 
@@ -2407,6 +2532,25 @@ async function loadKaraokeSong(id) {
     alert("❌ Error al cargar el karaoke.");
   }
 }
+
+/*
+function cargarPistaKaraoke(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  karaokeLoadedItem = null;
+  karaokeSelectedTrackBlob = file;
+  karaokeSelectedTrackName = file.name;
+  karaokeLoadedLyrics = [];
+
+  const track = $("karaokeTrack");
+  track.src = URL.createObjectURL(file);
+  track.volume = 0.5;
+
+  $("karaokeStatus").textContent = "Estado: Pista lista. ¡Presiona Iniciar Grabación!";
+  cargarLetrasEnMonitor();
+}
+*/
 
 async function loadTrackOptionsInKaraoke() {
   const select = $("karaokeTrackSelect");
@@ -3139,6 +3283,11 @@ function initSettings() {
 function applyAppTheme(theme) {
   // Aplicamos el tema al elemento raíz (html)
   document.documentElement.setAttribute("data-theme", theme);
+  
+  /* También al body por si acaso
+  document.body.setAttribute("data-theme", theme);
+  */
+  
   console.log("🎨 Tema aplicado:", theme);
 }
 
@@ -3992,13 +4141,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       showTab("cambiarTono");
       if (typeof loadPitchKaraokeOptions === "function") loadPitchKaraokeOptions();
     });
-
-    // ===== INIT VISUAL DEL MONITOR KARAOKE =====
-    if ($("karaokeCanvas")) {
-      resizeKaraokeCanvas();
-      drawKaraokeMonitor(0, -1, -1);
-    }
-    
+    safeAdd("btnSplitter", "click", () => showTab("splitter"));
     safeAdd("btnConfig", "click", () => showTab("config"));
 
     // cambiar tono (pitch shifter)
@@ -4025,18 +4168,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     safeAdd("pauseTrackBtn", "click", pauseTrack);
     safeAdd("stopTrackBtn", "click", stopTrack);
     
-    /*
     safeAdd("startStudioRecBtn", "click", startStudioRecording);
     safeAdd("stopStudioRecBtn", "click", stopStudioRecording);
     safeAdd("redoStudioRecBtn", "click", redoStudioRecording);
     safeAdd("saveStudioRecBtn", "click", saveStudioRecording);
-    */
     
     safeAdd("refreshVoiceListBtn", "click", loadVoiceOptionsInStudio);
     safeAdd("loadSelectedVoiceBtn", "click", loadSelectedVoiceFromLibrary);
 
     safeAdd("refreshStudioTextListBtn", "click", loadTextOptionsInStudio);
     safeAdd("loadSelectedTextBtn", "click", loadSelectedTextFromLibrary);
+    
+    safeAdd("transcribeVoiceBtn", "click", transcribeSelectedVoice);
     safeAdd("applyCorrectedLyricsBtn", "click", applyCorrectedLyrics);
 
     // Toggle auto-scroll
@@ -4049,7 +4192,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     });
 
-    /*
     // EVENTO DE SINCRONIZACIÓN AUTOMÁTICA INTELIGENTE (ACTUALIZADO)
     const autoSyncBtn = $("autoSyncBtn");
     if (autoSyncBtn) {
@@ -4073,7 +4215,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       });
     }
-    */
+
     // Eventos de sincronización con Taps
     safeAdd("startTapSyncBtn", "click", startTapSync);
     safeAdd("cancelTapSyncBtn", "click", cancelTapSync);
@@ -4096,7 +4238,28 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (file) importKaraokeFile(file);
       e.target.value = "";
     });
-   
+    
+    /*
+    // Importador UltraStar
+    safeAdd("importUltrastarBtn", "click", openUltrastarModal);
+    safeAdd("cancelImportBtn", "click", closeUltrastarModal);
+    safeAdd("confirmImportBtn", "click", confirmUltrastarImport);
+    safeAdd("ultrastarTxtFile", "change", handleUltrastarTxtChange);
+    safeAdd("refreshKaraokeCatalogBtn", "click", async () => {
+      await loadKaraokeCatalog();
+      await loadMyKaraokeSongs();
+    });
+      
+    // Cerrar modal al hacer clic fuera
+    $("ultrastarModal")?.addEventListener("click", (e) => {
+      if (e.target.id === "ultrastarModal") {
+        closeUltrastarModal();
+      }
+    });
+    */
+      
+    // Cargar catálogo y mis canciones al iniciar
+   // loadKaraokeCatalog();
     loadMyKaraokeSongs();
     
     
@@ -4127,6 +4290,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
     
     // karaoke
+    // safeAdd("karaokeTrackFile", "change", cargarPistaKaraoke);
     safeAdd("karaokeStartBtn", "click", startKaraokeRecording);
     safeAdd("karaokeStopBtn", "click", stopKaraokeRecording);
     safeAdd("karaokeRestartBtn", "click", restartKaraokeRecording);
@@ -4140,6 +4304,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         syncKaraokeMonitor(kTrack.currentTime);
       });
     }
+
+    // splitter
+    safeAdd("splitBtn", "click", splitAudio);
 
     // micrófonos
       safeAdd("refreshMicsBtn", "click", loadAvailableMics);
@@ -4183,13 +4350,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     alert("❌ Error inicializando la app");
   }
 });
-
-window.addEventListener("resize", () => {
-  const track = $("karaokeTrack") || $("karaokeAudio") || $("audioKaraoke") || $("trackPlayer");
-  const currentTime = track ? track.currentTime : 0;
-  drawKaraokeMonitor(currentTime, karaokePitchP1 || -1, karaokePitchP2 || -1);
-});
-
 // ==========================================
 // MONITOR DE KARAOKE (CANVAS)
 // ==========================================
@@ -4256,39 +4416,10 @@ function stopP2PitchTracking() {
   pitchHistoryP2 = [];
 }
 
-function resizeKaraokeCanvas() {
-  const canvas = $("karaokeCanvas");
-  if (!canvas) return;
-
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  const cssWidth = Math.max(300, Math.round(rect.width));
-  const cssHeight = Math.max(300, Math.round(rect.height));
-
-  const realWidth = Math.round(cssWidth * dpr);
-  const realHeight = Math.round(cssHeight * dpr);
-
-  if (canvas.width !== realWidth || canvas.height !== realHeight) {
-    canvas.width = realWidth;
-    canvas.height = realHeight;
-  }
-
-  const ctx = canvas.getContext("2d");
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
-  ctx.scale(dpr, dpr);
-}
-
 function drawKaraokeMonitor(currentTime, currentFreq, currentFreq2) {
   const canvas = $("karaokeCanvas");
   if (!canvas) return;
-
-  resizeKaraokeCanvas();
-
   const ctx = canvas.getContext("2d");
-  const dpr = window.devicePixelRatio || 1;
-  const width = canvas.width / dpr;
-  const height = canvas.height / dpr;
-
   const hueFiesta = (currentTime * 50) % 360;
   const paleta = obtenerPaletaTema(hueFiesta);
 
@@ -4300,7 +4431,7 @@ function drawKaraokeMonitor(currentTime, currentFreq, currentFreq2) {
   const MIDI_MIN = 36;
   const MIDI_MAX = 84;
   const lineX = 80; // Línea roja (Ahora)
-  const pixelsPerSecond = (width - 50) / 7;
+  const pixelsPerSecond = (canvas.width - 50) / 7;
 
   function obtenerPaletaTema(hue = 0) {
     const temaActual = localStorage.getItem("vocalApp_stage") || "theme-clasico";
@@ -4331,7 +4462,7 @@ function drawKaraokeMonitor(currentTime, currentFreq, currentFreq2) {
 
   // 1. LIMPIAR TODO EL CANVAS
   ctx.fillStyle = paleta.fondo;
-  ctx.fillRect(0, 0, width, height);
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   // Fuente de datos (palabras con tiempos)
   const datos = (textSegments && textSegments.length > 0) ? textSegments : transcriptionSegments;
@@ -4429,7 +4560,7 @@ function drawKaraokeMonitor(currentTime, currentFreq, currentFreq2) {
       const y = pTop + (pHeight / numLines) * i;
       ctx.beginPath();
       ctx.moveTo(pentagramStartX, y);
-      ctx.lineTo(width, y);
+      ctx.lineTo(canvas.width, y);
       ctx.stroke();
     }
 
@@ -4457,7 +4588,7 @@ function drawKaraokeMonitor(currentTime, currentFreq, currentFreq2) {
         words.forEach(w => {
           const start = w.start || w.startTime || seg.start || 0;
           const end = w.end || (start + (w.duration || 0.5));
-          if (end < currentTime - 1 || start > currentTime + (width / pixelsPerSecond)) return;
+          if (end < currentTime - 1 || start > currentTime + (canvas.width / pixelsPerSecond)) return;
 
           const x = dynLineX + (start - currentTime) * pixelsPerSecond;
           const width = (end - start) * pixelsPerSecond;
@@ -4551,7 +4682,7 @@ function drawKaraokeMonitor(currentTime, currentFreq, currentFreq2) {
     // Dos regiones apiladas: P1 arriba, P2 abajo. Teleprompter compartido al fondo.
     const TELE_H = 100;
     const GAP = 14;
-    const totalUsable = height - TELE_H - 20;
+    const totalUsable = canvas.height - TELE_H - 20;
     const regionH = (totalUsable - GAP) / 2;
     const topP1 = 20;
     const bottomP1 = topP1 + regionH;
@@ -4566,14 +4697,14 @@ function drawKaraokeMonitor(currentTime, currentFreq, currentFreq2) {
 
     // Línea divisoria sutil entre regiones
     ctx.fillStyle = "rgba(255,255,255,0.06)";
-    ctx.fillRect(0, bottomP1, width, GAP);
+    ctx.fillRect(0, bottomP1, canvas.width, GAP);
 
     drawRegion(topP1, bottomP1, currentFreq, pitchHistoryP1, "P1", "P1");
     drawRegion(topP2, bottomP2, currentFreq2, pitchHistoryP2, "P2", "P2");
   } else {
     // Modo clásico: una sola región a todo lo alto (sin filtro de parte)
     const P_TOP = 40;
-    const P_BOTTOM = height - 110;
+    const P_BOTTOM = canvas.height - 110;
 
     if (typeof pitchHistory !== 'undefined') {
       pitchHistory.push(currentFreq > 0 ? currentFreq : null);
@@ -4587,7 +4718,7 @@ function drawKaraokeMonitor(currentTime, currentFreq, currentFreq2) {
     const idx = datos.findIndex(s => currentTime >= (s.start || 0) && currentTime <= (s.end || (s.start + 1)));
     if (idx !== -1) {
       ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
-      ctx.fillRect(0, height - 100, width, 100);
+      ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
 
       ctx.textAlign = "center";
       ctx.fillStyle = "white";
@@ -4596,12 +4727,12 @@ function drawKaraokeMonitor(currentTime, currentFreq, currentFreq2) {
       // En split, mostramos también la parte cantando
       const parteActual = datos[idx].parte || "P1";
       const prefijo = karaokeDuoSplitMode ? (parteActual === "DUO" ? "🟪 DÚO · " : (parteActual === "P2" ? "🟧 P2 · " : "🟦 P1 · ")) : "";
-      ctx.fillText(prefijo + (datos[idx].text || ""), width / 2, height - 65);
+      ctx.fillText(prefijo + (datos[idx].text || ""), canvas.width / 2, canvas.height - 65);
 
       if (datos[idx + 1]) {
         ctx.fillStyle = "#94a3b8";
         ctx.font = "italic 22px Arial";
-        ctx.fillText(datos[idx + 1].text || "", width / 2, height - 25);
+        ctx.fillText(datos[idx + 1].text || "", canvas.width / 2, canvas.height - 25);
       }
     }
   }
@@ -4660,6 +4791,34 @@ async function startKaraokePitchDetection() {
   }
   loop();
 }
+
+/*
+// ==========================================
+// IMPORTADOR ULTRASTAR
+// ==========================================
+let parsedUltrastar = null;
+
+function openUltrastarModal() {
+  const modal = $("ultrastarModal");
+  if (modal) {
+    modal.style.display = "flex";
+    // Limpiar campos
+    $("ultrastarTxtFile").value = "";
+    $("ultrastarAudioFile").value = "";
+    $("ultrastarVocalsFile").value = "";
+    $("ultrastarPreview").style.display = "none";
+    parsedUltrastar = null;
+  }
+}
+
+function closeUltrastarModal() {
+  const modal = $("ultrastarModal");
+  if (modal) {
+    modal.style.display = "none";
+    parsedUltrastar = null;
+  }
+}
+*/
 
 function parseUltrastarTxt(content) {
   const lines = content.split("\n");
