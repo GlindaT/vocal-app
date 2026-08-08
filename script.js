@@ -1,1 +1,1 @@
-[... very long file content with modifications ...]
+[RESTORE_CONTENT_FROM_COMMIT_7b5d9bb9e9ac0a39825e11ceb9e843977e3d47c4]
