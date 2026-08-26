@@ -327,6 +327,112 @@ function showTab(tabId) {
 // AFINADOR
 // ==========================================
 let audioContext, analyser, stream;
+// Estado de ondas del afinador
+let tunerRipples = [];
+let tunerLastRippleTime = 0;
+
+function drawTuner(pitch, cents, targetNote, isInTune) {
+  const canvas = $("tunerCanvas");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
+  const radius = Math.min(canvas.width, canvas.height) / 2 - 8;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // 1. Círculo de fondo
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.strokeStyle = "rgba(255,255,255,0.15)";
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // 2. Marcas (ticks) de -50 a +50 cents
+  const tickCount = 11;
+  for (let i = 0; i < tickCount; i++) {
+    const t = i / (tickCount - 1);
+    const centsVal = -50 + t * 100;
+    const angle = -Math.PI / 2 + (centsVal / 50) * (Math.PI / 2);
+    const isCenter = i === Math.floor(tickCount / 2);
+    const tickLen = isCenter ? 16 : 8;
+    const x1 = cx + Math.cos(angle) * (radius - tickLen);
+    const y1 = cy + Math.sin(angle) * (radius - tickLen);
+    const x2 = cx + Math.cos(angle) * radius;
+    const y2 = cy + Math.sin(angle) * radius;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.strokeStyle = isCenter ? "#22c55e" : "rgba(255,255,255,0.3)";
+    ctx.lineWidth = isCenter ? 3 : 1.5;
+    ctx.stroke();
+  }
+
+  // 3. Nota objetivo arriba-centro
+  ctx.fillStyle = isInTune ? "#22c55e" : "rgba(255,255,255,0.7)";
+  ctx.font = "bold 20px Arial";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(targetNote, cx, cy - radius + 28);
+
+  // 4. Ondas verde neón cuando está afinado
+  if (isInTune && pitch !== -1) {
+    const now = performance.now();
+    if (now - tunerLastRippleTime > 250) {
+      tunerRipples.push({ radius: radius, opacity: 0.7 });
+      tunerLastRippleTime = now;
+    }
+  }
+
+  for (let i = tunerRipples.length - 1; i >= 0; i--) {
+    const r = tunerRipples[i];
+    r.radius += 2;
+    r.opacity -= 0.012;
+    if (r.opacity <= 0) {
+      tunerRipples.splice(i, 1);
+      continue;
+    }
+    ctx.beginPath();
+    ctx.arc(cx, cy, r.radius, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(34, 197, 94, ${r.opacity})`;
+    ctx.lineWidth = 2;
+    ctx.shadowColor = "#22c55e";
+    ctx.shadowBlur = 12;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  }
+
+  // 5. Aguja
+  let needleAngle;
+  if (pitch === -1) {
+    needleAngle = Math.PI / 2; // abajo (6 en punto)
+  } else {
+    const clampedCents = Math.max(-50, Math.min(50, cents));
+    needleAngle = -Math.PI / 2 + (clampedCents / 50) * (Math.PI / 2);
+  }
+
+  const needleLen = radius - 25;
+  const nx = cx + Math.cos(needleAngle) * needleLen;
+  const ny = cy + Math.sin(needleAngle) * needleLen;
+
+  const needleColor = pitch === -1
+    ? "rgba(255,255,255,0.4)"
+    : (isInTune ? "#22c55e" : "#f59e0b");
+
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(nx, ny);
+  ctx.strokeStyle = needleColor;
+  ctx.lineWidth = 3;
+  ctx.lineCap = "round";
+  ctx.stroke();
+
+  // Punto central
+  ctx.beginPath();
+  ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+  ctx.fillStyle = needleColor;
+  ctx.fill();
+}
 
 async function toggleRecording() {
   const btn = $("recordBtn");
@@ -391,41 +497,57 @@ function detectPitch() {
   const targetNote = targetNoteEl ? targetNoteEl.value : "E2";
 
   if (display && guide) {
-    if (pitch !== -1) {
-      const noteFull = getNoteFromFrequency(pitch);
-      const targetFreq = getNoteFrequency(targetNote);
-      // Evitar logaritmo de 0 o infinito
-      const cents = 1200 * Math.log2(pitch / targetFreq);
+  if (pitch !== -1) {
+    const noteFull = getNoteFromFrequency(pitch);
+    const targetFreq = getNoteFrequency(targetNote);
+    const cents = 1200 * Math.log2(pitch / targetFreq);
 
-      display.textContent = noteFull;
+    display.textContent = noteFull;
 
-      const dificultad = localStorage.getItem("vocalApp_difficulty") || "medio";
-      let maxDesviation = 30;
-        if (dificultad === "facil") maxDesviation = 50;
-        else if (dificultad === "dificil") maxDesviation = 15;
-        else if (dificultad === "experto") maxDesviation = 5;
-        
-        // Asegúrate de que las llaves envuelven correctamente cada bloque
-        if (Math.abs(cents) <= maxDesviation) {
-            display.style.color = "#22c55e"; 
-            guide.textContent = `🎯 ¡En la nota! (${targetNote})`;
-            guide.style.color = "#22c55e";
-        } else if (cents < 0) {
-            display.style.color = "#f59e0b";
-            guide.textContent = `⬆️ Estás grave. Sube a ${targetNote}`;
-            guide.style.color = "#f59e0b";
-        } else {
-            display.style.color = "#f59e0b";
-            guide.textContent = `⬇️ Estás agudo. Baja a ${targetNote}`;
-            guide.style.color = "#f59e0b";
-        }
+    const dificultad = localStorage.getItem("vocalApp_difficulty") || "medio";
+    let maxDesviation = 30;
+    if (dificultad === "facil") maxDesviation = 50;
+    else if (dificultad === "dificil") maxDesviation = 15;
+    else if (dificultad === "experto") maxDesviation = 5;
+
+    const isInTune = Math.abs(cents) <= maxDesviation;
+
+    if (isInTune) {
+      display.style.color = "#22c55e";
+      guide.textContent = `🎯 ¡En la nota! (${targetNote})`;
+      guide.style.color = "#22c55e";
+    } else if (cents < 0) {
+      display.style.color = "#f59e0b";
+      guide.textContent = `⬆️ Estás grave. Sube a ${targetNote}`;
+      guide.style.color = "#f59e0b";
     } else {
-      display.textContent = "--";
-      display.style.color = "white";
-      guide.textContent = "🎤 Esperando voz...";
+      display.style.color = "#f59e0b";
+      guide.textContent = `⬇️ Estás agudo. Baja a ${targetNote}`;
+      guide.style.color = "#f59e0b";
     }
+
+    // Actualizar cents display
+    const centsValue = $("centsValue");
+    const centsFill = $("centsFill");
+    if (centsValue) centsValue.textContent = Math.round(cents);
+    if (centsFill) {
+      const pct = Math.max(-100, Math.min(100, cents * 2));
+      centsFill.style.width = Math.abs(pct) + "%";
+      centsFill.style.background = isInTune ? "#22c55e" : "#f59e0b";
+    }
+
+    // Dibujar afinador
+    drawTuner(pitch, cents, targetNote, isInTune);
+  } else {
+    display.textContent = "--";
+    display.style.color = "white";
+    guide.textContent = "🎤 Esperando voz...";
+    const centsValue = $("centsValue");
+    const centsFill = $("centsFill");
+    if (centsValue) centsValue.textContent = "0";
+    if (centsFill) centsFill.style.width = "0%";
+    drawTuner(-1, 0, targetNote, false);
   }
-  requestAnimationFrame(detectPitch);
 }
 
 function getNoteFromFrequency(freq) {
