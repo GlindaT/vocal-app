@@ -551,7 +551,6 @@ function detectPitch() {
   }
 }
 
-
 function getNoteFromFrequency(freq) {
   const notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
   const A4 = 440;
@@ -624,6 +623,7 @@ function autoCorrelate(buf, sampleRate) {
 
   return frequency;
 }
+
 // ==========================================
 // ESTADO ESTUDIO / BIBLIOTECA
 // ==========================================
