@@ -3668,27 +3668,22 @@ async function applyTapSync() {
   const isTextoManual = !selectedVoiceBlob && selectedVoiceId;
   const modoSeleccionado = window.currentTapSyncModeType || "linea";
 
-  // 🎯 BIFURCACIÓN DE MAPEO: EVITA LAS BARRAS GIGANTES EN EL CANVAS
+  // --- LÓGICA DE MAPEO DE SEGMENTOS ---
   if (isTextoManual && modoSeleccionado === "linea") {
     let globalWordId = 1;
-
     tapSyncLines.forEach((lineText, lineIndex) => {
       const startFrase = tapSyncTimestamps[lineIndex] || 0;
       const endFrase = (lineIndex < tapSyncTimestamps.length - 1) ? tapSyncTimestamps[lineIndex + 1] : (totalDuration || startFrase + 3.0);
       const duracionTotalFrase = endFrase - startFrase;
       const parteLinea = tapSyncParts[lineIndex] || "P1";
-
       const palabrasDeLaLinea = lineText.split(/\s+/).filter(w => w.trim().length > 0);
       const totalPalabras = palabrasDeLaLinea.length;
-
       if (totalPalabras === 0) return;
-
       const duracionPorPalabra = duracionTotalFrase / totalPalabras;
 
       palabrasDeLaLinea.forEach((palabraText, wordIndex) => {
         const wordStart = startFrase + (wordIndex * duracionPorPalabra);
         const wordEnd = wordStart + duracionPorPalabra;
-
         newSegments.push(buildWordTimingFromSegment({
           start: wordStart,
           end: wordEnd,
@@ -3696,12 +3691,7 @@ async function applyTapSync() {
           id: globalWordId++,
           renglon: lineIndex + 1,
           parte: parteLinea,
-          words: [{
-            start: wordStart,
-            end: wordEnd,
-            word: palabraText,
-            midi: 60
-          }]
+          words: [{ start: wordStart, end: wordEnd, word: palabraText, midi: 60 }]
         }));
       });
     });
@@ -3709,7 +3699,6 @@ async function applyTapSync() {
     for (let i = 0; i < tapSyncLines.length; i++) {
       const start = tapSyncTimestamps[i] || 0;
       let end = (i < tapSyncTimestamps.length - 1) ? tapSyncTimestamps[i + 1] : (totalDuration || start + 3);
-      
       newSegments.push(buildWordTimingFromSegment({
         start: start,
         end: end,
@@ -3725,73 +3714,64 @@ async function applyTapSync() {
     analyzedSegments = await analyzePitchForSegments(selectedVoiceBlob, selectedTextBlob || null, newSegments);
   }
 
-  // --- NUEVA LÓGICA DE BÚSQUEDA DE PISTA INSTRUMENTAL ---
-  // Buscamos en la biblioteca el archivo que REALMENTE sea una pista
+  // --- BÚSQUEDA DE PISTA INSTRUMENTAL ---
   const biblioteca = await getAllLibraryItemsFromSupabase();
+  // Buscamos el ítem tipo 'pista' que coincida con el audio cargado en el estudio
   const pistaReal = biblioteca.find(it => 
     it.type === 'pista' && it.name.includes(studioTrackFileName)
   );
 
-  // 🎤 1. CREAR EL "PAQUETE MAESTRO" EN SUPABASE (EL NUEVO ARCHIVO KARAOKE)
-  //if (studioTrackBlob) {
-    //try {
-  const karaokeItem = {
-    name: `Karaoke - ${studioTrackFileName}`,
-    type: "karaoke",
-    file_url: pistaReal ? pistaReal.file_url : null, 
-    lyrics: analyzedSegments, 
-    date: new Date().toISOString(),
-    tapModeStyle: modoSeleccionado,
-    syncedManually: true,
-    metadata: { 
-      originalTrack: studioTrackFileName,
-      vocalSourceUrl: studioTrackBlob // Guardamos referencia a la voz por si acaso
-    }
-  };
+  // 1. CREAR EL NUEVO REGISTRO KARAOKE (VINCULADO A LA PISTA)
+  try {
+    const karaokeItem = {
+      name: `Karaoke - ${studioTrackFileName}`,
+      type: "karaoke",
+      file_url: pistaReal ? pistaReal.file_url : null, // IMPORTANTE: Usa la URL de la pista
+      lyrics: analyzedSegments, 
+      date: new Date().toISOString(),
+      tapModeStyle: modoSeleccionado,
+      metadata: { 
+        syncedManually: true,
+        originalTrack: studioTrackFileName,
+        vocalSourceUrl: selectedVoiceId // Referencia al ID de la voz
+      }
+    };
 
-  if (!karaokeItem.file_url) {
-    alert("⚠️ Error: No se puede crear el Karaoke porque no se encontró el archivo de PISTA en la biblioteca.");
-    return;
+    if (!karaokeItem.file_url) {
+      alert("⚠️ Error: Debes subir primero el archivo como tipo 'pista' en la Biblioteca.");
+      return;
+    }
+
+    await addLibraryItemToSupabase(karaokeItem);
+    console.log("✅ Paquete de Karaoke creado con audio instrumental en Supabase.");
+  } catch (err) {
+    console.error("Error al crear karaoke:", err);
   }
 
-  //await addLibraryItemToSupabase(karaokeItem);
-  //console.log("✅ Paquete de Karaoke creado con audio instrumental.");
- // } catch (err) {
- // console.error("Error al crear nuevo karaoke:", err);
- // }
-
-  // 🎯 2. ACTUALIZAR EL ORIGEN EN SUPABASE (SIN DESTRUIR LA LETRA)
+  // 2. ACTUALIZAR ORIGEN (MARCAR COMO SINCRONIZADA SIN CAMBIAR EL TYPE)
   const currentId = selectedVoiceId || selectedTextId;
   if (currentId) {
     const updateData = { 
       isSincronizada: true,
-      // ELIMINADO: type: "karaoke" <-- Ya no cambiamos el tipo del archivo original
       tapModeStyle: modoSeleccionado 
     };
 
-    if (isTextoManual) {
-      updateData.lyrics = analyzedSegments;
-    } else {
-      updateData.transcription = analyzedSegments;
-    }
-
-    // ELIMINADO: El cambio de file_url al origen. La letra no necesita la URL de la voz.
+    if (isTextoManual) { updateData.lyrics = analyzedSegments; } 
+    else { updateData.transcription = analyzedSegments; }
 
     try {
       await updateLibraryItemFromSupabase(currentId, updateData);
-      console.log("✅ El archivo original se marcó como sincronizado, pero mantiene su tipo original.");
+      console.log("✅ Archivo original actualizado.");
     } catch (err) {
       console.error("Error al actualizar origen:", err);
     }
   }
+
   // 3. LIMPIEZA Y REFRESCO
   await renderLibrary(window.currentFilter || 'todos');
-  
   if (typeof loadMyKaraokeSongs === "function") await loadMyKaraokeSongs();
 
-  alert(studioTrackBlob
-    ? "¡Karaoke listo! Ahora aparece en la carpeta Karaoke."
-    : "Sincronización guardada. (Recuerda que sin pista de audio no se puede crear el archivo final de Karaoke).");
+  alert("¡Karaoke listo! Los archivos originales se mantienen y el nuevo karaoke usa la pista instrumental.");
 }
 
 function redoTapSync() {
