@@ -234,7 +234,7 @@ async function getLibraryItemByIdFromSupabase(id) {
 async function uploadFileToSupabase(fileOrBlob, fileName, mimeType, type) {
   try {
     // PASO A: Pedir la URL firmada a tu servidor (Opción B)
-    const responseUrl = await fetch('/api/upload', { // Ajusta la ruta a tu API de Next.js
+    const responseUrl = await fetch('/api/get-upload-url', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
