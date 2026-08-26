@@ -241,7 +241,7 @@ async function uploadFileToSupabase(fileOrBlob, fileName, mimeType = "applicatio
 
   try {
     // LLAMADA AL WORKER (asegúrate de que la URL sea la de tu Worker)
-    const response = await fetch('https://tu-worker.workers.dev/api/upload', {
+    const response = await fetch('https://vocal-app-r2-upload.caminante-via.workers.dev/api/upload', {
       method: 'POST',
       body: formData
       // No pongas Content-Type manual, el navegador lo hará con el boundary del FormData
