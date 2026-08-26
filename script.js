@@ -231,35 +231,39 @@ async function getLibraryItemByIdFromSupabase(id) {
   }
 }
 
-//Agregado Supabase 04/07/2026
-
-async function uploadFileToSupabase(fileOrBlob, fileName, mimeType = "application/octet-stream") {
-  // Construimos el FormData para el Worker
-  const formData = new FormData();
-  formData.append('file', fileOrBlob);
-  formData.append('fileName', fileName);
-  formData.append('mimeType', mimeType);
-
+async function uploadFileToSupabase(fileOrBlob, fileName, mimeType, type) {
   try {
-    // LLAMADA AL WORKER (asegúrate de que la URL sea la de tu Worker)
-    const response = await fetch('https://vocal-app-r2-upload.caminante-via.workers.dev/api/upload', {
+    // PASO A: Pedir la URL firmada a tu servidor (Opción B)
+    const responseUrl = await fetch('/api/upload', { // Ajusta la ruta a tu API de Next.js
       method: 'POST',
-      body: formData
-      // No pongas Content-Type manual, el navegador lo hará con el boundary del FormData
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        filename: fileName, 
+        contentType: mimeType,
+        type: type // Pasamos el tipo: 'pista' o 'voz'
+      })
     });
 
-    if (!response.ok) {
-      throw new Error(`Error en Worker: ${response.status}`);
-    }
+    if (!responseUrl.ok) throw new Error("Error obteniendo URL firmada");
+    
+    const { uploadUrl, publicUrl } = await responseUrl.json();
 
-    const data = await response.json();
+    // PASO B: Subir el binario directamente a Cloudflare R2 usando PUT
+    const uploadRes = await fetch(uploadUrl, {
+      method: 'PUT',
+      body: fileOrBlob,
+      headers: { 'Content-Type': mimeType }
+    });
 
+    if (!uploadRes.ok) throw new Error("Error al subir archivo a R2");
+
+    // Devolvemos la URL pública que generó tu API
     return {
-      filePath: data.filePath,
-      fileUrl: data.fileUrl
+      fileUrl: publicUrl,
+      filePath: fileName // O la key que prefieras
     };
   } catch (error) {
-    console.error("❌ Error subiendo al Worker:", error);
+    console.error("❌ Error en el proceso de subida:", error);
     throw error;
   }
 }
@@ -268,45 +272,24 @@ async function saveLibraryItemToSupabase({ name, type, blob, transcription = [],
   if (!db) throw new Error("❌ La base de datos no está inicializada.");
 
   const mimeType = blob.type || "application/octet-stream";
-  const extension = mimeType.includes("wav")
-    ? "wav"
-    : mimeType.includes("mpeg")
-    ? "mp3"
-    : mimeType.includes("webm")
-    ? "webm"
-    : mimeType.includes("ogg")
-    ? "ogg"
-    : "bin";
+  
+  // 1. Limpiamos el nombre
+  let cleanName = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9._]/g, "_");
 
-  // 1. OPTIMIZACIÓN DE SEGURIDAD: Limpiamos el nombre de tildes, espacios y caracteres raros
-  let cleanName = name
-    .normalize("NFD") // Separa las tildes de las letras
-    .replace(/[\u0300-\u036f]/g, "") // Borra los acentos completamente
-    .replace(/[^a-zA-Z0-9._]/g, "_") // Cambia espacios, guiones y símbolos por guiones bajos
-    .replace(/__+/g, "_"); // Reduce múltiples guiones bajos seguidos a uno solo
+  // 2. Llamamos a la nueva versión de subida pasando el 'type'
+  const { fileUrl } = await uploadFileToSupabase(blob, cleanName, mimeType, type);
 
-  const fileName = `${cleanName}_${type}_${Date.now()}.${extension}`;
-
-  console.log(`📤 Nombre original: "${name}" -> Generando archivo seguro: "${fileName}"`);
-
-  // 2. Subimos el binario al Storage de Supabase
-  const { filePath, fileUrl } = await uploadFileToSupabase(blob, fileName, mimeType);
-
-  // 3. Insertamos la referencia en tu tabla 'library'
-  // CORRECCIÓN: Quitamos la columna 'mime_type' para que no choque si la borraste en el panel web
+  // 3. Guardamos en Supabase
   const { error } = await db
     .from("library") 
-    .insert([
-      {
-        name, // Aquí conservamos el nombre bonito con tildes para mostrarlo en la interfaz de la app
+    .insert([{
+        name,
         type,
-        file_path: filePath, // Almacena la ruta limpia con la marca de tiempo (timestamp)
-        file_url: fileUrl,   // Almacena el enlace público web directo
+        file_url: fileUrl, // Esta URL ahora es única gracias al Date.now() de tu API
         transcription,
         metadata,
         date: new Date().toISOString()
-      }
-    ]);
+    }]);
 
   if (error) throw error;
 }
