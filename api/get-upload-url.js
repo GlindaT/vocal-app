@@ -15,8 +15,9 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Método no permitido' });
 
   try {
-    const { filename, contentType } = req.body;
-    const key = `karaoke-${Date.now()}-${filename}`; // Nombre único para el archivo
+    // En tu handler de Next.js/Node
+    const { filename, contentType, type } = req.body; // Recibe el tipo (pista/voz)
+    const key = `${type}_${Date.now()}_${filename.replace(/\s+/g, '_')}`;
 
     const command = new PutObjectCommand({
       Bucket: process.env.R2_BUCKET_NAME,
