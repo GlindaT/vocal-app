@@ -2211,62 +2211,56 @@ let karaokeTrackObjectUrl = "";
 
 async function loadKaraokeSong(id) {
   try {
-    // CORRECCIÓN 1: Enlazamos con la función de consulta oficial de Supabase
     const item = await getLibraryItemByIdFromSupabase(id);
-    if (!item) {
-      alert("⚠️ No se encontró el karaoke.");
-      return;
-    }
+    if (!item) return;
 
-    // CORRECCIÓN 2: Validamos usando la URL del Storage en lugar de un Blob local
-    if (!item.file_url) {
-      alert("⚠️ Este karaoke no tiene audio en la nube.");
-      return;
-    }
-
-    // Guardamos las referencias en tus variables globales actuales de la aplicación
-    karaokeLoadedItem = item;
-    karaokeSelectedTrackBlob = item.file_url; // Pasamos la URL directa para que el reproductor sepa de dónde leer
-    karaokeSelectedTrackName = item.name || "Karaoke";
-
-    // Como ya no usamos Blobs locales en memoria, limpiamos el revocador antiguo
-    if (karaokeTrackObjectUrl) {
-      try { URL.revokeObjectURL(karaokeTrackObjectUrl); } catch (e) {}
-      karaokeTrackObjectUrl = null;
-    }
+    // --- LÓGICA DE RECUPERACIÓN DE PISTA REAL ---
+    const biblioteca = await getAllLibraryItemsFromSupabase();
+    // Extraemos el nombre base (ej. quitamos "Karaoke - ")
+    const nombreLimpio = item.name.replace("Karaoke - ", "");
+    
+    // Buscamos el archivo que sea específicamente 'pista' para esta canción
+    const pistaReal = biblioteca.find(it => 
+      it.type === 'pista' && it.name.includes(nombreLimpio)
+    );
 
     const track = $("karaokeTrack") || $("karaokeAudio") || $("audioKaraoke") || $("trackPlayer");
+    
     if (track) {
-      try { track.pause(); } catch (e) {}
+      track.pause();
       track.currentTime = 0;
       
-      // CORRECCIÓN 3: Cargamos el enlace directo de Supabase Storage en el reproductor musical
-      track.src = item.file_url; 
+      // PRIORIDAD: Si encontramos el archivo tipo 'pista', usamos ese. 
+      // Si no, usamos el file_url del registro (que podría ser la voz).
+      if (pistaReal) {
+        track.src = pistaReal.file_url;
+        karaokeSelectedTrackBlob = pistaReal.file_url;
+        console.log("✅ Pista instrumental vinculada dinámicamente.");
+      } else {
+        track.src = item.file_url;
+        karaokeSelectedTrackBlob = item.file_url;
+        console.warn("⚠️ No se encontró pista instrumental, usando audio del registro.");
+      }
+      
       track.volume = 0.5;
       track.load();
     }
 
-    // Cargamos los renglones sincronizados de las letras desde la columna JSON
-    if (Array.isArray(item.transcription) && item.transcription.length) {
-      transcriptionSegments = item.transcription;
-      karaokeLoadedLyrics = item.transcription;
-    } else if (Array.isArray(item.lyrics) && item.lyrics.length) {
-      transcriptionSegments = item.lyrics;
-      karaokeLoadedLyrics = item.lyrics;
-    } else {
-      transcriptionSegments = [];
-      karaokeLoadedLyrics = [];
-    }
+    // Carga de letras (se mantiene igual)
+    karaokeLoadedItem = item;
+    karaokeSelectedTrackName = item.name;
+    const lyricsData = (Array.isArray(item.transcription) && item.transcription.length) 
+                       ? item.transcription 
+                       : (item.lyrics || []);
+    
+    transcriptionSegments = lyricsData;
+    karaokeLoadedLyrics = lyricsData;
 
     cargarLetrasEnMonitor();
+    if ($("karaokeStatus")) $("karaokeStatus").textContent = `Estado: "${item.name}" lista.`;
 
-    const status = $("karaokeStatus");
-    if (status) {
-      status.textContent = `Estado: "${item.name}" cargada. ¡A cantar! 🎤`;
-    }
   } catch (error) {
     console.error("Error cargando karaoke:", error);
-    alert("❌ Error al cargar el karaoke.");
   }
 }
 
