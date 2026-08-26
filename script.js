@@ -497,58 +497,60 @@ function detectPitch() {
   const targetNote = targetNoteEl ? targetNoteEl.value : "E2";
 
   if (display && guide) {
-  if (pitch !== -1) {
-    const noteFull = getNoteFromFrequency(pitch);
-    const targetFreq = getNoteFrequency(targetNote);
-    const cents = 1200 * Math.log2(pitch / targetFreq);
-
-    display.textContent = noteFull;
-
-    const dificultad = localStorage.getItem("vocalApp_difficulty") || "medio";
-    let maxDesviation = 30;
-    if (dificultad === "facil") maxDesviation = 50;
-    else if (dificultad === "dificil") maxDesviation = 15;
-    else if (dificultad === "experto") maxDesviation = 5;
-
-    const isInTune = Math.abs(cents) <= maxDesviation;
-
-    if (isInTune) {
-      display.style.color = "#22c55e";
-      guide.textContent = `🎯 ¡En la nota! (${targetNote})`;
-      guide.style.color = "#22c55e";
-    } else if (cents < 0) {
-      display.style.color = "#f59e0b";
-      guide.textContent = `⬆️ Estás grave. Sube a ${targetNote}`;
-      guide.style.color = "#f59e0b";
+    if (pitch !== -1) {
+      const noteFull = getNoteFromFrequency(pitch);
+      const targetFreq = getNoteFrequency(targetNote);
+      const cents = 1200 * Math.log2(pitch / targetFreq);
+  
+      display.textContent = noteFull;
+  
+      const dificultad = localStorage.getItem("vocalApp_difficulty") || "medio";
+      let maxDesviation = 30;
+      if (dificultad === "facil") maxDesviation = 50;
+      else if (dificultad === "dificil") maxDesviation = 15;
+      else if (dificultad === "experto") maxDesviation = 5;
+  
+      const isInTune = Math.abs(cents) <= maxDesviation;
+  
+      if (isInTune) {
+        display.style.color = "#22c55e";
+        guide.textContent = `🎯 ¡En la nota! (${targetNote})`;
+        guide.style.color = "#22c55e";
+      } else if (cents < 0) {
+        display.style.color = "#f59e0b";
+        guide.textContent = `⬆️ Estás grave. Sube a ${targetNote}`;
+        guide.style.color = "#f59e0b";
+      } else {
+        display.style.color = "#f59e0b";
+        guide.textContent = `⬇️ Estás agudo. Baja a ${targetNote}`;
+        guide.style.color = "#f59e0b";
+      }
+  
+      // Actualizar cents display
+      const centsValue = $("centsValue");
+      const centsFill = $("centsFill");
+      if (centsValue) centsValue.textContent = Math.round(cents);
+      if (centsFill) {
+        const pct = Math.max(-100, Math.min(100, cents * 2));
+        centsFill.style.width = Math.abs(pct) + "%";
+        centsFill.style.background = isInTune ? "#22c55e" : "#f59e0b";
+      }
+  
+      // Dibujar afinador
+      drawTuner(pitch, cents, targetNote, isInTune);
     } else {
-      display.style.color = "#f59e0b";
-      guide.textContent = `⬇️ Estás agudo. Baja a ${targetNote}`;
-      guide.style.color = "#f59e0b";
+      display.textContent = "--";
+      display.style.color = "white";
+      guide.textContent = "🎤 Esperando voz...";
+      const centsValue = $("centsValue");
+      const centsFill = $("centsFill");
+      if (centsValue) centsValue.textContent = "0";
+      if (centsFill) centsFill.style.width = "0%";
+      drawTuner(-1, 0, targetNote, false);
     }
-
-    // Actualizar cents display
-    const centsValue = $("centsValue");
-    const centsFill = $("centsFill");
-    if (centsValue) centsValue.textContent = Math.round(cents);
-    if (centsFill) {
-      const pct = Math.max(-100, Math.min(100, cents * 2));
-      centsFill.style.width = Math.abs(pct) + "%";
-      centsFill.style.background = isInTune ? "#22c55e" : "#f59e0b";
-    }
-
-    // Dibujar afinador
-    drawTuner(pitch, cents, targetNote, isInTune);
-  } else {
-    display.textContent = "--";
-    display.style.color = "white";
-    guide.textContent = "🎤 Esperando voz...";
-    const centsValue = $("centsValue");
-    const centsFill = $("centsFill");
-    if (centsValue) centsValue.textContent = "0";
-    if (centsFill) centsFill.style.width = "0%";
-    drawTuner(-1, 0, targetNote, false);
   }
 }
+
 
 function getNoteFromFrequency(freq) {
   const notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
