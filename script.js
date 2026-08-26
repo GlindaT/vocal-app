@@ -233,60 +233,32 @@ async function getLibraryItemByIdFromSupabase(id) {
 //Agregado Supabase 04/07/2026
 
 async function uploadFileToSupabase(fileOrBlob, fileName, mimeType = "application/octet-stream") {
-  // NOTA: Mantenemos el nombre de la función idéntico para que no tengas que cambiar 
-  // ninguna otra parte de tu código, pero ahora por dentro subirá a Cloudflare R2.
-
-  // 1. Limpiamos el nombre original quitando tildes y caracteres prohibidos
-  let cleanName = fileName
-    .normalize("NFD") 
-    .replace(/[\u0300-\u036f]/g, "") 
-    .replace(/[^a-zA-Z0-9._]/g, "_") 
-    .replace(/__+/g, "_"); 
-
-  // 2. Le pegamos el número de seguridad al inicio (Esto evita duplicados)
-  const safePath = `${Date.now()}_${cleanName}`;
-
-  console.log(`📤 Redirigiendo subida a Cloudflare R2 con nombre: ${safePath}`);
+  // Construimos el FormData para el Worker
+  const formData = new FormData();
+  formData.append('file', fileOrBlob);
+  formData.append('fileName', fileName);
+  formData.append('mimeType', mimeType);
 
   try {
-    // PASO A: Solicitar la URL de subida firmada a nuestra Edge Function de Vercel
-    const response = await fetch('/api/get-upload-url', {
+    // LLAMADA AL WORKER (asegúrate de que la URL sea la de tu Worker)
+    const response = await fetch('https://tu-worker.workers.dev/api/upload', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        filename: safePath, 
-        contentType: mimeType 
-      })
+      body: formData
+      // No pongas Content-Type manual, el navegador lo hará con el boundary del FormData
     });
-    
+
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || "Error al obtener la URL firmada de Vercel");
+      throw new Error(`Error en Worker: ${response.status}`);
     }
 
-    const { uploadUrl, publicUrl } = await response.json();
+    const data = await response.json();
 
-    // PASO B: Subir el archivo (pista, voz o letra) directamente desde el navegador a Cloudflare
-    const uploadResponse = await fetch(uploadUrl, {
-      method: 'PUT',
-      body: fileOrBlob,
-      headers: { 'Content-Type': mimeType }
-    });
-
-    if (!uploadResponse.ok) {
-      throw new Error(`Cloudflare rechazó la subida. Código: ${uploadResponse.status}`);
-    }
-
-    console.log("✅ Archivo alojado en Cloudflare R2 con éxito");
-
-    // Devolvemos exactamente la misma estructura para mantener compatibilidad con tus tablas
     return {
-      filePath: safePath,
-      fileUrl: publicUrl // Esta es la nueva URL de Cloudflare que se guardará en tu base de datos
+      filePath: data.filePath,
+      fileUrl: data.fileUrl
     };
-
   } catch (error) {
-    console.error("❌ Error en el proceso de subida a Cloudflare R2:", error);
+    console.error("❌ Error subiendo al Worker:", error);
     throw error;
   }
 }
