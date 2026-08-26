@@ -4487,34 +4487,34 @@ async function startKaraokePitchDetection() {
   if (karaokeDuoSplitMode) {
     await ensureP2PitchTracking();
   }
-}
 
-function loop() {
-  const track = $("karaokeTrack") || $("karaokeAudio") || $("audioKaraoke") || $("trackPlayer");
-  const currentTime = track ? track.currentTime : 0;
+  function loop() {
+    const track = $("karaokeTrack") || $("karaokeAudio") || $("audioKaraoke") || $("trackPlayer");
+    const currentTime = track ? track.currentTime : 0;
 
-  const buffer = new Float32Array(analyser.fftSize);
-  analyser.getFloatTimeDomainData(buffer);
-  const pitch = autoCorrelate(buffer, audioCtx.sampleRate);
+    const buffer = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(buffer);
+    const pitch = autoCorrelate(buffer, audioCtx.sampleRate);
 
-  // Inicializar P2 si el modo split se activó después del inicio
-  if (karaokeDuoSplitMode && !karaokeSplitAnalyser2 && !karaokeDuoAnalyser2) {
-    ensureP2PitchTracking();
+    // Pitch del Mic 2 (P2) si está disponible
+    let pitch2 = -1;
+    if (karaokeDuoSplitMode && karaokeSplitAnalyser2) {
+      const buf2 = new Float32Array(karaokeSplitAnalyser2.fftSize);
+      karaokeSplitAnalyser2.getFloatTimeDomainData(buf2);
+      pitch2 = autoCorrelate(buf2, karaokeSplitAudioCtx.sampleRate);
+    }
+
+    drawKaraokeMonitor(currentTime, pitch, pitch2);
+
+    // Si la pista terminó, paramos
+    if (track && track.ended) return;
+
+    // Seguimos el loop mientras se graba
+    if (karaokeMediaRecorder && karaokeMediaRecorder.state === "recording") {
+      requestAnimationFrame(loop);
+    }
   }
-
-  let pitch2 = -1;
-  if (karaokeDuoSplitMode && karaokeSplitAnalyser2) {
-    const buf2 = new Float32Array(karaokeSplitAnalyser2.fftSize);
-    karaokeSplitAnalyser2.getFloatTimeDomainData(buf2);
-    pitch2 = autoCorrelate(buf2, karaokeSplitAudioCtx.sampleRate);
-  }
-
-  drawKaraokeMonitor(currentTime, pitch, pitch2);
-
-  if (track && track.ended) return;
-  if (karaokeMediaRecorder && karaokeMediaRecorder.state === "recording") {
-    requestAnimationFrame(loop);
-  }
+  loop();
 }
 
 function parseUltrastarTxt(content) {
