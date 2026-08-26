@@ -79,12 +79,15 @@ async function handleUpload(request, env, corsHeaders) {
     fileData = await request.arrayBuffer();
   }
 
+  // 1. Limpiamos el nombre manteniendo puntos y guiones bajos que ya vienen del script.js
   const cleanName = fileName
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g,"")
-    .replace(/[^a-zA-Z0-9._]/g, "_")
+    .replace(/[^a-zA-Z0-9._]/g, "_") 
     .replace(/__+/g, "_");
-
+  
+  // 2. IMPORTANTE: Usamos el cleanName directamente como safePath.
+  // Si el script.js envió "Tormenta_pista_172465.mp3", el safePath será ese.
   const safePath = cleanName;
 
   await env.VOCAL_APP_R2_UPLOAD.put(safePath, fileData, {
