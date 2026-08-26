@@ -3727,35 +3727,38 @@ async function applyTapSync() {
 
   // --- NUEVA LÓGICA DE BÚSQUEDA DE PISTA INSTRUMENTAL ---
   // Buscamos en la biblioteca el archivo que REALMENTE sea una pista
-  const bibliotecaGlobal = await getAllLibraryItemsFromSupabase();
-  const pistaReal = bibliotecaGlobal.find(it => 
+  const biblioteca = await getAllLibraryItemsFromSupabase();
+  const pistaReal = biblioteca.find(it => 
     it.type === 'pista' && it.name.includes(studioTrackFileName)
   );
 
   // 🎤 1. CREAR EL "PAQUETE MAESTRO" EN SUPABASE (EL NUEVO ARCHIVO KARAOKE)
-  if (studioTrackBlob) {
-    try {
-      const karaokeItem = {
-        name: `Karaoke - ${studioTrackFileName || "Sin nombre"}`,
-        type: "karaoke",
-        // CAMBIO CRÍTICO: Usamos la URL de la pista instrumental encontrada, no el blob de voz del estudio
-        file_url: pistaReal ? pistaReal.file_url : studioTrackBlob, 
-        lyrics: analyzedSegments, 
-        date: new Date().toISOString(),
-        tapModeStyle: modoSeleccionado,
-        metadata: { 
-          syncedManually: true,
-          originalTrack: studioTrackFileName,
-          vocalReferenceId: selectedVoiceId // Guardamos referencia a la voz por si acaso
-        }
-      };
-
-      await addLibraryItemToSupabase(karaokeItem);
-      console.log("✅ Paquete de Karaoke creado con audio instrumental.");
-    } catch (err) {
-      console.error("Error al crear nuevo karaoke:", err);
+  //if (studioTrackBlob) {
+    //try {
+  const karaokeItem = {
+    name: `Karaoke - ${studioTrackFileName`,
+    type: "karaoke",
+    file_url: pistaReal ? pistaReal.file_url : null, 
+    lyrics: analyzedSegments, 
+    date: new Date().toISOString(),
+    tapModeStyle: modoSeleccionado,
+    syncedManually: true,
+    metadata: { 
+      originalTrack: studioTrackFileName,
+      vocalSourceUrl: studioTrackBlob // Guardamos referencia a la voz por si acaso
     }
+  };
+
+  if (!karaokeItem.file_url) {
+    alert("⚠️ Error: No se puede crear el Karaoke porque no se encontró el archivo de PISTA en la biblioteca.");
+    return;
   }
+
+  //await addLibraryItemToSupabase(karaokeItem);
+  //console.log("✅ Paquete de Karaoke creado con audio instrumental.");
+ // } catch (err) {
+ // console.error("Error al crear nuevo karaoke:", err);
+ // }
 
   // 🎯 2. ACTUALIZAR EL ORIGEN EN SUPABASE (SIN DESTRUIR LA LETRA)
   const currentId = selectedVoiceId || selectedTextId;
