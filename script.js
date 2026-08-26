@@ -350,7 +350,7 @@ function drawTuner(pitch, cents, targetNote, isInTune) {
 
   // 2. Marcas (ticks) de -50 a +50 cents
   const tickCount = 11;
-  for (let i = 0; i < tickCount; i++) {
+  for (let i = 0; i <tickCount; i++) {
     const t = i / (tickCount - 1);
     const centsVal = -50 + t * 100;
     const angle = -Math.PI / 2 + (centsVal / 50) * (Math.PI / 2);
@@ -4487,8 +4487,9 @@ async function startKaraokePitchDetection() {
   if (karaokeDuoSplitMode) {
     await ensureP2PitchTracking();
   }
+}
 
-  function loop() {
+function loop() {
   const track = $("karaokeTrack") || $("karaokeAudio") || $("audioKaraoke") || $("trackPlayer");
   const currentTime = track ? track.currentTime : 0;
 
@@ -4515,7 +4516,6 @@ async function startKaraokePitchDetection() {
     requestAnimationFrame(loop);
   }
 }
-
 
 function parseUltrastarTxt(content) {
   const lines = content.split("\n");
