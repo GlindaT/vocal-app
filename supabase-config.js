@@ -35,7 +35,7 @@ function getSupabaseConfig() {
 
   return { url, key };
 }
-
+/*
 // Inicialización perezosa del cliente Supabase
 let _supabaseApp = null;
 
@@ -46,7 +46,8 @@ function getSupabaseClient() {
   }
   return _supabaseApp;
 }
-
+*/
+/*
 // Para compatibilidad con código existente
 const supabaseApp = new Proxy({}, {
   get(_, prop) {
@@ -57,3 +58,4 @@ const supabaseApp = new Proxy({}, {
 // Exponer globalmente
 window.supabaseApp = supabaseApp;
 window.getSupabaseClient = getSupabaseClient;
+*/
