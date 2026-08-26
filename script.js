@@ -285,7 +285,7 @@ async function saveLibraryItemToSupabase({ name, type, blob, transcription = [],
     .replace(/[^a-zA-Z0-9._]/g, "_") // Cambia espacios, guiones y símbolos por guiones bajos
     .replace(/__+/g, "_"); // Reduce múltiples guiones bajos seguidos a uno solo
 
-  const fileName = `${cleanName}_${type}.${extension}`;
+  const fileName = `${cleanName}_${type}_${Date.now()}.${extension}`;
 
   console.log(`📤 Nombre original: "${name}" -> Generando archivo seguro: "${fileName}"`);
 
