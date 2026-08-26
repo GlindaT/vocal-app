@@ -3736,7 +3736,7 @@ async function applyTapSync() {
   //if (studioTrackBlob) {
     //try {
   const karaokeItem = {
-    name: `Karaoke - ${studioTrackFileName`,
+    name: `Karaoke - ${studioTrackFileName}`,
     type: "karaoke",
     file_url: pistaReal ? pistaReal.file_url : null, 
     lyrics: analyzedSegments, 
