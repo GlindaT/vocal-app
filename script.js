@@ -595,10 +595,14 @@ function autoCorrelate(buf, sampleRate) {
 
   if (rms < 0.001) return -1;
 
+  // Solo buscar offsets dentro del rango vocal (60Hz–1200Hz)
+  const minOffset = Math.floor(sampleRate / 1200); // ~40
+  const maxOffset = Math.floor(sampleRate / 60);   // ~800
+
   let bestOffset = -1;
   let bestCorrelation = 0;
 
-  for (let offset = 8; offset < 1000; offset++) {
+  for (let offset = minOffset; offset < maxOffset; offset++) {
     let correlation = 0;
     for (let i = 0; i < buf.length - offset; i++) {
       correlation += Math.abs(buf[i] - buf[i + offset]);
@@ -611,11 +615,6 @@ function autoCorrelate(buf, sampleRate) {
     }
   }
 
-  // LOG temporal — borrar después
-  if (rms > 0.001) {
-    console.log(`rms: ${rms.toFixed(4)} | corr: ${bestCorrelation.toFixed(3)} | offset: ${bestOffset} | freq: ${(sampleRate/bestOffset).toFixed(1)}Hz`);
-  }
-
   if (bestCorrelation < 0.7 || bestOffset === -1) return -1;
 
   const frequency = sampleRate / bestOffset;
@@ -623,6 +622,7 @@ function autoCorrelate(buf, sampleRate) {
 
   return frequency;
 }
+
 
 // ==========================================
 // ESTADO ESTUDIO / BIBLIOTECA
