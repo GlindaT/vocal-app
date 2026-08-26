@@ -2489,7 +2489,7 @@ async function startKaraokeRecording() {
   // CORRECCIÓN: Si el reproductor no tiene origen, le asignamos la URL directa de la nube
   if (!track.src && karaokeSelectedTrackBlob) {
     track.src = karaokeSelectedTrackBlob; // Copia el enlace 'file_url' de Supabase
-    track.volume = 0.5;
+    track.volume = 0.7;
     track.load();
   }
 
@@ -2800,7 +2800,7 @@ async function mixKaraoke() {
     );
 
     const trackGain = offlineCtx.createGain();
-    trackGain.gain.value = 0.4;
+    trackGain.gain.value = 0.7;
 
     const trackSource = offlineCtx.createBufferSource();
     trackSource.buffer = trackBuffer;
@@ -2808,7 +2808,7 @@ async function mixKaraoke() {
     trackGain.connect(offlineCtx.destination);
 
     const voiceGain = offlineCtx.createGain();
-    voiceGain.gain.value = 2.6;
+    voiceGain.gain.value = 2.3;
 
     const voiceSource = offlineCtx.createBufferSource();
     voiceSource.buffer = voiceBuffer;
