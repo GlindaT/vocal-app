@@ -599,6 +599,10 @@ function autoCorrelate(buf, sampleRate) {
   const minOffset = Math.floor(sampleRate / 1200); // ~40
   const maxOffset = Math.floor(sampleRate / 60);   // ~800
 
+  const pitch = autoCorrelate(pitchBuffer, audioContext.sampleRate);
+  console.log(`pitch: ${pitch} | sampleRate: ${audioContext.sampleRate}`);
+
+
   let bestOffset = -1;
   let bestCorrelation = 0;
 
