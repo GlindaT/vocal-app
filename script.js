@@ -2349,7 +2349,7 @@ async function loadKaraokeSong(id) {
         console.warn("⚠️ No se encontró pista instrumental, usando audio del registro.");
       }
       
-      track.volume = 0.5;
+      track.volume = 0.7;
       track.load();
     }
 
