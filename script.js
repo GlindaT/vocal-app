@@ -2349,7 +2349,7 @@ async function loadKaraokeSong(id) {
         console.warn("⚠️ No se encontró pista instrumental, usando audio del registro.");
       }
       
-      track.volume = 0.7;
+      track.volume = 0.9;
       track.load();
     }
 
@@ -2489,7 +2489,7 @@ async function startKaraokeRecording() {
   // CORRECCIÓN: Si el reproductor no tiene origen, le asignamos la URL directa de la nube
   if (!track.src && karaokeSelectedTrackBlob) {
     track.src = karaokeSelectedTrackBlob; // Copia el enlace 'file_url' de Supabase
-    track.volume = 0.7;
+    track.volume = 0.9;
     track.load();
   }
 
@@ -2800,7 +2800,7 @@ async function mixKaraoke() {
     );
 
     const trackGain = offlineCtx.createGain();
-    trackGain.gain.value = 0.7;
+    trackGain.gain.value = 1.2;
 
     const trackSource = offlineCtx.createBufferSource();
     trackSource.buffer = trackBuffer;
@@ -2808,7 +2808,7 @@ async function mixKaraoke() {
     trackGain.connect(offlineCtx.destination);
 
     const voiceGain = offlineCtx.createGain();
-    voiceGain.gain.value = 2.3;
+    voiceGain.gain.value = 1.8;
 
     const voiceSource = offlineCtx.createBufferSource();
     voiceSource.buffer = voiceBuffer;
@@ -4776,7 +4776,7 @@ async function loadCatalogSong(folder, title, artist) {
     const track = $("karaokeTrack") || $("karaokeAudio") || $("audioKaraoke") || $("trackPlayer");
     if (track) {
       track.src = audioUrl;
-      track.volume = 0.5;
+      track.volume = 0.9;
       
       // Sincronizamos las variables globales usando la ruta del archivo
       karaokeSelectedTrackBlob = audioUrl;
@@ -4934,7 +4934,7 @@ async function loadKaraokeSong(id) {
       track.dataset.objectUrl = ""; // Ya no aplica localmente
       track.dataset.karaokeId = String(item.id);
       track.dataset.karaokeLoaded = "1";
-      track.volume = 0.5;
+      track.volume = 0.9;
       track.load();
     }
 
