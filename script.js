@@ -1092,9 +1092,9 @@ async function saveManualFileToLibrary() {
   try {
     const libraryItem = {
       name: customName || file.name,
-      type: typeSelect,
+      type: type,
       date: new Date().toISOString(), 
-      metadata: { originalName: file.name },
+      metadata: {},
       transcription: []
     };
 
