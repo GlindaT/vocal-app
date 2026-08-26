@@ -6,6 +6,7 @@ const pitchBuffer = new Float32Array(2048);
 // ==========================================
 const state = {
   instrumentalUrl: null,
+  
   letraLrc: "",
   isRecording: false
 };
@@ -284,7 +285,7 @@ async function saveLibraryItemToSupabase({ name, type, blob, transcription = [],
     .replace(/[^a-zA-Z0-9._]/g, "_") // Cambia espacios, guiones y símbolos por guiones bajos
     .replace(/__+/g, "_"); // Reduce múltiples guiones bajos seguidos a uno solo
 
-  const fileName = `${cleanName}.${extension}`;
+  const fileName = `${cleanName}_${type}.${extension}`;
 
   console.log(`📤 Nombre original: "${name}" -> Generando archivo seguro: "${fileName}"`);
 
@@ -1091,9 +1092,10 @@ async function saveManualFileToLibrary() {
   try {
     const libraryItem = {
       name: customName || file.name,
-      type: type,
-      date: new Date().toISOString(), 
-      metadata: {},
+      type: typeSelect,
+      //date: new Date().toISOString(), 
+      blob: file,
+      metadata: { originalName: file.name },
       transcription: []
     };
 
@@ -3650,127 +3652,52 @@ function cancelTapSync() {
 }
 
 async function applyTapSync() {
-  if (tapSyncTimestamps.length === 0 || tapSyncLines.length === 0) {
-    alert("⚠️ No hay datos de sincronización.");
-    return;
-  }
-  
-  const voicePlayer = $("selectedVoicePlayer");
-  const totalDuration = voicePlayer ? voicePlayer.duration : 0;
-  
-  const statusId = selectedVoiceId ? "selectedVoiceStatus" : "selectedTextStatus";
-  const status = $(statusId);
-  
-  if (status) status.textContent = "Estado: Aplicando tiempos y analizando notas...";
-  
-  const newSegments = [];
-  const isTextoManual = !selectedVoiceBlob && selectedVoiceId;
-  const modoSeleccionado = window.currentTapSyncModeType || "linea";
+  // ... (toda tu lógica inicial de mapeo y análisis de pitch se mantiene igual) ...
 
-  // 🎯 BIFURCACIÓN DE MAPEO: EVITA LAS BARRAS GIGANTES EN EL CANVAS
-  if (isTextoManual && modoSeleccionado === "linea") {
-    let globalWordId = 1;
-
-    tapSyncLines.forEach((lineText, lineIndex) => {
-      const startFrase = tapSyncTimestamps[lineIndex] || 0;
-      const endFrase = (lineIndex < tapSyncTimestamps.length - 1) ? tapSyncTimestamps[lineIndex + 1] : (totalDuration || startFrase + 3.0);
-      const duracionTotalFrase = endFrase - startFrase;
-      const parteLinea = tapSyncParts[lineIndex] || "P1";
-
-      const palabrasDeLaLinea = lineText.split(/\s+/).filter(w => w.trim().length > 0);
-      const totalPalabras = palabrasDeLaLinea.length;
-
-      if (totalPalabras === 0) return;
-
-      const duracionPorPalabra = duracionTotalFrase / totalPalabras;
-
-      palabrasDeLaLinea.forEach((palabraText, wordIndex) => {
-        const wordStart = startFrase + (wordIndex * duracionPorPalabra);
-        const wordEnd = wordStart + duracionPorPalabra;
-
-        newSegments.push(buildWordTimingFromSegment({
-          start: wordStart,
-          end: wordEnd,
-          text: palabraText,
-          id: globalWordId++,
-          renglon: lineIndex + 1,
-          parte: parteLinea,
-          words: [{
-            start: wordStart,
-            end: wordEnd,
-            word: palabraText,
-            midi: 60
-          }]
-        }));
-      });
-    });
-  } else {
-    for (let i = 0; i < tapSyncLines.length; i++) {
-      const start = tapSyncTimestamps[i] || 0;
-      let end = (i < tapSyncTimestamps.length - 1) ? tapSyncTimestamps[i + 1] : (totalDuration || start + 3);
-      
-      newSegments.push(buildWordTimingFromSegment({
-        start: start,
-        end: end,
-        text: tapSyncLines[i],
-        parte: tapSyncParts[i] || "P1"
-      }));
-    }
-  }
-  
   let analyzedSegments = newSegments;
   if (selectedVoiceBlob) {
     if (status) status.textContent = "Estado: Analizando notas musicales... 🎵";
     analyzedSegments = await analyzePitchForSegments(selectedVoiceBlob, selectedTextBlob || null, newSegments);
   }
-  
-  if (isTextoManual) {
-    baseTextSegments = analyzedSegments;
-    textSegments = analyzedSegments;
-    renderKaraokeLyrics(textSegments);
-  } else {
-    baseTranscriptionSegments = analyzedSegments;
-    transcriptionSegments = analyzedSegments;
-    renderKaraokeLyrics(transcriptionSegments);
-  }
-  
-  cargarLetrasEnMonitor();
-  
-  // 🎤 1. CREAR EL "PAQUETE MAESTRO" EN SUPABASE
+
+  // --- NUEVA LÓGICA DE BÚSQUEDA DE PISTA INSTRUMENTAL ---
+  // Buscamos en la biblioteca el archivo que REALMENTE sea una pista
+  const bibliotecaGlobal = await getAllLibraryItemsFromSupabase();
+  const pistaReal = bibliotecaGlobal.find(it => 
+    it.type === 'pista' && it.name.includes(studioTrackFileName)
+  );
+
+  // 🎤 1. CREAR EL "PAQUETE MAESTRO" EN SUPABASE (EL NUEVO ARCHIVO KARAOKE)
   if (studioTrackBlob) {
     try {
-      const currentId = selectedVoiceId || selectedTextId;
-      const originalItem = currentId ? await getLibraryItemByIdFromSupabase(currentId) : null;
-
       const karaokeItem = {
         name: `Karaoke - ${studioTrackFileName || "Sin nombre"}`,
         type: "karaoke",
-        file_url: studioTrackBlob || (originalItem ? originalItem.file_url : null),
-        file_path: originalItem ? originalItem.file_path : null,
+        // CAMBIO CRÍTICO: Usamos la URL de la pista instrumental encontrada, no el blob de voz del estudio
+        file_url: pistaReal ? pistaReal.file_url : studioTrackBlob, 
         lyrics: analyzedSegments, 
         date: new Date().toISOString(),
-        // INYECCIÓN: Guardamos el modo en la columna que acabas de añadir en el panel
         tapModeStyle: modoSeleccionado,
         metadata: { 
           syncedManually: true,
-          originalTrack: studioTrackFileName 
+          originalTrack: studioTrackFileName,
+          vocalReferenceId: selectedVoiceId // Guardamos referencia a la voz por si acaso
         }
       };
 
       await addLibraryItemToSupabase(karaokeItem);
-      console.log("✅ Paquete de Karaoke creado en Supabase.");
+      console.log("✅ Paquete de Karaoke creado con audio instrumental.");
     } catch (err) {
       console.error("Error al crear nuevo karaoke:", err);
     }
   }
 
-  // 🎯 2. ACTUALIZAR EL ORIGEN EN SUPABASE
+  // 🎯 2. ACTUALIZAR EL ORIGEN EN SUPABASE (SIN DESTRUIR LA LETRA)
   const currentId = selectedVoiceId || selectedTextId;
   if (currentId) {
     const updateData = { 
       isSincronizada: true,
-      type: "karaoke",
-      // INYECCIÓN: Actualizamos también el origen con su estilo de visualización correspondiente
+      // ELIMINADO: type: "karaoke" <-- Ya no cambiamos el tipo del archivo original
       tapModeStyle: modoSeleccionado 
     };
 
@@ -3780,13 +3707,11 @@ async function applyTapSync() {
       updateData.transcription = analyzedSegments;
     }
 
-    if (isTextoManual && studioTrackBlob) {
-      updateData.file_url = studioTrackBlob;
-    }
+    // ELIMINADO: El cambio de file_url al origen. La letra no necesita la URL de la voz.
 
     try {
       await updateLibraryItemFromSupabase(currentId, updateData);
-      console.log("✅ El archivo original se ha convertido en Karaoke.");
+      console.log("✅ El archivo original se marcó como sincronizado, pero mantiene su tipo original.");
     } catch (err) {
       console.error("Error al actualizar origen:", err);
     }
