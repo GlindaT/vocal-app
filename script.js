@@ -2353,7 +2353,7 @@ async function loadKaraokeSong(id) {
         console.warn("⚠️ No se encontró pista instrumental, usando audio del registro.");
       }
       
-      track.volume = 0.9;
+      track.volume = 0.8;
       track.load();
     }
 
@@ -2493,7 +2493,7 @@ async function startKaraokeRecording() {
   // CORRECCIÓN: Si el reproductor no tiene origen, le asignamos la URL directa de la nube
   if (!track.src && karaokeSelectedTrackBlob) {
     track.src = karaokeSelectedTrackBlob; // Copia el enlace 'file_url' de Supabase
-    track.volume = 0.9;
+    track.volume = 0.8;
     track.load();
   }
 
@@ -2804,7 +2804,7 @@ async function mixKaraoke() {
     );
 
     const trackGain = offlineCtx.createGain();
-    trackGain.gain.value = 1.2;
+    trackGain.gain.value = 1.0;
 
     const trackSource = offlineCtx.createBufferSource();
     trackSource.buffer = trackBuffer;
@@ -2812,7 +2812,7 @@ async function mixKaraoke() {
     trackGain.connect(offlineCtx.destination);
 
     const voiceGain = offlineCtx.createGain();
-    voiceGain.gain.value = 1.8;
+    voiceGain.gain.value = 2.0;
 
     const voiceSource = offlineCtx.createBufferSource();
     voiceSource.buffer = voiceBuffer;
