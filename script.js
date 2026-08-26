@@ -593,19 +593,16 @@ function autoCorrelate(buf, sampleRate) {
   }
   rms = Math.sqrt(rms / buf.length);
 
-  // Si el volumen es muy bajo, ignoramos la detección
-  if (rms < 0.01) return -1;
+  if (rms < 0.001) return -1;
 
   let bestOffset = -1;
   let bestCorrelation = 0;
 
   for (let offset = 8; offset < 1000; offset++) {
     let correlation = 0;
-
     for (let i = 0; i < buf.length - offset; i++) {
       correlation += Math.abs(buf[i] - buf[i + offset]);
     }
-
     correlation = 1 - (correlation / (buf.length - offset));
 
     if (correlation > bestCorrelation) {
@@ -614,11 +611,14 @@ function autoCorrelate(buf, sampleRate) {
     }
   }
 
-  if (bestCorrelation < 0.85 || bestOffset === -1) return -1;
+  // LOG temporal — borrar después
+  if (rms > 0.001) {
+    console.log(`rms: ${rms.toFixed(4)} | corr: ${bestCorrelation.toFixed(3)} | offset: ${bestOffset} | freq: ${(sampleRate/bestOffset).toFixed(1)}Hz`);
+  }
+
+  if (bestCorrelation < 0.7 || bestOffset === -1) return -1;
 
   const frequency = sampleRate / bestOffset;
-
-  // Ignorar frecuencias absurdas para voz humana cantada
   if (frequency < 60 || frequency > 1200) return -1;
 
   return frequency;
