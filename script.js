@@ -3651,8 +3651,74 @@ function cancelTapSync() {
 }
 
 async function applyTapSync() {
-  // ... (toda tu lógica inicial de mapeo y análisis de pitch se mantiene igual) ...
+  if (tapSyncTimestamps.length === 0 || tapSyncLines.length === 0) {
+    alert("⚠️ No hay datos de sincronización.");
+    return;
+  }
+  
+  const voicePlayer = $("selectedVoicePlayer");
+  const totalDuration = voicePlayer ? voicePlayer.duration : 0;
+  
+  const statusId = selectedVoiceId ? "selectedVoiceStatus" : "selectedTextStatus";
+  const status = $(statusId);
+  
+  if (status) status.textContent = "Estado: Aplicando tiempos y analizando notas...";
+  
+  const newSegments = [];
+  const isTextoManual = !selectedVoiceBlob && selectedVoiceId;
+  const modoSeleccionado = window.currentTapSyncModeType || "linea";
 
+  // 🎯 BIFURCACIÓN DE MAPEO: EVITA LAS BARRAS GIGANTES EN EL CANVAS
+  if (isTextoManual && modoSeleccionado === "linea") {
+    let globalWordId = 1;
+
+    tapSyncLines.forEach((lineText, lineIndex) => {
+      const startFrase = tapSyncTimestamps[lineIndex] || 0;
+      const endFrase = (lineIndex < tapSyncTimestamps.length - 1) ? tapSyncTimestamps[lineIndex + 1] : (totalDuration || startFrase + 3.0);
+      const duracionTotalFrase = endFrase - startFrase;
+      const parteLinea = tapSyncParts[lineIndex] || "P1";
+
+      const palabrasDeLaLinea = lineText.split(/\s+/).filter(w => w.trim().length > 0);
+      const totalPalabras = palabrasDeLaLinea.length;
+
+      if (totalPalabras === 0) return;
+
+      const duracionPorPalabra = duracionTotalFrase / totalPalabras;
+
+      palabrasDeLaLinea.forEach((palabraText, wordIndex) => {
+        const wordStart = startFrase + (wordIndex * duracionPorPalabra);
+        const wordEnd = wordStart + duracionPorPalabra;
+
+        newSegments.push(buildWordTimingFromSegment({
+          start: wordStart,
+          end: wordEnd,
+          text: palabraText,
+          id: globalWordId++,
+          renglon: lineIndex + 1,
+          parte: parteLinea,
+          words: [{
+            start: wordStart,
+            end: wordEnd,
+            word: palabraText,
+            midi: 60
+          }]
+        }));
+      });
+    });
+  } else {
+    for (let i = 0; i < tapSyncLines.length; i++) {
+      const start = tapSyncTimestamps[i] || 0;
+      let end = (i < tapSyncTimestamps.length - 1) ? tapSyncTimestamps[i + 1] : (totalDuration || start + 3);
+      
+      newSegments.push(buildWordTimingFromSegment({
+        start: start,
+        end: end,
+        text: tapSyncLines[i],
+        parte: tapSyncParts[i] || "P1"
+      }));
+    }
+  }
+  
   let analyzedSegments = newSegments;
   if (selectedVoiceBlob) {
     if (status) status.textContent = "Estado: Analizando notas musicales... 🎵";
@@ -3715,7 +3781,6 @@ async function applyTapSync() {
       console.error("Error al actualizar origen:", err);
     }
   }
-
   // 3. LIMPIEZA Y REFRESCO
   await renderLibrary(window.currentFilter || 'todos');
   
