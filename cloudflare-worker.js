@@ -87,7 +87,7 @@ async function handleUpload(request, env, corsHeaders) {
 
   const safePath = cleanName;
 
-  await env.VOCAL_APP_STORAGE.put(safePath, fileData, {
+  await env.VOCAL_APP_R2.put(safePath, fileData, {
     httpMetadata: { contentType: mimeType },
   });
 
