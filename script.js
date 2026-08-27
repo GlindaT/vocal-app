@@ -1290,13 +1290,14 @@ async function saveManualFileToLibrary() {
     alert("❌ Error al guardar: " + error.message);
   }
 }
+
 async function loadTrackOptionsInStudio() {
   const select = $("studioTrackSelect");
   if (!select) return;
 
-  // 🔴 CONDICIÓN INICIAL: Si hay carga reciente, ignora Supabase
-  if (ultimaCargaEstudio && ultimaCargaEstudio.pista) {
-    select.innerHTML = `<option value="${ultimaCargaEstudio.pista.file_url || 'reciente'}" selected>🟢 Recién subida: ${ultimaCargaEstudio.pista.name}</option>`;
+  // 🛑 GUARDIAS: Si hay subida reciente, omite la consulta a Supabase
+  if (ultimaCargaEstudio && ultimaCargaEstudio.pista && ultimaCargaEstudio.pista.file_url) {
+    actualizarSelectoresConUltimaCarga();
     return;
   }
 
@@ -1406,9 +1407,9 @@ async function loadVoiceOptionsInStudio() {
   const select = $("voiceLibrarySelect");
   if (!select) return;
 
-  // 🔴 CONDICIÓN INICIAL: Si hay carga reciente, ignora Supabase
-  if (ultimaCargaEstudio && ultimaCargaEstudio.voz) {
-    select.innerHTML = `<option value="${ultimaCargaEstudio.voz.file_url || 'reciente'}" selected>🟢 Recién subida: ${ultimaCargaEstudio.voz.name}</option>`;
+  // 🛑 GUARDIAS: Si hay subida reciente, omite la consulta a Supabase
+  if (ultimaCargaEstudio && ultimaCargaEstudio.voz && ultimaCargaEstudio.voz.file_url) {
+    actualizarSelectoresConUltimaCarga();
     return;
   }
 
@@ -1580,9 +1581,9 @@ async function loadTextOptionsInStudio() {
   const select = $("textLibrarySelect");
   if (!select) return;
 
-  // 🔴 CONDICIÓN INICIAL: Si hay carga reciente, ignora Supabase
-  if (ultimaCargaEstudio && ultimaCargaEstudio.letra) {
-    select.innerHTML = `<option value="${ultimaCargaEstudio.letra.id || 'reciente'}" selected>🟢 Recién subida: ${ultimaCargaEstudio.letra.name}</option>`;
+  // 🛑 GUARDIAS: Si hay subida reciente, omite la consulta a Supabase
+  if (ultimaCargaEstudio && ultimaCargaEstudio.letra && ultimaCargaEstudio.letra.id) {
+    actualizarSelectoresConUltimaCarga();
     return;
   }
 
@@ -4046,67 +4047,63 @@ function redoTapSync() {
 async function procesarSubidaArchivos(filePista, fileVoz, fileLetra) {
   try {
     const statusEl = $("studioStatus");
-    if (statusEl) statusEl.textContent = "Estado: Subiendo archivos a la nube...";
+    if (statusEl) statusEl.textContent = "Estado: Subiendo archivos a Cloudflare/Supabase...";
 
-    // 1. Subida respetando la firma de uploadFileToSupabase(file, name, mimeType, type)
+    // 1. Subida a Cloudflare R2 / Supabase
     const resPista = await uploadFileToSupabase(filePista, filePista.name, filePista.type || "audio/mpeg", "pista");
     const resVoz   = await uploadFileToSupabase(fileVoz, fileVoz.name, fileVoz.type || "audio/webm", "voz");
     const resLetra = await uploadFileToSupabase(fileLetra, fileLetra.name, fileLetra.type || "text/plain", "texto");
 
-    // 2. Guardar la referencia global de la carga reciente
+    // 2. Guardar las URLs de Cloudflare / Supabase en el estado global
     ultimaCargaEstudio = {
-      pista: { name: filePista.name, file_url: resPista?.fileUrl || "" },
-      voz:   { name: fileVoz.name,   file_url: resVoz?.fileUrl || "" },
-      letra: { name: fileLetra.name, id: resLetra?.id || resLetra?.fileUrl || "" }
+      pista: { name: filePista.name, file_url: resPista.fileUrl },
+      voz:   { name: fileVoz.name,   file_url: resVoz.fileUrl },
+      letra: { name: fileLetra.name, id: resLetra.id || resLetra.fileUrl }
     };
 
-    // 3. Asignar a las variables globales de estado del Estudio
+    // 3. Asignación inmediata al estado interno del Estudio
     studioTrackFileName = filePista.name;
-    studioTrackBlob = filePista;
-    selectedVoiceBlob = fileVoz;
+    studioTrackBlob = resPista.fileUrl; 
+    selectedVoiceBlob = resVoz.fileUrl;
     studioTextBlob = fileLetra;
 
-    // 4. Cargar el audio local en el reproductor del Estudio
+    // 4. Asignar la URL de Cloudflare al reproductor principal
     const player = $("player");
     if (player) {
-      player.src = URL.createObjectURL(filePista);
+      player.src = resPista.fileUrl;
     }
 
-    // 5. Refrescar los selectores (usarán la guardia con ultimaCargaEstudio)
-    loadTrackOptionsInStudio();
-    loadVoiceOptionsInStudio();
-    loadTextOptionsInStudio();
+    // 5. Dibujar la opción única en los selectores del Estudio
+    actualizarSelectoresConUltimaCarga();
 
-    // 6. Cambiar a la pestaña Estudio automáticamente
+    // 6. Cambiar a la pestaña Estudio
     showTab("estudio");
 
     if (statusEl) {
-      statusEl.textContent = `Estado: "${filePista.name}" cargado y listo para sincronizar por taps.`;
+      statusEl.textContent = `Estado: "${filePista.name}" cargado desde Cloudflare y listo para sincronizar.`;
     }
 
   } catch (error) {
-    console.error("❌ Error al procesar la subida de archivos:", error);
-    alert("❌ Error en la subida: " + error.message);
+    console.error("❌ Error en la subida automatizada:", error);
+    alert("❌ Error en el proceso de carga: " + error.message);
   }
 }
 
 function actualizarSelectoresConUltimaCarga() {
-  // Ajuste a los IDs reales utilizados en el DOM de la aplicación
   const selectPista = $("studioTrackSelect");
   const selectVoz   = $("voiceLibrarySelect");
   const selectLetra = $("textLibrarySelect");
 
-  if (ultimaCargaEstudio.pista && selectPista) {
-    selectPista.innerHTML = `<option value="${ultimaCargaEstudio.pista.file_url || 'reciente'}" selected>🟢 Recién subida: ${ultimaCargaEstudio.pista.name}</option>`;
+  if (selectPista && ultimaCargaEstudio.pista) {
+    selectPista.innerHTML = `<option value="${ultimaCargaEstudio.pista.file_url}" selected>🟢 Recién subida: ${ultimaCargaEstudio.pista.name}</option>`;
   }
-  if (ultimaCargaEstudio.voz && selectVoz) {
-    selectVoz.innerHTML = `<option value="${ultimaCargaEstudio.voz.file_url || 'reciente'}" selected>🟢 Recién subida: ${ultimaCargaEstudio.voz.name}</option>`;
+  if (selectVoz && ultimaCargaEstudio.voz) {
+    selectVoz.innerHTML = `<option value="${ultimaCargaEstudio.voz.file_url}" selected>🟢 Recién subida: ${ultimaCargaEstudio.voz.name}</option>`;
   }
-  if (ultimaCargaEstudio.letra && selectLetra) {
-    selectLetra.innerHTML = `<option value="${ultimaCargaEstudio.letra.id || 'reciente'}" selected>🟢 Recién subida: ${ultimaCargaEstudio.letra.name}</option>`;
+  if (selectLetra && ultimaCargaEstudio.letra) {
+    selectLetra.innerHTML = `<option value="${ultimaCargaEstudio.letra.id}" selected>🟢 Recién subida: ${ultimaCargaEstudio.letra.name}</option>`;
   }
 }
-
 // ==========================================
 // INIT
 // ==========================================
