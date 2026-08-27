@@ -11,6 +11,13 @@ const state = {
   isRecording: false
 };
 
+// Variable global para almacenar el grupo de archivos subidos
+let ultimaCargaEstudio = {
+  pista: null,
+  voz: null,
+  letra: null
+};
+
 let db;
 let pitchHistory = [];
 let transcriptionSegments = [];
@@ -3920,6 +3927,49 @@ async function applyTapSync() {
 function redoTapSync() {
   if ($("tapSyncResult")) $("tapSyncResult").style.display = "none";
   startTapSync();
+}
+
+// ==========================================
+// AUTOMATIZACIÓN DE CARGA DIRECTA EN ESTUDIO
+// ==========================================
+async function procesarSubidaArchivos(filePista, fileVoz, fileLetra) {
+  // Guardamos la referencia global del conjunto recién subido
+  ultimaCargaEstudio.pista = filePista;
+  ultimaCargaEstudio.voz = fileVoz;
+  ultimaCargaEstudio.letra = fileLetra;
+
+  // Asignamos a las variables que usa el Estudio
+  studioTrackFileName = filePista.name;
+  studioTrackBlob = filePista;
+  selectedVoiceBlob = fileVoz;
+  studioTextBlob = fileLetra;
+
+  // Actualizamos el reproductor
+  const player = $("player");
+  if (player) {
+    player.src = URL.createObjectURL(filePista);
+  }
+
+  // Actualizamos los selectores para mostrar solo esta subida
+  actualizarSelectoresConUltimaCarga();
+
+  showTab("estudio");
+}
+
+function actualizarSelectoresConUltimaCarga() {
+  const selectPista = $("selectPistaEstudio");
+  const selectVoz = $("selectVozEstudio");
+  const selectLetra = $("selectLetraEstudio");
+
+  if (ultimaCargaEstudio.pista && selectPista) {
+    selectPista.innerHTML = `<option value="reciente" selected>🟢 Recién subida: ${ultimaCargaEstudio.pista.name}</option>`;
+  }
+  if (ultimaCargaEstudio.voz && selectVoz) {
+    selectVoz.innerHTML = `<option value="reciente" selected>🟢 Recién subida: ${ultimaCargaEstudio.voz.name}</option>`;
+  }
+  if (ultimaCargaEstudio.letra && selectLetra) {
+    selectLetra.innerHTML = `<option value="reciente" selected>🟢 Recién subida: ${ultimaCargaEstudio.letra.name}</option>`;
+  }
 }
 
 // ==========================================
