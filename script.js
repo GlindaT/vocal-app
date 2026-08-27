@@ -328,10 +328,9 @@ function showTab(tabId) {
 // ==========================================
 let audioContext, analyser, stream;
 
-// Variable global para suavizar el movimiento de la aguja
-let currentNeedleAngle = Math.PI / 2;
+// Variables fuera de la función para el estado de la aguja y animaciones
+let currentNeedleAngle = Math.PI / 2; // Apunta abajo por defecto
 
-// Arreglos para partículas
 const tunerParticles = {
   waves: [],
   bubbles: [],
@@ -340,14 +339,13 @@ const tunerParticles = {
 
 function triggerTunerEffects(x, y) {
   const now = Date.now();
-  // Limitar para que solo cree 2 o 3 ondas lentas y no un exceso
-  if (now - tunerParticles.lastWaveTime > 600) {
-    tunerParticles.waves.push({ x, y, radius: 15, alpha: 1.0 });
-    
-    // Crear un grupo pequeño de burbujas (3 a 5)
+  // Solo crea una nueva onda cada 700ms para evitar saturación
+  if (now - tunerParticles.lastWaveTime > 700) {
+    tunerParticles.waves.push({ x, y, radius: 10, alpha: 1.0 });
+
     for (let i = 0; i < 4; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const speed = 0.8 + Math.random() * 1.5; // Velocidad suave
+      const speed = 1 + Math.random() * 2;
       tunerParticles.bubbles.push({
         x, y,
         vx: Math.cos(angle) * speed,
@@ -378,27 +376,19 @@ function drawTuner(ctx, centerX, centerY, radius, currentPitch, targetNote) {
     }
   }
 
-  // 1. CÍRCULO PRINCIPAL (ÚNICO CÍRCULO)
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
-  ctx.lineWidth = 4;
-  ctx.stroke();
-
   // Coordenadas de la nota objetivo (borde superior del círculo)
   const targetX = centerX;
   const targetY = centerY - radius;
 
-  // Disparar efectos si está afinado
   if (isInTune) {
     triggerTunerEffects(targetX, targetY);
   }
 
-  // 2. DIBUJAR ONDAS EXPANSIVAS (Lentas y hacia toda la pantalla)
+  // 1. ONDAS EXPANSIVAS (Atraviesan el círculo y se expanden sin límite)
   for (let i = tunerParticles.waves.length - 1; i >= 0; i--) {
     const w = tunerParticles.waves[i];
-    w.radius += 1.2;  // Expansión pausada y elegante
-    w.alpha -= 0.005; // Se desvanecen lentamente para recorrer pantalla
+    w.radius += 1.5;   // Expansión suave
+    w.alpha -= 0.006;  // Desvanecimiento lento para que lleguen lejos
     
     if (w.alpha <= 0) {
       tunerParticles.waves.splice(i, 1);
@@ -407,16 +397,16 @@ function drawTuner(ctx, centerX, centerY, radius, currentPitch, targetNote) {
     ctx.beginPath();
     ctx.arc(w.x, w.y, w.radius, 0, Math.PI * 2);
     ctx.strokeStyle = `rgba(34, 197, 94, ${w.alpha})`;
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2.5;
     ctx.stroke();
   }
 
-  // 3. DIBUJAR BURBUJAS
+  // 2. BURBUJAS EN EXPANSIÓN
   for (let i = tunerParticles.bubbles.length - 1; i >= 0; i--) {
     const b = tunerParticles.bubbles[i];
     b.x += b.vx;
     b.y += b.vy;
-    b.alpha -= 0.01;
+    b.alpha -= 0.012;
     if (b.alpha <= 0) {
       tunerParticles.bubbles.splice(i, 1);
       continue;
@@ -427,47 +417,52 @@ function drawTuner(ctx, centerX, centerY, radius, currentPitch, targetNote) {
     ctx.fill();
   }
 
-  // 4. NOTA OBJETIVO (Crece y brilla al estar afinado)
+  // 3. ÚNICO CÍRCULO PRINCIPAL (Sin círculos internos)
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  // 4. NOTA OBJETIVO
   ctx.save();
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-
   if (isInTune) {
-    ctx.font = "bold 32px Sans-Serif"; // Aumenta tamaño
-    ctx.fillStyle = "#22c55e";        // Verde neón
-    ctx.shadowColor = "#22c55e";       // Resplandor / Brillo
-    ctx.shadowBlur = 20;
+    ctx.font = "bold 30px Sans-Serif";
+    ctx.fillStyle = "#22c55e";
+    ctx.shadowColor = "#22c55e";
+    ctx.shadowBlur = 18;
   } else {
-    ctx.font = "bold 22px Sans-Serif";
+    ctx.font = "bold 20px Sans-Serif";
     ctx.fillStyle = "#ffffff";
     ctx.shadowBlur = 0;
   }
-  ctx.fillText(targetNote, targetX, targetY - 18);
+  ctx.fillText(targetNote, targetX, targetY - 16);
   ctx.restore();
 
-  // 5. CÁLCULO Y CAMBIO DE COLOR DE LA AGUJA
-  const defaultAngle = Math.PI / 2; // Apunta hacia abajo
+  // 5. CÁLCULO Y MOVIMIENTO SUAVE DE LA AGUJA (LERP)
+  const defaultAngle = Math.PI / 2; // Inicia apuntando hacia abajo
   const maxCents = 50;
   const clampedCents = Math.max(-maxCents, Math.min(maxCents, cents));
-  
-  // Ángulo objetivo
+
   const angleOffset = (clampedCents / maxCents) * (Math.PI / 3);
   const targetAngle = currentPitch > 0 ? (defaultAngle + angleOffset) : defaultAngle;
 
-  // Suavizado de movimiento (LERP al 12%)
+  // Transición fluida (desplazamiento continuo en lugar de saltos)
   currentNeedleAngle += (targetAngle - currentNeedleAngle) * 0.12;
 
-  // Transición dinámica de color (Rojo -> Amarillo -> Verde)
-  let needleColor = "#ef4444"; // Rojo por defecto
+  // Cambiar color de la aguja según cercanía
+  let needleColor = "#ef4444";
   if (currentPitch > 0) {
-    const proximity = 1 - Math.abs(clampedCents) / maxCents; // 0 (lejos) a 1 (afinado)
-    const red = Math.round(239 * (1 - proximity));
-    const green = Math.round(225 * proximity);
-    needleColor = `rgb(${red}, ${green}, 50)`;
+    const proximity = 1 - Math.abs(clampedCents) / maxCents;
+    const r = Math.round(239 * (1 - proximity));
+    const g = Math.round(225 * proximity);
+    needleColor = `rgb(${r}, ${g}, 50)`;
   }
 
-  // 6. DIBUJAR AGUJA ESTILIZADA Y MÁS GRANDE
-  const needleLength = radius - 8; // Ocupa casi todo el círculo
+  // 6. DIBUJAR AGUJA MÁS GRANDE
+  const needleLength = radius - 5; // Llega casi hasta el borde del círculo
   const needleX = centerX + Math.cos(currentNeedleAngle) * needleLength;
   const needleY = centerY + Math.sin(currentNeedleAngle) * needleLength;
 
@@ -476,19 +471,18 @@ function drawTuner(ctx, centerX, centerY, radius, currentPitch, targetNote) {
   ctx.moveTo(centerX, centerY);
   ctx.lineTo(needleX, needleY);
   ctx.strokeStyle = needleColor;
-  ctx.lineWidth = 5; // Más gruesa
+  ctx.lineWidth = 5;
   ctx.lineCap = "round";
-  
-  // Sombra brillante en la aguja si está afinado
+
   if (isInTune) {
     ctx.shadowColor = "#22c55e";
     ctx.shadowBlur = 12;
   }
   ctx.stroke();
 
-  // Base/Pivote central elegante
+  // Pequeño punto pivot central
   ctx.beginPath();
-  ctx.arc(centerX, centerY, 7, 0, Math.PI * 2);
+  ctx.arc(centerX, centerY, 5, 0, Math.PI * 2);
   ctx.fillStyle = "#ffffff";
   ctx.fill();
   ctx.restore();
