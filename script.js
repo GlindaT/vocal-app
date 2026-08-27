@@ -1290,7 +1290,41 @@ async function saveManualFileToLibrary() {
     alert("❌ Error al guardar: " + error.message);
   }
 }
+async function loadTrackOptionsInStudio() {
+  const select = $("studioTrackSelect");
+  if (!select) return;
 
+  // 🎯 FILTRADO AUTOMÁTICO: Si hay una subida reciente, mostrar solo esa opción
+  if (ultimaCargaEstudio.pista) {
+    select.innerHTML = `<option value="${ultimaCargaEstudio.pista.file_url || 'reciente'}" selected>🟢 Recién subida: ${ultimaCargaEstudio.pista.name}</option>`;
+    return;
+  }
+
+  select.innerHTML = `<option value="">Selecciona una pista desde Biblioteca</option>`;
+
+  try {
+    const tracks = await getLibraryItemsByTypeFromSupabase("pista");
+
+    if (!tracks.length) {
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "No hay pistas guardadas";
+      select.appendChild(option);
+      return;
+    }
+
+    tracks.forEach((item) => {
+      const option = document.createElement("option");
+      option.value = item.id;
+      option.textContent = `${item.name} (${item.date || "sin fecha"})`;
+      select.appendChild(option);
+    });
+  } catch (error) {
+    console.error("Error al cargar pistas:", error);
+  }
+}
+
+/*
 async function loadTrackOptionsInStudio() {
   const select = $("studioTrackSelect");
   if (!select) return;
@@ -1318,6 +1352,7 @@ async function loadTrackOptionsInStudio() {
     console.error(error);
   }
 }
+*/
 
 async function loadSelectedTrackFromLibraryStudio() {
   const select = $("studioTrackSelect");
@@ -1370,6 +1405,43 @@ async function loadVoiceOptionsInStudio() {
   const select = $("voiceLibrarySelect");
   if (!select) return;
 
+  // 🎯 FILTRADO AUTOMÁTICO: Si hay una subida reciente, mostrar solo esa opción
+  if (ultimaCargaEstudio.voz) {
+    select.innerHTML = `<option value="${ultimaCargaEstudio.voz.file_url || 'reciente'}" selected>🟢 Recién subida: ${ultimaCargaEstudio.voz.name}</option>`;
+    return;
+  }
+
+  select.innerHTML = `<option value="">Selecciona una voz guardada</option>`;
+
+  try {
+    const voces = await getLibraryItemsByTypeFromSupabase("voz");
+    const grabaciones = await getLibraryItemsByTypeFromSupabase("grabacion");
+    const merged = [...voces, ...grabaciones];
+
+    if (!merged.length) {
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "No hay voces guardadas";
+      select.appendChild(option);
+      return;
+    }
+
+    merged.forEach((item) => {
+      const option = document.createElement("option");
+      option.value = item.id;
+      option.textContent = `${item.name} (${item.date || "sin fecha"})`;
+      select.appendChild(option);
+    });
+  } catch (error) {
+    console.error("Error al cargar voces:", error);
+  }
+}
+
+/*
+async function loadVoiceOptionsInStudio() {
+  const select = $("voiceLibrarySelect");
+  if (!select) return;
+
   select.innerHTML = `<option value="">Selecciona una voz guardada</option>`;
 
   try {
@@ -1396,6 +1468,7 @@ async function loadVoiceOptionsInStudio() {
     console.error(error);
   }
 }
+*/
 
 async function loadSelectedVoiceFromLibrary() {
   const select = $("voiceLibrarySelect");
@@ -1506,6 +1579,41 @@ async function loadTextOptionsInStudio() {
   const select = $("textLibrarySelect");
   if (!select) return;
 
+  // 🎯 FILTRADO AUTOMÁTICO: Si hay una subida reciente, mostrar solo esa opción
+  if (ultimaCargaEstudio.letra) {
+    select.innerHTML = `<option value="${ultimaCargaEstudio.letra.id || 'reciente'}" selected>🟢 Recién subida: ${ultimaCargaEstudio.letra.name}</option>`;
+    return;
+  }
+
+  select.innerHTML = `<option value="">Selecciona una letra guardada</option>`;
+
+  try {
+    const letras = await getLibraryItemsByTypeFromSupabase("texto");
+
+    if (!letras.length) {
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "No hay letras guardadas";
+      select.appendChild(option);
+      return;
+    }
+
+    letras.forEach((item) => {
+      const option = document.createElement("option");
+      option.value = item.id;
+      option.textContent = `${item.name} (${item.date || "sin fecha"})`;
+      select.appendChild(option);
+    });
+  } catch (error) {
+    console.error("Error al cargar letras:", error);
+  }
+}
+
+/*
+async function loadTextOptionsInStudio() {
+  const select = $("textLibrarySelect");
+  if (!select) return;
+
   select.innerHTML = `<option value="">Selecciona una letra guardada</option>`;
 
   try {
@@ -1532,7 +1640,7 @@ async function loadTextOptionsInStudio() {
     console.error(error);
   }
 }
-
+*/
 async function loadSelectedTextFromLibrary() {
   const select = $("textLibrarySelect");
   const status = $("selectedTextStatus");
