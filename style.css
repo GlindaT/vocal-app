@@ -3,7 +3,7 @@
 ========================================== */
 
 :root {
-   --bg-main: #352E3A;  /* Las propiedades que empiezan con -- son variables personalizadas de CSS. Se suele usar en zonas como: body,contenedor principal, fondo general de la app o web */
+   --bg-main: #27222B;  /* Las propiedades que empiezan con -- son variables personalizadas de CSS. Se suele usar en zonas como: body,contenedor principal, fondo general de la app o web */
    --bg-sidebar: #1e293b; /* Define otro color de fondo, también oscuro, para la barra lateral o sidebar. */
    --bg-card: #1e293b;  /* Define el color de fondo para tarjetas o bloques de contenido. */
    
