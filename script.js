@@ -328,6 +328,157 @@ function showTab(tabId) {
 // ==========================================
 let audioContext, analyser, stream;
 
+// Estado para las partículas del Afinador
+const tunerParticles = {
+  waves: [],
+  bubbles: []
+};
+
+// Función para disparar las ondas y burbujas desde la nota objetivo
+function triggerTunerEffects(x, y) {
+  // Onda concéntrica verde neón (estilo gota de agua)
+  tunerParticles.waves.push({ x, y, radius: 10, alpha: 1 });
+
+  // Ráfaga de burbujas a mayor velocidad
+  for (let i = 0; i < 5; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 3 + Math.random() * 4; // Un poco más rápidas que la onda
+    tunerParticles.bubbles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      size: 3 + Math.random() * 6,
+      alpha: 1
+    });
+  }
+}
+
+function drawTuner(ctx, centerX, centerY, radius, currentPitch, targetNote) {
+  const targetFreq = getNoteFrequency(targetNote);
+  let cents = 0;
+  let isInTune = false;
+
+  // 1. Calcular desviación en 'cents' si hay voz
+  if (currentPitch > 0 && targetFreq > 0) {
+    cents = 1200 * Math.log2(currentPitch / targetFreq);
+    // Tolerancia (ej: +/- 15 cents para considerar afinado)
+    if (Math.abs(cents) <= 15) {
+      isInTune = true;
+    }
+  }
+
+  // 2. DIBUJAR CÍRCULO BASE
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+  ctx.lineWidth = 4;
+  ctx.stroke();
+
+  // 3. NOTA OBJETIVO (Parte superior del círculo: 0°)
+  const targetX = centerX;
+  const targetY = centerY - radius;
+
+  // Si está afinado, disparar efectos desde el punto de la nota objetivo
+  if (isInTune) {
+    triggerTunerEffects(targetX, targetY);
+  }
+
+  // --- DIBUJAR ONDAS (Verde Neón) ---
+  for (let i = tunerParticles.waves.length - 1; i >= 0; i--) {
+    const w = tunerParticles.waves[i];
+    w.radius += 2.5; // Expansión
+    w.alpha -= 0.02;  // Desvanecimiento
+    if (w.alpha <= 0) {
+      tunerParticles.waves.splice(i, 1);
+      continue;
+    }
+    ctx.beginPath();
+    ctx.arc(w.x, w.y, w.radius, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(34, 197, 94, ${w.alpha})`; // Verde neón
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  // --- DIBUJAR BURBUJAS ---
+  for (let i = tunerParticles.bubbles.length - 1; i >= 0; i--) {
+    const b = tunerParticles.bubbles[i];
+    b.x += b.vx;
+    b.y += b.vy;
+    b.alpha -= 0.025;
+    if (b.alpha <= 0) {
+      tunerParticles.bubbles.splice(i, 1);
+      continue;
+    }
+    ctx.beginPath();
+    ctx.arc(b.x, b.y, b.size, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(34, 197, 94, ${b.alpha})`;
+    ctx.fill();
+  }
+
+  // --- DIBUJAR NOTA OBJETIVO (Agranda y brilla si está afinado) ---
+  ctx.save();
+  ctx.font = isInTune ? "bold 28px Sans-Serif" : "bold 20px Sans-Serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  if (isInTune) {
+    ctx.shadowColor = "#22c55e"; // Brillo verde neón
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = "#22c55e";
+  } else {
+    ctx.fillStyle = "#ffffff";
+  }
+  ctx.fillText(targetNote, targetX, targetY - 15);
+  ctx.restore();
+
+  // 4. CÁLCULO DE LA AGUJA
+  // Apunta hacia abajo por defecto (90° / Math.PI / 2)
+  const defaultAngle = Math.PI / 2; 
+  const maxCents = 50;
+  const clampedCents = Math.max(-maxCents, Math.min(maxCents, cents));
+
+  // Desviación angular:
+  // Si canta más arriba (agudo) -> pasa del centro hacia la DERECHA (+ angle)
+  // Si canta más abajo (grave)  -> no llega al centro / va a la IZQUIERDA (- angle)
+  const angleOffset = (clampedCents / maxCents) * (Math.PI / 3);
+  const currentAngle = defaultAngle + angleOffset;
+
+  // --- COLOR DE LA AGUJA (Transición de Rojo a Verde) ---
+  // Cuanto más cerca de 0 cents, más verde. Si está lejos, más rojo.
+  const proximity = 1 - Math.abs(clampedCents) / maxCents; // 0 (lejos/rojo) a 1 (afinado/verde)
+  const r = Math.round(239 * (1 - proximity));
+  const g = Math.round(227 * proximity + 68 * (1 - proximity));
+  const needleColor = `rgb(${r}, ${g}, 68)`;
+
+  // DIBUJAR AGUJA
+  const needleLength = radius - 10;
+  const needleX = centerX + Math.cos(currentAngle) * needleLength;
+  const needleY = centerY + Math.sin(currentAngle) * needleLength;
+
+  ctx.beginPath();
+  ctx.moveTo(centerX, centerY);
+  ctx.lineTo(needleX, needleY);
+  ctx.strokeStyle = currentPitch > 0 ? needleColor : "#ef4444"; // Rojo si no detecta voz
+  ctx.lineWidth = 4;
+  ctx.lineCap = "round";
+  ctx.stroke();
+
+  // Pivote central
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, 6, 0, Math.PI * 2);
+  ctx.fillStyle = "#ffffff";
+  ctx.fill();
+
+  // 5. NOTA CANTADA TODO EL TIEMPO (Debajo del afinador)
+  if (currentPitch > 0) {
+    const currentNoteText = getNoteFromFrequency(currentPitch);
+    ctx.font = "15px Sans-Serif";
+    ctx.fillStyle = "#a1a1aa";
+    ctx.textAlign = "center";
+    ctx.fillText(`Estás cantando: ${currentNoteText}`, centerX, centerY + radius + 30);
+  }
+}
+
 async function toggleRecording() {
   const btn = $("recordBtn");
 
@@ -376,15 +527,10 @@ function stopAfinador() {
 function detectPitch() {
   if (!state.isRecording || !analyser) return;
 
-  // Usamos el buffer global en lugar de crear uno nuevo cada 16ms
   analyser.getFloatTimeDomainData(pitchBuffer);
   const pitch = autoCorrelate(pitchBuffer, audioContext.sampleRate);
-  
-  if (document.getElementById("karaokeCanvas")) {
-    // Asegúrate de que esta función esté definida o comentada para evitar errores
-    if (typeof drawKaraokeMonitor === 'function') drawKaraokeMonitor(0, pitch); 
-  }
 
+  // 1. CÓDIGO QUE TIENES SELECCIONADO (Maneja los textos de guía)
   const display = $("noteDisplay");
   const guide = $("guideText");
   const targetNoteEl = $("targetNote");
@@ -394,37 +540,45 @@ function detectPitch() {
     if (pitch !== -1) {
       const noteFull = getNoteFromFrequency(pitch);
       const targetFreq = getNoteFrequency(targetNote);
-      // Evitar logaritmo de 0 o infinito
       const cents = 1200 * Math.log2(pitch / targetFreq);
 
       display.textContent = noteFull;
 
       const dificultad = localStorage.getItem("vocalApp_difficulty") || "medio";
       let maxDesviation = 30;
-        if (dificultad === "facil") maxDesviation = 50;
-        else if (dificultad === "dificil") maxDesviation = 15;
-        else if (dificultad === "experto") maxDesviation = 5;
-        
-        // Asegúrate de que las llaves envuelven correctamente cada bloque
-        if (Math.abs(cents) <= maxDesviation) {
-            display.style.color = "#22c55e"; 
-            guide.textContent = `🎯 ¡En la nota! (${targetNote})`;
-            guide.style.color = "#22c55e";
-        } else if (cents < 0) {
-            display.style.color = "#f59e0b";
-            guide.textContent = `⬆️ Estás grave. Sube a ${targetNote}`;
-            guide.style.color = "#f59e0b";
-        } else {
-            display.style.color = "#f59e0b";
-            guide.textContent = `⬇️ Estás agudo. Baja a ${targetNote}`;
-            guide.style.color = "#f59e0b";
-        }
+      if (dificultad === "facil") maxDesviation = 50;
+      else if (dificultad === "dificil") maxDesviation = 15;
+      else if (dificultad === "experto") maxDesviation = 5;
+
+      if (Math.abs(cents) <= maxDesviation) {
+        display.style.color = "#22c55e"; 
+        guide.textContent = `🎯 ¡En la nota! (${targetNote})`;
+        guide.style.color = "#22c55e";
+      } else if (cents < 0) {
+        display.style.color = "#f59e0b";
+        guide.textContent = `⬆️ Estás grave. Sube a ${targetNote}`;
+        guide.style.color = "#f59e0b";
+      } else {
+        display.style.color = "#f59e0b";
+        guide.textContent = `⬇️ Estás agudo. Baja a ${targetNote}`;
+        guide.style.color = "#f59e0b";
+      }
     } else {
       display.textContent = "--";
       display.style.color = "white";
       guide.textContent = "🎤 Esperando voz...";
     }
   }
+
+  // 2. ⬇️ AQUÍ AGREGAS EL CÓDIGO DEL CANVAS ⬇️
+  const canvas = document.getElementById("tunerCanvas");
+  if (canvas) {
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawTuner(ctx, canvas.width / 2, canvas.height / 2, 80, pitch, targetNote);
+  }
+
+  // 3. ÚLTIMA LÍNEA DE LA FUNCIÓN
   requestAnimationFrame(detectPitch);
 }
 
