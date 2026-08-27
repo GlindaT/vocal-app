@@ -4043,27 +4043,40 @@ function redoTapSync() {
 // AUTOMATIZACIÓN DE CARGA DIRECTA EN ESTUDIO
 // ==========================================
 async function procesarSubidaArchivos(filePista, fileVoz, fileLetra) {
-  // Guardamos la referencia global del conjunto recién subido
-  ultimaCargaEstudio.pista = filePista;
-  ultimaCargaEstudio.voz = fileVoz;
-  ultimaCargaEstudio.letra = fileLetra;
+  try {
+    // 1. Subir a Supabase / Servidor
+    const resPista = await uploadFileToSupabase(filePista, "pistas");
+    const resVoz   = await uploadFileToSupabase(fileVoz, "voces");
+    const resLetra = await uploadFileToSupabase(fileLetra, "letras");
 
-  // Asignamos a las variables que usa el Estudio
-  studioTrackFileName = filePista.name;
-  studioTrackBlob = filePista;
-  selectedVoiceBlob = fileVoz;
-  studioTextBlob = fileLetra;
+    // 2. Guardar la referencia global de la carga reciente
+    ultimaCargaEstudio.pista = { name: filePista.name, file_url: resPista.fileUrl };
+    ultimaCargaEstudio.voz   = { name: fileVoz.name,   file_url: resVoz.fileUrl };
+    ultimaCargaEstudio.letra = { name: fileLetra.name, id: resLetra.id || resLetra.fileUrl };
 
-  // Actualizamos el reproductor
-  const player = $("player");
-  if (player) {
-    player.src = URL.createObjectURL(filePista);
+    // 3. Asignar variables locales para el reproductor/estudio
+    studioTrackFileName = filePista.name;
+    studioTrackBlob = filePista;
+    selectedVoiceBlob = fileVoz;
+    studioTextBlob = fileLetra;
+
+    // 4. Cargar el audio local en el reproductor
+    const player = $("player");
+    if (player) {
+      player.src = URL.createObjectURL(filePista);
+    }
+
+    // 5. Actualizar los selectores en la vista
+    loadTrackOptionsInStudio();
+    loadVoiceOptionsInStudio();
+    loadTextOptionsInStudio();
+
+    // 6. Cambiar a la pestaña Estudio
+    showTab("estudio");
+
+  } catch (error) {
+    console.error("Error al procesar la subida de archivos:", error);
   }
-
-  // Actualizamos los selectores para mostrar solo esta subida
-  actualizarSelectoresConUltimaCarga();
-
-  showTab("estudio");
 }
 
 function actualizarSelectoresConUltimaCarga() {
