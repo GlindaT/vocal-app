@@ -155,7 +155,7 @@ button {
 /* Botón principal */
 button {
    background: var(--accent);
-   color: black;
+   color: #87a8a3;
    border: 2px solid #41f6ff;
 }
 
