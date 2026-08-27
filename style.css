@@ -10,7 +10,7 @@
    --text-main: #031B13; /* Define el color principal del texto: blanco. Se usa en títulos, párrafos importantes, botones, etc. */
    --text-muted: #94a3b8; /* Define un color de texto más suave o apagado.Se usa para texto secundario */
    
-   --accent: #22c55e;  /* Define el color de acento principal, en este caso un verde.Se suele usar para destacar elementos importantes */
+   --accent: #043336;  /* Define el color de acento principal, en este caso un verde.Se suele usar para destacar elementos importantes */
    --accent-hover: #0d7835; /* Cuando el usuario pasa el ratón por encima de un botón o enlace, ese elemento puede cambiar a este color para dar feedback visual. */
    
    --danger: #ef4444; /* Define un color rojo para acciones o estados de peligro. */
