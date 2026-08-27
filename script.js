@@ -4042,56 +4042,68 @@ function redoTapSync() {
 // ==========================================
 // AUTOMATIZACIÓN DE CARGA DIRECTA EN ESTUDIO
 // ==========================================
+
 async function procesarSubidaArchivos(filePista, fileVoz, fileLetra) {
   try {
-    // 1. Subir a Supabase / Servidor
-    const resPista = await uploadFileToSupabase(filePista, "pistas");
-    const resVoz   = await uploadFileToSupabase(fileVoz, "voces");
-    const resLetra = await uploadFileToSupabase(fileLetra, "letras");
+    const statusEl = $("studioStatus");
+    if (statusEl) statusEl.textContent = "Estado: Subiendo archivos a la nube...";
+
+    // 1. Subida respetando la firma de uploadFileToSupabase(file, name, mimeType, type)
+    const resPista = await uploadFileToSupabase(filePista, filePista.name, filePista.type || "audio/mpeg", "pista");
+    const resVoz   = await uploadFileToSupabase(fileVoz, fileVoz.name, fileVoz.type || "audio/webm", "voz");
+    const resLetra = await uploadFileToSupabase(fileLetra, fileLetra.name, fileLetra.type || "text/plain", "texto");
 
     // 2. Guardar la referencia global de la carga reciente
-    ultimaCargaEstudio.pista = { name: filePista.name, file_url: resPista.fileUrl };
-    ultimaCargaEstudio.voz   = { name: fileVoz.name,   file_url: resVoz.fileUrl };
-    ultimaCargaEstudio.letra = { name: fileLetra.name, id: resLetra.id || resLetra.fileUrl };
+    ultimaCargaEstudio = {
+      pista: { name: filePista.name, file_url: resPista?.fileUrl || "" },
+      voz:   { name: fileVoz.name,   file_url: resVoz?.fileUrl || "" },
+      letra: { name: fileLetra.name, id: resLetra?.id || resLetra?.fileUrl || "" }
+    };
 
-    // 3. Asignar variables locales para el reproductor/estudio
+    // 3. Asignar a las variables globales de estado del Estudio
     studioTrackFileName = filePista.name;
     studioTrackBlob = filePista;
     selectedVoiceBlob = fileVoz;
     studioTextBlob = fileLetra;
 
-    // 4. Cargar el audio local en el reproductor
+    // 4. Cargar el audio local en el reproductor del Estudio
     const player = $("player");
     if (player) {
       player.src = URL.createObjectURL(filePista);
     }
 
-    // 5. Actualizar los selectores en la vista
+    // 5. Refrescar los selectores (usarán la guardia con ultimaCargaEstudio)
     loadTrackOptionsInStudio();
     loadVoiceOptionsInStudio();
     loadTextOptionsInStudio();
 
-    // 6. Cambiar a la pestaña Estudio
+    // 6. Cambiar a la pestaña Estudio automáticamente
     showTab("estudio");
 
+    if (statusEl) {
+      statusEl.textContent = `Estado: "${filePista.name}" cargado y listo para sincronizar por taps.`;
+    }
+
   } catch (error) {
-    console.error("Error al procesar la subida de archivos:", error);
+    console.error("❌ Error al procesar la subida de archivos:", error);
+    alert("❌ Error en la subida: " + error.message);
   }
 }
 
 function actualizarSelectoresConUltimaCarga() {
-  const selectPista = $("selectPistaEstudio");
-  const selectVoz = $("selectVozEstudio");
-  const selectLetra = $("selectLetraEstudio");
+  // Ajuste a los IDs reales utilizados en el DOM de la aplicación
+  const selectPista = $("studioTrackSelect");
+  const selectVoz   = $("voiceLibrarySelect");
+  const selectLetra = $("textLibrarySelect");
 
   if (ultimaCargaEstudio.pista && selectPista) {
-    selectPista.innerHTML = `<option value="reciente" selected>🟢 Recién subida: ${ultimaCargaEstudio.pista.name}</option>`;
+    selectPista.innerHTML = `<option value="${ultimaCargaEstudio.pista.file_url || 'reciente'}" selected>🟢 Recién subida: ${ultimaCargaEstudio.pista.name}</option>`;
   }
   if (ultimaCargaEstudio.voz && selectVoz) {
-    selectVoz.innerHTML = `<option value="reciente" selected>🟢 Recién subida: ${ultimaCargaEstudio.voz.name}</option>`;
+    selectVoz.innerHTML = `<option value="${ultimaCargaEstudio.voz.file_url || 'reciente'}" selected>🟢 Recién subida: ${ultimaCargaEstudio.voz.name}</option>`;
   }
   if (ultimaCargaEstudio.letra && selectLetra) {
-    selectLetra.innerHTML = `<option value="reciente" selected>🟢 Recién subida: ${ultimaCargaEstudio.letra.name}</option>`;
+    selectLetra.innerHTML = `<option value="${ultimaCargaEstudio.letra.id || 'reciente'}" selected>🟢 Recién subida: ${ultimaCargaEstudio.letra.name}</option>`;
   }
 }
 
