@@ -1417,7 +1417,7 @@ async function loadVoiceOptionsInStudio() {
   try {
     const voces = await getLibraryItemsByTypeFromSupabase("voz");
     // ...
-    const merged = [...voces, ...grabaciones];
+    const merged = [...voces];
 
     if (!merged.length) {
       const option = document.createElement("option");
