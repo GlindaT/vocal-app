@@ -328,28 +328,35 @@ function showTab(tabId) {
 // ==========================================
 let audioContext, analyser, stream;
 
-// Estado para las partículas del Afinador
+// Variable global para suavizar el movimiento de la aguja
+let currentNeedleAngle = Math.PI / 2;
+
+// Arreglos para partículas
 const tunerParticles = {
   waves: [],
-  bubbles: []
+  bubbles: [],
+  lastWaveTime: 0
 };
 
-// Función para disparar las ondas y burbujas desde la nota objetivo
 function triggerTunerEffects(x, y) {
-  // Onda concéntrica verde neón (estilo gota de agua)
-  tunerParticles.waves.push({ x, y, radius: 10, alpha: 1 });
-
-  // Ráfaga de burbujas a mayor velocidad
-  for (let i = 0; i < 5; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const speed = 3 + Math.random() * 4; // Un poco más rápidas que la onda
-    tunerParticles.bubbles.push({
-      x, y,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      size: 3 + Math.random() * 6,
-      alpha: 1
-    });
+  const now = Date.now();
+  // Limitar para que solo cree 2 o 3 ondas lentas y no un exceso
+  if (now - tunerParticles.lastWaveTime > 600) {
+    tunerParticles.waves.push({ x, y, radius: 15, alpha: 1.0 });
+    
+    // Crear un grupo pequeño de burbujas (3 a 5)
+    for (let i = 0; i < 4; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 0.8 + Math.random() * 1.5; // Velocidad suave
+      tunerParticles.bubbles.push({
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        size: 3 + Math.random() * 5,
+        alpha: 1.0
+      });
+    }
+    tunerParticles.lastWaveTime = now;
   }
 }
 
@@ -358,53 +365,58 @@ function drawTuner(ctx, centerX, centerY, radius, currentPitch, targetNote) {
   let cents = 0;
   let isInTune = false;
 
-  // 1. Calcular desviación en 'cents' si hay voz
   if (currentPitch > 0 && targetFreq > 0) {
     cents = 1200 * Math.log2(currentPitch / targetFreq);
-    // Tolerancia (ej: +/- 15 cents para considerar afinado)
-    if (Math.abs(cents) <= 15) {
+    const dificultad = localStorage.getItem("vocalApp_difficulty") || "medio";
+    let maxDesviation = 30;
+    if (dificultad === "facil") maxDesviation = 50;
+    else if (dificultad === "dificil") maxDesviation = 15;
+    else if (dificultad === "experto") maxDesviation = 5;
+
+    if (Math.abs(cents) <= maxDesviation) {
       isInTune = true;
     }
   }
 
-  // 2. DIBUJAR CÍRCULO BASE
+  // 1. CÍRCULO PRINCIPAL (ÚNICO CÍRCULO)
   ctx.beginPath();
   ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
   ctx.lineWidth = 4;
   ctx.stroke();
 
-  // 3. NOTA OBJETIVO (Parte superior del círculo: 0°)
+  // Coordenadas de la nota objetivo (borde superior del círculo)
   const targetX = centerX;
   const targetY = centerY - radius;
 
-  // Si está afinado, disparar efectos desde el punto de la nota objetivo
+  // Disparar efectos si está afinado
   if (isInTune) {
     triggerTunerEffects(targetX, targetY);
   }
 
-  // --- DIBUJAR ONDAS (Verde Neón) ---
+  // 2. DIBUJAR ONDAS EXPANSIVAS (Lentas y hacia toda la pantalla)
   for (let i = tunerParticles.waves.length - 1; i >= 0; i--) {
     const w = tunerParticles.waves[i];
-    w.radius += 2.5; // Expansión
-    w.alpha -= 0.02;  // Desvanecimiento
+    w.radius += 1.2;  // Expansión pausada y elegante
+    w.alpha -= 0.005; // Se desvanecen lentamente para recorrer pantalla
+    
     if (w.alpha <= 0) {
       tunerParticles.waves.splice(i, 1);
       continue;
     }
     ctx.beginPath();
     ctx.arc(w.x, w.y, w.radius, 0, Math.PI * 2);
-    ctx.strokeStyle = `rgba(34, 197, 94, ${w.alpha})`; // Verde neón
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = `rgba(34, 197, 94, ${w.alpha})`;
+    ctx.lineWidth = 3;
     ctx.stroke();
   }
 
-  // --- DIBUJAR BURBUJAS ---
+  // 3. DIBUJAR BURBUJAS
   for (let i = tunerParticles.bubbles.length - 1; i >= 0; i--) {
     const b = tunerParticles.bubbles[i];
     b.x += b.vx;
     b.y += b.vy;
-    b.alpha -= 0.025;
+    b.alpha -= 0.01;
     if (b.alpha <= 0) {
       tunerParticles.bubbles.splice(i, 1);
       continue;
@@ -415,68 +427,71 @@ function drawTuner(ctx, centerX, centerY, radius, currentPitch, targetNote) {
     ctx.fill();
   }
 
-  // --- DIBUJAR NOTA OBJETIVO (Agranda y brilla si está afinado) ---
+  // 4. NOTA OBJETIVO (Crece y brilla al estar afinado)
   ctx.save();
-  ctx.font = isInTune ? "bold 28px Sans-Serif" : "bold 20px Sans-Serif";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
   if (isInTune) {
-    ctx.shadowColor = "#22c55e"; // Brillo verde neón
-    ctx.shadowBlur = 18;
-    ctx.fillStyle = "#22c55e";
+    ctx.font = "bold 32px Sans-Serif"; // Aumenta tamaño
+    ctx.fillStyle = "#22c55e";        // Verde neón
+    ctx.shadowColor = "#22c55e";       // Resplandor / Brillo
+    ctx.shadowBlur = 20;
   } else {
+    ctx.font = "bold 22px Sans-Serif";
     ctx.fillStyle = "#ffffff";
+    ctx.shadowBlur = 0;
   }
-  ctx.fillText(targetNote, targetX, targetY - 15);
+  ctx.fillText(targetNote, targetX, targetY - 18);
   ctx.restore();
 
-  // 4. CÁLCULO DE LA AGUJA
-  // Apunta hacia abajo por defecto (90° / Math.PI / 2)
-  const defaultAngle = Math.PI / 2; 
+  // 5. CÁLCULO Y CAMBIO DE COLOR DE LA AGUJA
+  const defaultAngle = Math.PI / 2; // Apunta hacia abajo
   const maxCents = 50;
   const clampedCents = Math.max(-maxCents, Math.min(maxCents, cents));
-
-  // Desviación angular:
-  // Si canta más arriba (agudo) -> pasa del centro hacia la DERECHA (+ angle)
-  // Si canta más abajo (grave)  -> no llega al centro / va a la IZQUIERDA (- angle)
+  
+  // Ángulo objetivo
   const angleOffset = (clampedCents / maxCents) * (Math.PI / 3);
-  const currentAngle = defaultAngle + angleOffset;
+  const targetAngle = currentPitch > 0 ? (defaultAngle + angleOffset) : defaultAngle;
 
-  // --- COLOR DE LA AGUJA (Transición de Rojo a Verde) ---
-  // Cuanto más cerca de 0 cents, más verde. Si está lejos, más rojo.
-  const proximity = 1 - Math.abs(clampedCents) / maxCents; // 0 (lejos/rojo) a 1 (afinado/verde)
-  const r = Math.round(239 * (1 - proximity));
-  const g = Math.round(227 * proximity + 68 * (1 - proximity));
-  const needleColor = `rgb(${r}, ${g}, 68)`;
+  // Suavizado de movimiento (LERP al 12%)
+  currentNeedleAngle += (targetAngle - currentNeedleAngle) * 0.12;
 
-  // DIBUJAR AGUJA
-  const needleLength = radius - 10;
-  const needleX = centerX + Math.cos(currentAngle) * needleLength;
-  const needleY = centerY + Math.sin(currentAngle) * needleLength;
+  // Transición dinámica de color (Rojo -> Amarillo -> Verde)
+  let needleColor = "#ef4444"; // Rojo por defecto
+  if (currentPitch > 0) {
+    const proximity = 1 - Math.abs(clampedCents) / maxCents; // 0 (lejos) a 1 (afinado)
+    const red = Math.round(239 * (1 - proximity));
+    const green = Math.round(225 * proximity);
+    needleColor = `rgb(${red}, ${green}, 50)`;
+  }
 
+  // 6. DIBUJAR AGUJA ESTILIZADA Y MÁS GRANDE
+  const needleLength = radius - 8; // Ocupa casi todo el círculo
+  const needleX = centerX + Math.cos(currentNeedleAngle) * needleLength;
+  const needleY = centerY + Math.sin(currentNeedleAngle) * needleLength;
+
+  ctx.save();
   ctx.beginPath();
   ctx.moveTo(centerX, centerY);
   ctx.lineTo(needleX, needleY);
-  ctx.strokeStyle = currentPitch > 0 ? needleColor : "#ef4444"; // Rojo si no detecta voz
-  ctx.lineWidth = 4;
+  ctx.strokeStyle = needleColor;
+  ctx.lineWidth = 5; // Más gruesa
   ctx.lineCap = "round";
+  
+  // Sombra brillante en la aguja si está afinado
+  if (isInTune) {
+    ctx.shadowColor = "#22c55e";
+    ctx.shadowBlur = 12;
+  }
   ctx.stroke();
 
-  // Pivote central
+  // Base/Pivote central elegante
   ctx.beginPath();
-  ctx.arc(centerX, centerY, 6, 0, Math.PI * 2);
+  ctx.arc(centerX, centerY, 7, 0, Math.PI * 2);
   ctx.fillStyle = "#ffffff";
   ctx.fill();
-
-  // 5. NOTA CANTADA TODO EL TIEMPO (Debajo del afinador)
-  if (currentPitch > 0) {
-    const currentNoteText = getNoteFromFrequency(currentPitch);
-    ctx.font = "15px Sans-Serif";
-    ctx.fillStyle = "#a1a1aa";
-    ctx.textAlign = "center";
-    ctx.fillText(`Estás cantando: ${currentNoteText}`, centerX, centerY + radius + 30);
-  }
+  ctx.restore();
 }
 
 async function toggleRecording() {
