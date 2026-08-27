@@ -156,6 +156,7 @@ button {
 button {
    background: var(--accent);
    color: black;
+   border: 2px solid #41f6ff;
 }
 
 button:hover {
