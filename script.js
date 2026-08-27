@@ -1011,6 +1011,7 @@ async function renderLibrary(filter = "todos") {
 
           await loadKaraokeSong(id);
           alert(`✅ "${selectedItem?.name || "Karaoke"}" enviado al monitor karaoke.`);
+          showTab('karaoke');
         } catch (e) {
           console.error("Error enviando al monitor karaoke:", e);
           alert("❌ No se pudo enviar al monitor karaoke.");
