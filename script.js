@@ -1294,16 +1294,17 @@ async function loadTrackOptionsInStudio() {
   const select = $("studioTrackSelect");
   if (!select) return;
 
-  // 🎯 FILTRADO AUTOMÁTICO: Si hay una subida reciente, mostrar solo esa opción
-  if (ultimaCargaEstudio.pista) {
+  // 🔴 CONDICIÓN INICIAL: Si hay carga reciente, ignora Supabase
+  if (ultimaCargaEstudio && ultimaCargaEstudio.pista) {
     select.innerHTML = `<option value="${ultimaCargaEstudio.pista.file_url || 'reciente'}" selected>🟢 Recién subida: ${ultimaCargaEstudio.pista.name}</option>`;
     return;
   }
 
+  // Código original que consulta a Supabase...
   select.innerHTML = `<option value="">Selecciona una pista desde Biblioteca</option>`;
-
   try {
     const tracks = await getLibraryItemsByTypeFromSupabase("pista");
+    // ...
 
     if (!tracks.length) {
       const option = document.createElement("option");
@@ -1405,17 +1406,17 @@ async function loadVoiceOptionsInStudio() {
   const select = $("voiceLibrarySelect");
   if (!select) return;
 
-  // 🎯 FILTRADO AUTOMÁTICO: Si hay una subida reciente, mostrar solo esa opción
-  if (ultimaCargaEstudio.voz) {
+  // 🔴 CONDICIÓN INICIAL: Si hay carga reciente, ignora Supabase
+  if (ultimaCargaEstudio && ultimaCargaEstudio.voz) {
     select.innerHTML = `<option value="${ultimaCargaEstudio.voz.file_url || 'reciente'}" selected>🟢 Recién subida: ${ultimaCargaEstudio.voz.name}</option>`;
     return;
   }
 
+  // Código original que consulta a Supabase...
   select.innerHTML = `<option value="">Selecciona una voz guardada</option>`;
-
   try {
     const voces = await getLibraryItemsByTypeFromSupabase("voz");
-    const grabaciones = await getLibraryItemsByTypeFromSupabase("grabacion");
+    // ...
     const merged = [...voces, ...grabaciones];
 
     if (!merged.length) {
@@ -1579,16 +1580,17 @@ async function loadTextOptionsInStudio() {
   const select = $("textLibrarySelect");
   if (!select) return;
 
-  // 🎯 FILTRADO AUTOMÁTICO: Si hay una subida reciente, mostrar solo esa opción
-  if (ultimaCargaEstudio.letra) {
+  // 🔴 CONDICIÓN INICIAL: Si hay carga reciente, ignora Supabase
+  if (ultimaCargaEstudio && ultimaCargaEstudio.letra) {
     select.innerHTML = `<option value="${ultimaCargaEstudio.letra.id || 'reciente'}" selected>🟢 Recién subida: ${ultimaCargaEstudio.letra.name}</option>`;
     return;
   }
 
+  // Código original que consulta a Supabase...
   select.innerHTML = `<option value="">Selecciona una letra guardada</option>`;
-
   try {
     const letras = await getLibraryItemsByTypeFromSupabase("texto");
+    // ...
 
     if (!letras.length) {
       const option = document.createElement("option");
