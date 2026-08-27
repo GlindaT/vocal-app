@@ -278,6 +278,42 @@ async function uploadFileToSupabase(fileOrBlob, fileName, mimeType, type) {
 async function saveLibraryItemToSupabase({ name, type, blob, transcription = [], metadata = {} }) {
   if (!db) throw new Error("❌ La base de datos no está inicializada.");
 
+  const mimeType = blob?.type || (type === "texto" ? "text/plain" : "application/octet-stream");
+  
+  // 1. Limpiamos el nombre del archivo
+  let cleanName = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9._]/g, "_");
+
+  let fileUrl = "";
+  
+  // 2. Si es binario (pista o voz), subimos a Cloudflare R2 vía API
+  if (blob) {
+    const uploadRes = await uploadFileToSupabase(blob, cleanName, mimeType, type);
+    fileUrl = uploadRes.fileUrl;
+  }
+
+  // 3. Insertamos el ítem en la tabla 'library' de Supabase
+  const { data, error } = await db
+    .from("library")
+    .insert([{
+        name,
+        type,
+        file_url: fileUrl,
+        transcription,
+        metadata,
+        date: new Date().toISOString()
+    }])
+    .select();
+
+  if (error) throw error;
+  
+  // Retornamos el objeto recién insertado en la nube
+  return data[0];
+}
+
+/*
+async function saveLibraryItemToSupabase({ name, type, blob, transcription = [], metadata = {} }) {
+  if (!db) throw new Error("❌ La base de datos no está inicializada.");
+
   const mimeType = blob.type || "application/octet-stream";
   
   // 1. Limpiamos el nombre
@@ -300,6 +336,7 @@ async function saveLibraryItemToSupabase({ name, type, blob, transcription = [],
 
   if (error) throw error;
 }
+*/
 
 // ==========================================
 // NAVEGACIÓN
@@ -4047,45 +4084,46 @@ function redoTapSync() {
 async function procesarSubidaArchivos(filePista, fileVoz, fileLetra) {
   try {
     const statusEl = $("studioStatus");
-    if (statusEl) statusEl.textContent = "Estado: Subiendo archivos a Cloudflare/Supabase...";
+    if (statusEl) statusEl.textContent = "Estado: Subiendo a Cloudflare R2 y registrando en Supabase...";
 
-    // 1. Subida a Cloudflare R2 / Supabase
-    const resPista = await uploadFileToSupabase(filePista, filePista.name, filePista.type || "audio/mpeg", "pista");
-    const resVoz   = await uploadFileToSupabase(fileVoz, fileVoz.name, fileVoz.type || "audio/webm", "voz");
-    const resLetra = await uploadFileToSupabase(fileLetra, fileLetra.name, fileLetra.type || "text/plain", "texto");
+    // 1. Subida paralela y registro en la base de datos Supabase
+    const recordPista = await saveLibraryItemToSupabase({ name: filePista.name, type: "pista", blob: filePista });
+    const recordVoz   = await saveLibraryItemToSupabase({ name: fileVoz.name,   type: "voz",   blob: fileVoz });
+    
+    // Para el texto plano podemos subirlo directamente o enviar el contenido si corresponde
+    const recordLetra = await saveLibraryItemToSupabase({ name: fileLetra.name, type: "texto", blob: fileLetra });
 
-    // 2. Guardar las URLs de Cloudflare / Supabase en el estado global
+    // 2. Establecer el blindaje en la variable global
     ultimaCargaEstudio = {
-      pista: { name: filePista.name, file_url: resPista.fileUrl },
-      voz:   { name: fileVoz.name,   file_url: resVoz.fileUrl },
-      letra: { name: fileLetra.name, id: resLetra.id || resLetra.fileUrl }
+      pista: { name: recordPista.name, file_url: recordPista.file_url, id: recordPista.id },
+      voz:   { name: recordVoz.name,   file_url: recordVoz.file_url,   id: recordVoz.id },
+      letra: { name: recordLetra.name, file_url: recordLetra.file_url, id: recordLetra.id }
     };
 
-    // 3. Asignación inmediata al estado interno del Estudio
+    // 3. Asignación inmediata al reproductor y variables de sesión del Estudio
     studioTrackFileName = filePista.name;
-    studioTrackBlob = resPista.fileUrl; 
-    selectedVoiceBlob = resVoz.fileUrl;
+    studioTrackBlob = recordPista.file_url;
+    selectedVoiceBlob = recordVoz.file_url;
     studioTextBlob = fileLetra;
 
-    // 4. Asignar la URL de Cloudflare al reproductor principal
     const player = $("player");
     if (player) {
-      player.src = resPista.fileUrl;
+      player.src = recordPista.file_url;
     }
 
-    // 5. Dibujar la opción única en los selectores del Estudio
+    // 4. Actualizar desplegables sin reconsultar todo Supabase
     actualizarSelectoresConUltimaCarga();
 
-    // 6. Cambiar a la pestaña Estudio
+    // 5. Redirigir al Estudio
     showTab("estudio");
 
     if (statusEl) {
-      statusEl.textContent = `Estado: "${filePista.name}" cargado desde Cloudflare y listo para sincronizar.`;
+      statusEl.textContent = `Estado: "${filePista.name}" cargado desde Cloudflare y registrado en Supabase.`;
     }
 
   } catch (error) {
-    console.error("❌ Error en la subida automatizada:", error);
-    alert("❌ Error en el proceso de carga: " + error.message);
+    console.error("❌ Error en el proceso de carga:", error);
+    alert("❌ Error al procesar la subida: " + error.message);
   }
 }
 
@@ -4095,13 +4133,13 @@ function actualizarSelectoresConUltimaCarga() {
   const selectLetra = $("textLibrarySelect");
 
   if (selectPista && ultimaCargaEstudio.pista) {
-    selectPista.innerHTML = `<option value="${ultimaCargaEstudio.pista.file_url}" selected>🟢 Recién subida: ${ultimaCargaEstudio.pista.name}</option>`;
+    selectPista.innerHTML = `<option value="${ultimaCargaEstudio.pista.id || ultimaCargaEstudio.pista.file_url}" selected>🟢 Recién subida: ${ultimaCargaEstudio.pista.name}</option>`;
   }
   if (selectVoz && ultimaCargaEstudio.voz) {
-    selectVoz.innerHTML = `<option value="${ultimaCargaEstudio.voz.file_url}" selected>🟢 Recién subida: ${ultimaCargaEstudio.voz.name}</option>`;
+    selectVoz.innerHTML = `<option value="${ultimaCargaEstudio.voz.id || ultimaCargaEstudio.voz.file_url}" selected>🟢 Recién subida: ${ultimaCargaEstudio.voz.name}</option>`;
   }
   if (selectLetra && ultimaCargaEstudio.letra) {
-    selectLetra.innerHTML = `<option value="${ultimaCargaEstudio.letra.id}" selected>🟢 Recién subida: ${ultimaCargaEstudio.letra.name}</option>`;
+    selectLetra.innerHTML = `<option value="${ultimaCargaEstudio.letra.id || 'reciente'}" selected>🟢 Recién subida: ${ultimaCargaEstudio.letra.name}</option>`;
   }
 }
 // ==========================================
