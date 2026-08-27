@@ -230,7 +230,7 @@ audio {
 
 /* Botón de grabar "Inactivo" (Verde) */
 #recordBtn {
-  background-color: #22c55e !important;
+  background-color: #352438 !important;
   color: white !important;
   padding: 12px 48px;
   font-size: 26px;
@@ -241,7 +241,7 @@ audio {
 
 /* Botón de grabar "Activo" (Rojo) */
 #recordBtn.recording {
-  background-color: #ef4444 !important;
+  background-color: #73203a !important;
   box-shadow: 0 4px 16px rgba(239, 68, 68, 0.5);
   animation: pulse-record 1.5s infinite;
 }
